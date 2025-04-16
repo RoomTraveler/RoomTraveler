@@ -53,11 +53,11 @@
             </tr>
             </thead>
 
-            <tbody>
+            <tbody th:with="link = ${pageRequestDTO.getLink()}">
             <tr th:each="dto : ${responseDTO.dtoList}"  >
               <th scope="row">[[${dto.bno}]]</th>
               <td>
-                [[${dto.title}]]
+                <a th:href="|@{/board/read(bno =${dto.bno})}&${link}|"> [[${dto.title}]] </a>
               </td>
               <td>[[${dto.writer}]]</td>
               <td>[[${#temporals.format(dto.regDate, 'yyyy-MM-dd')}]]</td>
@@ -92,15 +92,71 @@
       </div>
     </div>
   </div>
-</div>
+
+
+  <div class="modal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Modal title</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+
+        </div>
+        <div class="modal-body">
+          <p>Modal body text gose here</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          <button type="button" class="btn btn-primary">Save changes</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div> <!--end layout fragment -->
 
 <!--페이지 번호를 클릭하면 검색 창에 있는 <form> 태그에 <input type="hidden">으로 page를 추가한 후에 submit
 [Clear]버튼을 누르면 검색 조건 없이 '/board/list' 호출 -->
 
 <script layout:fragment="script" th:inline="javascript">
 
-  document.queryS
+  document.querySelector(".pagination").addEventListener("click", function (e) {
+    e.preventDefault()
+    e.stopPropagation()
 
-  console.log("script..");
+    const target = e.target
+
+    if(target.tagName !== 'A') {
+      return
+    }
+
+    const num = target.getAttribute("data-num")
+
+    const formObj = document.querySelector("form")
+
+    formObj.innerHTML += `<input type='hidden' name='page' value='${num}'>`
+
+    formObj.submit();
+
+  },false)
+
+  document.querySelector(".clearBtn").addEventListener("click", function (e){
+    e.preventDefault()
+    e.stopPropagation()
+
+    self.location ='/board/list'
+
+  },false)
+
+  //show modal
+  const result = [[${result}]]
+
+  const modal = new bootstrap.Modal(document.querySelector(".modal"))
+
+  if(result){
+    modal.show()
+  }
+
+
+
 </script>
-
