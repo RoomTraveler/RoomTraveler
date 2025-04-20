@@ -106,6 +106,6 @@ public class BoardController {
 
         redirectAttributes.addFlashAttribute("result", "removed");
 
-        return "redirect:/board/read";
+        return "redirect:/board/list";
     }
 }
