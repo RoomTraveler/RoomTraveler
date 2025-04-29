@@ -35,6 +35,7 @@ public class Board extends BaseEntity{
     //Update는 등록 시간이 필요하므로 가능하면 findById로 가져온 객체를 이용해서 약간의 수정을 통해 처리하도록 하자
     //일반적으로 엔티티 객체는 가능하면 최소한의 변경이나 변경이 없는 불변(immutable)하게 설계하는게 좋지만 반드시는 아님
     //Board 클래스에 수정이 가능한 부분을 미리 메소드로 설계. 제목./내용은 수정이 가능하니 change 메소드 추가
+    //그런거지
     public void change(String title, String content){
         this.title = title;
         this.content = content;
