@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.ssafy.trip.host.HostDao">
+
+    <!-- 새 호스트 등록 -->
+    <insert id="insert">
+        INSERT INTO hosts (host_id, business_name, business_reg_no, bank_account, profile_text, host_status)
+        VALUES (#{hostId}, #{businessName}, #{businessRegNo}, #{bankAccount}, #{profileText}, #{hostStatus})
+    </insert>
+
+    <!-- 호스트 ID로 호스트 조회 -->
+    <select id="getHostById" resultType="com.ssafy.trip.host.Host">
+        SELECT h.*, u.username, u.email, u.role
+        FROM hosts h
+        JOIN users u ON h.host_id = u.user_id
+        WHERE h.host_id = #{hostId}
+    </select>
+    
+    <!-- 모든 호스트 조회 -->
+    <select id="getHosts" resultType="com.ssafy.trip.host.Host">
+        SELECT h.*, u.username, u.email, u.role
+        FROM hosts h
+        JOIN users u ON h.host_id = u.user_id
+    </select>
+    
+    <!-- 호스트 정보 업데이트 -->
+    <update id="updateHost">
+        UPDATE hosts
+        SET business_name = #{businessName}, 
+            business_reg_no = #{businessRegNo}, 
+            bank_account = #{bankAccount}, 
+            profile_text = #{profileText}
+        WHERE host_id = #{hostId}
+    </update>
+    
+    <!-- 호스트 삭제 -->
+    <delete id="deleteHost">
+        DELETE FROM hosts WHERE host_id = #{hostId}
+    </delete>
+    
+    <!-- 호스트 상태 업데이트 -->
+    <update id="updateHostStatus">
+        UPDATE hosts
+        SET host_status = #{param2}
+        WHERE host_id = #{param1}
+    </update>
+    
+    <!-- 사용자 ID로 호스트 조회 -->
+    <select id="getHostByUserId" resultType="com.ssafy.trip.host.Host">
+        SELECT h.*, u.username, u.email, u.role
+        FROM hosts h
+        JOIN users u ON h.host_id = u.user_id
+        WHERE h.host_id = #{userId}
+    </select>
+    
+</mapper>

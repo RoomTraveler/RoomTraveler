@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ssafy.trip.map.MapDAO">
+
+  <!-- 1) 관광지 기본 정보(위치 포함) 매핑 -->
+  <resultMap id="RegionTripResDtoMap" type="com.ssafy.trip.map.MapDTO$RegionTripResDto">
+    <id     property="no"        column="no"/>
+    <result property="title"     column="title"/>
+    <result property="image"     column="image"/>
+    <result property="addr1"     column="addr1"/>
+    <result property="addr2"     column="addr2"/>
+    <result property="tel"       column="tel"/>
+    <result property="latitude"  column="latitude"/>
+    <result property="longitude" column="longitude"/>
+  </resultMap>
+
+  <select id="getRegionTrip" resultMap="RegionTripResDtoMap">
+    SELECT no,
+           title,
+           first_image1 AS image,
+           addr1,
+           addr2,
+           tel,
+           latitude,
+           longitude
+      FROM attractions
+     WHERE si_gun_gu_code = #{gugunCode}
+       AND area_code  = #{sidoCode}
+  </select>
+
+  <select id="getInfoByLocalContent" resultMap="RegionTripResDtoMap">
+    SELECT no,
+           title,
+           first_image1 AS image,
+           addr1,
+           addr2,
+           tel,
+           latitude,
+           longitude
+      FROM attractions
+    WHERE si_gun_gu_code = #{gugunCode}
+      AND area_code  = #{sidoCode}
+       AND content_type_id = #{contentTypeId}
+  </select>
+
+  <!-- 2) 시도/구군/컨텐츠타입 조회 -->
+  <resultMap id="SidoMap" type="com.ssafy.trip.map.MapDTO$Sido">
+    <result property="name" column="sido_name"/>
+    <result property="code" column="sido_code"/>
+  </resultMap>
+  <select id="getSidos" resultMap="SidoMap">
+    SELECT DISTINCT sido_name, sido_code FROM sidos
+  </select>
+
+  <resultMap id="GugunMap" type="com.ssafy.trip.map.MapDTO$Gugun">
+    <result property="name" column="gugun_name"/>
+      <result property="code" column="gugun_code"/>
+  </resultMap>
+  <select id="getGuguns" resultMap="GugunMap">
+    SELECT DISTINCT gugun_name, gugun_code
+    FROM guguns
+    WHERE sido_code = #{sido}
+  </select>
+
+  <resultMap id="ContentTypeMap" type="com.ssafy.trip.map.MapDTO$ContentType">
+    <result property="code" column="content_type_id"/>
+    <result property="name" column="content_type_name"/>
+  </resultMap>
+  <select id="getContentTypes" resultMap="ContentTypeMap">
+    SELECT content_type_id, content_type_name FROM contenttypes;
+  </select>
+
+  <!-- 이메일로 사용자 ID 찾기 -->
+  <select id="findUserIdByEmail" resultType="long">
+    SELECT user_id FROM users WHERE email = #{email}
+  </select>
+
+  <!-- 3) 플랜 저장 및 조회 -->
+  <insert id="insertPlan" parameterType="long" useGeneratedKeys="true" keyProperty="planId">
+    INSERT INTO plan (user_id) VALUES (#{userId})
+  </insert>
+
+  <insert id="insertPlanAttractions" parameterType="map">
+    INSERT INTO plan_attraction (plan_id, attraction_id)
+    VALUES
+    <foreach collection="attractionIds" item="id" separator=",">
+      (#{planId}, #{id})
+    </foreach>
+  </insert>
+
+  <resultMap id="PlanMap" type="com.ssafy.trip.map.MapDTO$Plan">
+    <id property="planId" column="plan_id"/>
+  </resultMap>
+  <select id="getPlan" resultMap="PlanMap">
+    SELECT plan_id FROM plan WHERE user_id = #{userId}
+  </select>
+
+</mapper>
