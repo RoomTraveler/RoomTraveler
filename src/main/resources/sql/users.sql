@@ -15,10 +15,7 @@ CREATE TABLE users (
                        PRIMARY KEY (user_id),
                        UNIQUE KEY uq_users_email    (email),
                        UNIQUE KEY uq_users_username (username)
-) ENGINE=InnoDB
-  DEFAULT CHARSET=utf8mb4
-  COLLATE=utf8mb4_unicode_ci;
-
+);
 
 
 INSERT INTO users (username, email, password_hash, phone, role, status) VALUES

@@ -21,14 +21,14 @@ public class MapController {
 
     private final MapService mapService;
 
-    @Value("${trip.key.vworld}") 
-    private String keyVworld;
-    @Value("${trip.key.sgis.service-id}") 
-    private String keySgisServiceId;
-    @Value("${trip.key.sgis.security}") 
-    private String keySgisSecurity;
-    @Value("${trip.key.data}") 
-    private String keyData;
+//    @Value("${trip.key.vworld}")
+//    private String keyVworld;
+//    @Value("${trip.key.sgis.service-id}")
+//    private String keySgisServiceId;
+//    @Value("${trip.key.sgis.security}")
+//    private String keySgisSecurity;
+//    @Value("${trip.key.data}")
+//    private String keyData;
 
     @GetMapping("/sidos")
     @ResponseBody
