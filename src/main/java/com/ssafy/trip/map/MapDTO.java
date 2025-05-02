@@ -13,6 +13,15 @@ public class MapDTO {
     @NoArgsConstructor
     @AllArgsConstructor
     @Builder
+    public static class PlanStoreDTO {
+        private String id;
+        private List<Integer> attractionIds;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
     public static class RegionTripResDto {
         private int no;
         private String title;
@@ -22,6 +31,8 @@ public class MapDTO {
         private String tel;
         private double latitude;
         private double longitude;
+        private String homepage;
+        private String overview;
     }
 
     @Data
@@ -63,5 +74,21 @@ public class MapDTO {
     public static class ContentType {
         private int code;
         private String name;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class LatLng {
+        private double latitude;
+        private double longitude;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class MapBound {
+        private LatLng southWest;
+        private LatLng northEast;
     }
 }

@@ -11,6 +11,6 @@ public class ViewController {
 
     @GetMapping("/region-trip-form")
     public String regionTripForm() {
-        return "trip/region-trip-form";
+        return "trip/test";
     }
 }

@@ -72,11 +72,6 @@
     SELECT content_type_id, content_type_name FROM contenttypes;
   </select>
 
-  <!-- 이메일로 사용자 ID 찾기 -->
-  <select id="findUserIdByEmail" resultType="long">
-    SELECT user_id FROM users WHERE email = #{email}
-  </select>
-
   <!-- 3) 플랜 저장 및 조회 -->
   <insert id="insertPlan" parameterType="long" useGeneratedKeys="true" keyProperty="planId">
     INSERT INTO plan (user_id) VALUES (#{userId})
@@ -96,5 +91,19 @@
   <select id="getPlan" resultMap="PlanMap">
     SELECT plan_id FROM plan WHERE user_id = #{userId}
   </select>
+
+    <select id="getRegionTripWithinMapRange" resultMap="RegionTripResDtoMap">
+        SELECT no,
+            title,
+            first_image1 AS image,
+            addr1,
+            addr2,
+            tel,
+            latitude,
+            longitude
+        FROM attractions
+        WHERE latitude BETWEEN #{southWest.latitude} AND #{northEast.latitude}
+          AND longitude BETWEEN #{southWest.longitude} AND #{northEast.longitude}
+    </select>
 
 </mapper>

@@ -16,6 +16,11 @@
         SELECT * FROM users WHERE email = #{email} AND status = 'ACTIVE'
     </select>
 
+    <!-- 이메일로 사용자 ID 찾기 -->
+    <select id="findUserIdByEmail" resultType="long">
+        SELECT user_id FROM users WHERE email = #{email}
+    </select>
+
     <!-- 모든 사용자 조회 -->
     <select id="getUsers" resultType="com.ssafy.trip.user.User">
         SELECT * FROM users

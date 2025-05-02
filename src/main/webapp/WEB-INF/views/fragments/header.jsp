@@ -25,7 +25,7 @@ pageEncoding="UTF-8"%> <%-- 페이지들이 가져갈 공통적인 내용들 위
   <!-- 전체 .container 시작 -->
   <header class="d-flex justify-content-center my-5 align-items-center">
     <h1 class="text-center">Welcome To</h1>
-    <img src="${root }/img/ssafy_logo.png" id="logo" />
+<%--    <img src="${root }/img/ssafy_logo.png" id="logo" />--%>
   </header>
   <div class="d-flex justify-content-end">
     <a href="${root }/user" class="mx-3">메인으로</a> |

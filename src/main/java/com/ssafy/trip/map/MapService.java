@@ -10,12 +10,13 @@ import com.ssafy.trip.map.MapDTO.Sido;
 import java.util.List;
 
 public interface MapService {
-    List<RegionTripResDto> getRegionTrip(int sidoCode, int gugunCode);
-    List<Sido>              getSidoList();
-    List<Gugun>             getGugunList(int sido);
+//    List<RegionTripResDto> getRegionTrip(int sidoCode, int gugunCode);
+//    List<Sido>              getSidoList();
+//    List<Gugun>             getGugunList(int sido);
     List<ContentType>       getContentTypes();
-    List<RegionTripResDto>  getInfoByLocalContent(int sidoCode, int gugunCode, int contentTypeId);
-    void                    savePlan(String email, List<Integer> attractionIds);
+//    List<RegionTripResDto>  getInfoByLocalContent(int sidoCode, int gugunCode, int contentTypeId);
+    void                    savePlan(MapDTO.PlanStoreDTO planStoreDTO);
     List<Plan>              getPlan(Long userId);
-    List<RegionTripResDto>  findShortestPlan(RegionTripResDto startLocation, List<RegionTripResDto> locations);
+//    List<RegionTripResDto>  findShortestPlan(RegionTripResDto startLocation, List<RegionTripResDto> locations);
+    List<RegionTripResDto>  getRegionTripWithinMapRange(MapDTO.MapBound mapBound);
 }

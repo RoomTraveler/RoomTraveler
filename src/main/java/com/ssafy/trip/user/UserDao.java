@@ -40,4 +40,7 @@ public interface UserDao {
      * 이름과 이메일로 비밀번호를 찾습니다.
      */
     String findPassword(String username, String email) throws SQLException;
+
+    // 6) 이메일로 사용자 ID 찾기
+    Long findUserIdByEmail(String email);
 }
