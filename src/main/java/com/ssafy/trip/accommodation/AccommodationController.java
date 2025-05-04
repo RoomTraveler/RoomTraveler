@@ -14,7 +14,8 @@ public class AccommodationController {
 
     @GetMapping("/accommodation")
     public String showPage(Model model) {
-
+        // JSP에서 ${serviceKey} 로 꺼낼 수 있도록 담아둡니다.
+        model.addAttribute("serviceKey", props.getServiceKey());
         return "accommodation/index";
     }
 }
