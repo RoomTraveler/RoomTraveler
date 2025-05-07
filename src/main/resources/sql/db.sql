@@ -29,7 +29,6 @@ CREATE TABLE IF NOT EXISTS `ssafytrip`.`sidos` (
 ENGINE = InnoDB
 AUTO_INCREMENT = 35
 DEFAULT CHARACTER SET = utf8mb4
-COLLATE = utf8mb4_0900_ai_ci
 COMMENT = '시도정보테이블';
 
 
@@ -50,7 +49,6 @@ CREATE TABLE IF NOT EXISTS `ssafytrip`.`guguns` (
 ENGINE = InnoDB
 AUTO_INCREMENT = 469
 DEFAULT CHARACTER SET = utf8mb4
-COLLATE = utf8mb4_0900_ai_ci
 COMMENT = '구군정보테이블';
 
 

@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 
 @Controller
 @RequiredArgsConstructor
-public class AccommodationController {
+public class AccommodationIndexController {
 
     private final TourApiProperties props;
 

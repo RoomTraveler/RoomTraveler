@@ -7,13 +7,13 @@
 
     <!-- 새 사용자 등록 -->
     <insert id="insert" useGeneratedKeys="true" keyProperty="userId">
-        INSERT INTO users (username, email, password_hash, phone, role, status)
-        VALUES (#{username}, #{email}, #{passwordHash}, #{phone}, 'USER', 'ACTIVE')
+        INSERT INTO users (username, email, passwordHash, phone, role, status)
+        VALUES (#{username}, #{email}, #{password}, #{phone}, 'USER', 'ACTIVE')
     </insert>
 
     <!-- 로그인 -->
     <select id="login" resultType="com.ssafy.trip.user.User">
-        SELECT * FROM users WHERE email = #{email} AND status = 'ACTIVE'
+        SELECT * FROM users WHERE email = #{email} AND passwordHash = #{password} AND status = 'ACTIVE'
     </select>
 
     <!-- 모든 사용자 조회 -->
@@ -24,7 +24,7 @@
     <!-- 사용자 정보 업데이트 -->
     <update id="updateUser">
         UPDATE users
-        SET username = #{username}, password_hash = #{passwordHash}
+        SET username = #{username}, passwordHash = #{password}
         WHERE email = #{email}
     </update>
 
@@ -35,8 +35,15 @@
 
     <!-- 비밀번호 찾기 -->
     <select id="findPassword" resultType="String">
-        SELECT password_hash FROM users
+        SELECT passwordHash FROM users
         WHERE username = #{username} AND email = #{email}
     </select>
+
+    <!-- 사용자 상태 업데이트 -->
+    <update id="updateUserStatus">
+        UPDATE users
+        SET status = #{status}
+        WHERE user_id = #{userId}
+    </update>
 
 </mapper>

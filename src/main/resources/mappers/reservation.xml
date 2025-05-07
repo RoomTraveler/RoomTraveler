@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.ssafy.trip.accommodation.dao.ReservationDao">
+
+    <!-- 새 예약을 등록합니다. -->
+    <insert id="insert" useGeneratedKeys="true" keyProperty="reservationId">
+        INSERT INTO reservations (
+            user_id, room_id, accommodation_id, check_in_date, check_out_date, 
+            guest_count, total_price, status, payment_status, created_at, updated_at
+        )
+        VALUES (
+            #{userId}, #{roomId}, #{accommodationId}, #{checkInDate}, #{checkOutDate}, 
+            #{guestCount}, #{totalPrice}, #{status}, #{paymentStatus}, NOW(), NOW()
+        )
+    </insert>
+
+    <!-- 예약 ID로 예약을 조회합니다. -->
+    <select id="getReservationById" resultType="com.ssafy.trip.accommodation.model.Reservation">
+        SELECT * FROM reservations WHERE reservation_id = #{reservationId}
+    </select>
+
+    <!-- 사용자 ID로 예약 목록을 조회합니다. -->
+    <select id="getReservationsByUserId" resultType="com.ssafy.trip.accommodation.model.Reservation">
+        SELECT * FROM reservations WHERE user_id = #{userId}
+    </select>
+
+    <!-- 객실 ID로 예약 목록을 조회합니다. -->
+    <select id="getReservationsByRoomId" resultType="com.ssafy.trip.accommodation.model.Reservation">
+        SELECT * FROM reservations WHERE room_id = #{roomId}
+    </select>
+
+    <!-- 숙소 ID로 예약 목록을 조회합니다. -->
+    <select id="getReservationsByAccommodationId" resultType="com.ssafy.trip.accommodation.model.Reservation">
+        SELECT * FROM reservations WHERE accommodation_id = #{accommodationId}
+    </select>
+
+    <!-- 호스트 ID로 예약 목록을 조회합니다. -->
+    <select id="getReservationsByHostId" resultType="com.ssafy.trip.accommodation.model.Reservation">
+        SELECT r.* FROM reservations r
+        JOIN accommodations a ON r.accommodation_id = a.accommodation_id
+        WHERE a.host_id = #{hostId}
+    </select>
+
+    <!-- 날짜 범위로 예약 목록을 조회합니다. -->
+    <select id="getReservationsByDateRange" resultType="com.ssafy.trip.accommodation.model.Reservation">
+        SELECT * FROM reservations 
+        WHERE (check_in_date BETWEEN #{startDate} AND #{endDate})
+        OR (check_out_date BETWEEN #{startDate} AND #{endDate})
+        OR (check_in_date &lt;= #{startDate} AND check_out_date >= #{endDate})
+    </select>
+
+    <!-- 예약 상태를 업데이트합니다. -->
+    <update id="updateReservationStatus">
+        UPDATE reservations
+        SET status = #{status}, updated_at = NOW()
+        WHERE reservation_id = #{reservationId}
+    </update>
+
+    <!-- 결제 상태를 업데이트합니다. -->
+    <update id="updatePaymentStatus">
+        UPDATE reservations
+        SET payment_status = #{paymentStatus}, updated_at = NOW()
+        WHERE reservation_id = #{reservationId}
+    </update>
+
+    <!-- 예약을 취소합니다. -->
+    <update id="cancelReservation">
+        UPDATE reservations
+        SET status = 'CANCELLED', updated_at = NOW()
+        WHERE reservation_id = #{reservationId}
+    </update>
+
+    <!-- 예약을 삭제합니다. -->
+    <delete id="deleteReservation">
+        DELETE FROM reservations WHERE reservation_id = #{reservationId}
+    </delete>
+
+    <!-- 필터링된 예약 목록을 조회합니다. -->
+    <select id="getFilteredReservations" resultType="com.ssafy.trip.accommodation.model.Reservation">
+        SELECT * FROM reservations
+        <where>
+            <if test="userId != null">
+                user_id = #{userId}
+            </if>
+            <if test="roomId != null">
+                AND room_id = #{roomId}
+            </if>
+            <if test="accommodationId != null">
+                AND accommodation_id = #{accommodationId}
+            </if>
+            <if test="status != null">
+                AND status = #{status}
+            </if>
+            <if test="paymentStatus != null">
+                AND payment_status = #{paymentStatus}
+            </if>
+            <if test="startDate != null">
+                AND check_in_date >= #{startDate}
+            </if>
+            <if test="endDate != null">
+                AND check_out_date &lt;= #{endDate}
+            </if>
+        </where>
+    </select>
+</mapper>

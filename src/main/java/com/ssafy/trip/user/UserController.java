@@ -3,7 +3,6 @@ package com.ssafy.trip.user;
 import java.sql.SQLException;
 import java.util.List;
 
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -23,8 +22,7 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("/user")
 public class UserController {
     private final UserService uService;
-    private final BCryptPasswordEncoder bcryptPasswordEncoder;
-    
+
     /**
      * 인덱스 페이지로 이동합니다.
      */
@@ -32,7 +30,7 @@ public class UserController {
     public String index() {
     	return "index";
     }
-    
+
     /**
      * 로그인 폼 페이지로 이동합니다.
      */
@@ -40,7 +38,7 @@ public class UserController {
     public String loginForm() {
     	return "user/login-form";
     }
-    
+
     /**
      * 사용자 등록 폼 페이지로 이동합니다.
      */
@@ -48,7 +46,7 @@ public class UserController {
     public String registUserForm() {
     	return "user/user-regist-form";
     }
-    
+
     /**
      * 사용자 상세 페이지로 이동합니다.
      */
@@ -56,7 +54,7 @@ public class UserController {
     public String userDetail() {
     	return "user/user-detail";
     }
-    
+
     /**
      * 사용자 수정 폼 페이지로 이동합니다.
      */
@@ -64,14 +62,13 @@ public class UserController {
     public String userUpdateForm() {
     	return "user/user-update-form";
     }
-    
+
     /**
      * 새 사용자를 등록합니다.
      */
     @PostMapping("/regist-user")
     public String registUser(@ModelAttribute User user, RedirectAttributes redir, Model model) {
-    	String encodedPassword = bcryptPasswordEncoder.encode(user.getPasswordHash());
-    	user.setPasswordHash(encodedPassword);
+    	// 비밀번호는 평문으로 저장합니다.
     	try {
 			uService.registUser(user);
 			redir.addFlashAttribute("alertMsg", "등록되었습니다. 로그인 후 사용해주세요.");
@@ -82,20 +79,26 @@ public class UserController {
 			return "/user/user-regist-form";
 		}
     }
-    
+
     /**
      * 로그인 처리를 합니다.
      */
     @PostMapping("/login")
     public String login(@ModelAttribute User user, HttpSession session, RedirectAttributes redir, Model model) {
-    	
+
     	try {
-			User loginUser = uService.login(user.getEmail(), user.getPasswordHash());
-			if (loginUser == null || loginUser.getUsername() == null || bcryptPasswordEncoder.matches(user.getPasswordHash(), loginUser.getPasswordHash())) throw new Exception("잘못된 입력!");
+			// 이메일과 비밀번호로 사용자 조회
+			User loginUser = uService.login(user.getEmail(), user.getPassword());
+
+			// 사용자가 존재하지 않거나 사용자명이 없는 경우
+			if (loginUser == null || loginUser.getUsername() == null) {
+				throw new Exception("잘못된 입력!");
+			}
+
+			// 로그인 성공 시 세션에 사용자 정보 저장 (비밀번호 제외)
 			session.setAttribute("userId", loginUser.getUserId());
 			session.setAttribute("username", loginUser.getUsername());
 			session.setAttribute("email", loginUser.getEmail());
-			session.setAttribute("passwordHash", loginUser.getPasswordHash());
 			redir.addFlashAttribute("alertMsg", "로그인에 성공했습니다!");
 			return "redirect:/";
 		} catch (Exception e) {
@@ -104,7 +107,7 @@ public class UserController {
 			return "/user/login-form";
 		}
     }
-    
+
     /**
      * 사용자 목록을 조회합니다.
      */
@@ -121,26 +124,24 @@ public class UserController {
 			return "/";
 		}
     }
-    
+
     /**
      * 사용자 정보를 업데이트합니다.
      */
     @PostMapping("/update")
     public String updateUser(@ModelAttribute User user, HttpSession session, Model model) {
-    	String encodedPassword = bcryptPasswordEncoder.encode(user.getPasswordHash());
-    	user.setPasswordHash(encodedPassword);
+    	// 비밀번호는 평문으로 저장합니다.
     	try {
-    		uService.updateUser(user.getEmail(), user.getUsername(), user.getPasswordHash());
+    		uService.updateUser(user.getEmail(), user.getUsername(), user.getPassword());
     		session.setAttribute("username", user.getUsername());
-    		session.setAttribute("passwordHash", user.getPasswordHash());
     		return "user/user-detail";
     	} catch (Exception e) {
     		model.addAttribute("error", e.getMessage());
     		return "user/user-update-form";    		
     	}
-    	
+
     }
-    
+
     /**
      * 사용자를 삭제합니다.
      */
@@ -157,9 +158,9 @@ public class UserController {
 			model.addAttribute("error", e.getMessage());
 			return "/";
 		}
-    	
+
     }
-    
+
     /**
      * 로그아웃 처리를 합니다.
      */
@@ -169,15 +170,15 @@ public class UserController {
     	redir.addFlashAttribute("alertMsg", "로그아웃 됐습니다!");
     	return "redirect:/";
     }
-    
+
     /**
      * 비밀번호를 찾습니다.
      */
     @PostMapping("/find-password")
     public String findPassword(@ModelAttribute User user, Model model) {
     	try {
-			String passwordHash = uService.findPassword(user.getUsername(), user.getEmail());
-			model.addAttribute("passwordHash", passwordHash);
+			String password = uService.findPassword(user.getUsername(), user.getEmail());
+			model.addAttribute("password", password);
 			return "user/login-form";
 		} catch (SQLException e) {
 			e.printStackTrace();

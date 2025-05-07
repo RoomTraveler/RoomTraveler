@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.ssafy.trip.accommodation.dao.AccommodationDao">
+
+    <!-- 새 숙소를 등록합니다. -->
+    <insert id="insert" useGeneratedKeys="true" keyProperty="accommodationId">
+        INSERT INTO accommodations (
+            host_id, title, description, address, sido_code, gugun_code, 
+            latitude, longitude, status, 
+            check_in_time, check_out_time, amenities, created_at, updated_at
+        )
+        VALUES (
+            #{hostId}, #{title}, #{description}, #{address}, #{sidoCode}, #{gugunCode}, 
+            #{latitude}, #{longitude}, #{status}, 
+            #{checkInTime}, #{checkOutTime}, #{amenities}, NOW(), NOW()
+        )
+    </insert>
+
+    <!-- 숙소 ID로 숙소를 조회합니다. -->
+    <select id="getAccommodationById" resultType="com.ssafy.trip.accommodation.model.Accommodation">
+        SELECT * FROM accommodations WHERE accommodation_id = #{accommodationId}
+    </select>
+
+    <!-- 호스트 ID로 숙소 목록을 조회합니다. -->
+    <select id="getAccommodationsByHostId" resultType="com.ssafy.trip.accommodation.model.Accommodation">
+        SELECT * FROM accommodations WHERE host_id = #{hostId}
+    </select>
+
+    <!-- 지역 코드로 숙소 목록을 조회합니다. -->
+    <select id="getAccommodationsByRegion" resultType="com.ssafy.trip.accommodation.model.Accommodation">
+        SELECT * FROM accommodations 
+        WHERE sido_code = #{sidoCode}
+        <if test="gugunCode != null">
+            AND gugun_code = #{gugunCode}
+        </if>
+    </select>
+
+    <!-- 키워드로 숙소를 검색합니다. -->
+    <select id="searchAccommodations" resultType="com.ssafy.trip.accommodation.model.Accommodation">
+        SELECT * FROM accommodations 
+        WHERE title LIKE CONCAT('%', #{keyword}, '%')
+        OR description LIKE CONCAT('%', #{keyword}, '%')
+        OR address LIKE CONCAT('%', #{keyword}, '%')
+    </select>
+
+    <!-- 숙소 정보를 업데이트합니다. -->
+    <update id="updateAccommodation">
+        UPDATE accommodations
+        SET 
+            title = #{title},
+            description = #{description},
+            address = #{address},
+            sido_code = #{sidoCode},
+            gugun_code = #{gugunCode},
+            latitude = #{latitude},
+            longitude = #{longitude},
+            check_in_time = #{checkInTime},
+            check_out_time = #{checkOutTime},
+            amenities = #{amenities},
+            updated_at = NOW()
+        WHERE accommodation_id = #{accommodationId}
+    </update>
+
+    <!-- 숙소 상태를 업데이트합니다. -->
+    <update id="updateAccommodationStatus">
+        UPDATE accommodations
+        SET status = #{status}, updated_at = NOW()
+        WHERE accommodation_id = #{accommodationId}
+    </update>
+
+    <!-- 숙소를 삭제합니다. -->
+    <delete id="deleteAccommodation">
+        DELETE FROM accommodations WHERE accommodation_id = #{accommodationId}
+    </delete>
+
+    <!-- 모든 숙소를 조회합니다. -->
+    <select id="getAllAccommodations" resultType="com.ssafy.trip.accommodation.model.Accommodation">
+        SELECT * FROM accommodations
+    </select>
+
+    <!-- 필터링된 숙소 목록을 조회합니다. -->
+    <select id="getFilteredAccommodations" resultType="com.ssafy.trip.accommodation.model.Accommodation">
+        SELECT * FROM accommodations
+        <where>
+            <if test="sidoCode != null">
+                sido_code = #{sidoCode}
+            </if>
+            <if test="gugunCode != null">
+                AND gugun_code = #{gugunCode}
+            </if>
+            <if test="status != null">
+                AND status = #{status}
+            </if>
+        </where>
+    </select>
+
+    <!-- 외부 API에서 가져온 숙소 정보를 저장합니다. -->
+    <insert id="insertFromApi" useGeneratedKeys="true" keyProperty="accommodationId">
+        INSERT INTO accommodations (
+            host_id, title, description, address, sido_code, gugun_code, 
+            latitude, longitude, status, 
+            check_in_time, check_out_time, amenities, created_at, updated_at
+        )
+        VALUES (
+            #{hostId}, #{title}, #{description}, #{address}, #{sidoCode}, #{gugunCode}, 
+            #{latitude}, #{longitude}, #{status}, 
+            #{checkInTime}, #{checkOutTime}, #{amenities}, NOW(), NOW()
+        )
+    </insert>
+</mapper>

@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.ssafy.trip.accommodation.dao.ReviewDao">
+
+    <!-- 새 리뷰를 등록합니다. -->
+    <insert id="insert" useGeneratedKeys="true" keyProperty="reviewId">
+        INSERT INTO reviews (
+            user_id, accommodation_id, reservation_id, rating, content, created_at, updated_at
+        )
+        VALUES (
+            #{userId}, #{accommodationId}, #{reservationId}, #{rating}, #{content}, NOW(), NOW()
+        )
+    </insert>
+
+    <!-- 리뷰 ID로 리뷰를 조회합니다. -->
+    <select id="getReviewById" resultType="com.ssafy.trip.accommodation.model.Review">
+        SELECT * FROM reviews WHERE review_id = #{reviewId}
+    </select>
+
+    <!-- 사용자 ID로 리뷰 목록을 조회합니다. -->
+    <select id="getReviewsByUserId" resultType="com.ssafy.trip.accommodation.model.Review">
+        SELECT * FROM reviews WHERE user_id = #{userId}
+    </select>
+
+    <!-- 숙소 ID로 리뷰 목록을 조회합니다. -->
+    <select id="getReviewsByAccommodationId" resultType="com.ssafy.trip.accommodation.model.Review">
+        SELECT * FROM reviews WHERE accommodation_id = #{accommodationId}
+    </select>
+
+    <!-- 예약 ID로 리뷰를 조회합니다. -->
+    <select id="getReviewByReservationId" resultType="com.ssafy.trip.accommodation.model.Review">
+        SELECT * FROM reviews WHERE reservation_id = #{reservationId}
+    </select>
+
+    <!-- 호스트 ID로 리뷰 목록을 조회합니다. -->
+    <select id="getReviewsByHostId" resultType="com.ssafy.trip.accommodation.model.Review">
+        SELECT r.* FROM reviews r
+        JOIN accommodations a ON r.accommodation_id = a.accommodation_id
+        WHERE a.host_id = #{hostId}
+    </select>
+
+    <!-- 리뷰 정보를 업데이트합니다. -->
+    <update id="updateReview">
+        UPDATE reviews
+        SET 
+            rating = #{rating},
+            content = #{content},
+            updated_at = NOW()
+        WHERE review_id = #{reviewId}
+    </update>
+
+    <!-- 리뷰를 삭제합니다. -->
+    <delete id="deleteReview">
+        DELETE FROM reviews WHERE review_id = #{reviewId}
+    </delete>
+
+    <!-- 숙소 ID로 평균 평점을 조회합니다. -->
+    <select id="getAverageRatingByAccommodationId" resultType="double">
+        SELECT AVG(rating) FROM reviews WHERE accommodation_id = #{accommodationId}
+    </select>
+
+    <!-- 필터링된 리뷰 목록을 조회합니다. -->
+    <select id="getFilteredReviews" resultType="com.ssafy.trip.accommodation.model.Review">
+        SELECT * FROM reviews
+        <where>
+            <if test="userId != null">
+                user_id = #{userId}
+            </if>
+            <if test="accommodationId != null">
+                AND accommodation_id = #{accommodationId}
+            </if>
+            <if test="reservationId != null">
+                AND reservation_id = #{reservationId}
+            </if>
+            <if test="minRating != null">
+                AND rating >= #{minRating}
+            </if>
+            <if test="maxRating != null">
+                AND rating &lt;= #{maxRating}
+            </if>
+            <if test="startDate != null">
+                AND created_at >= #{startDate}
+            </if>
+            <if test="endDate != null">
+                AND created_at &lt;= #{endDate}
+            </if>
+        </where>
+    </select>
+</mapper>

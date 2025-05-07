@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.ssafy.trip.accommodation.dao.ImageDao">
+
+    <!-- 새 이미지를 등록합니다. -->
+    <insert id="insert" useGeneratedKeys="true" keyProperty="imageId">
+        INSERT INTO images (
+            reference_id, reference_type, image_url, is_main, caption, created_at
+        )
+        VALUES (
+            #{referenceId}, #{referenceType}, #{imageUrl}, #{isMain}, #{caption}, NOW()
+        )
+    </insert>
+
+    <!-- 이미지 ID로 이미지를 조회합니다. -->
+    <select id="getImageById" resultType="com.ssafy.trip.accommodation.model.Image">
+        SELECT * FROM images WHERE image_id = #{imageId}
+    </select>
+
+    <!-- 참조 ID와 참조 타입으로 이미지 목록을 조회합니다. -->
+    <select id="getImagesByReference" resultType="com.ssafy.trip.accommodation.model.Image">
+        SELECT * FROM images 
+        WHERE reference_id = #{referenceId} AND reference_type = #{referenceType}
+    </select>
+
+    <!-- 참조 ID와 참조 타입으로 대표 이미지를 조회합니다. -->
+    <select id="getMainImageByReference" resultType="com.ssafy.trip.accommodation.model.Image">
+        SELECT * FROM images 
+        WHERE reference_id = #{referenceId} 
+        AND reference_type = #{referenceType} 
+        AND is_main = true
+        LIMIT 1
+    </select>
+
+    <!-- 이미지 정보를 업데이트합니다. -->
+    <update id="updateImage">
+        UPDATE images
+        SET 
+            image_url = #{imageUrl},
+            caption = #{caption}
+        WHERE image_id = #{imageId}
+    </update>
+
+    <!-- 이미지를 삭제합니다. -->
+    <delete id="deleteImage">
+        DELETE FROM images WHERE image_id = #{imageId}
+    </delete>
+
+    <!-- 참조 ID와 참조 타입으로 이미지를 삭제합니다. -->
+    <delete id="deleteImagesByReference">
+        DELETE FROM images 
+        WHERE reference_id = #{referenceId} AND reference_type = #{referenceType}
+    </delete>
+
+    <!-- 이미지를 대표 이미지로 설정합니다. -->
+    <update id="setMainImage">
+        UPDATE images
+        SET is_main = false
+        WHERE reference_id = #{referenceId} AND reference_type = #{referenceType};
+        
+        UPDATE images
+        SET is_main = true
+        WHERE image_id = #{imageId}
+    </update>
+
+    <!-- 외부 API에서 가져온 이미지 정보를 저장합니다. -->
+    <insert id="insertFromApi" useGeneratedKeys="true" keyProperty="imageId">
+        INSERT INTO images (
+            reference_id, reference_type, image_url, is_main, caption, created_at
+        )
+        VALUES (
+            #{referenceId}, #{referenceType}, #{imageUrl}, #{isMain}, #{caption}, NOW()
+        )
+    </insert>
+</mapper>

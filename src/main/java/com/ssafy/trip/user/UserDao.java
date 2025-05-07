@@ -19,7 +19,7 @@ public interface UserDao {
     /**
      * 이메일과 비밀번호로 로그인합니다.
      */
-    User login(String email, String passwordHash) throws SQLException;
+    User login(String email, String password) throws SQLException;
 
     /**
      * 모든 사용자 목록을 조회합니다.
@@ -29,7 +29,12 @@ public interface UserDao {
     /**
      * 사용자 정보를 업데이트합니다.
      */
-    int updateUser(String email, String username, String passwordHash) throws SQLException;
+    int updateUser(String email, String username, String password) throws SQLException;
+
+    /**
+     * 사용자 상태를 업데이트합니다.
+     */
+    int updateUserStatus(Long userId, String status) throws SQLException;
 
     /**
      * 사용자를 삭제합니다.

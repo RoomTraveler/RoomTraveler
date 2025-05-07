@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.ssafy.trip.admin.AdminDao">
+
+    <!-- 사용자 통계 정보 조회 -->
+    <select id="getUserStatistics" resultType="java.util.HashMap">
+        SELECT 
+            COUNT(*) as totalUsers,
+            SUM(CASE WHEN status = 'ACTIVE' THEN 1 ELSE 0 END) as activeUsers,
+            SUM(CASE WHEN role = 'HOST' THEN 1 ELSE 0 END) as hostCount,
+            SUM(CASE WHEN role = 'ADMIN' THEN 1 ELSE 0 END) as adminCount
+        FROM users
+    </select>
+
+    <!-- 숙소 통계 정보 조회 -->
+    <select id="getAccommodationStatistics" resultType="java.util.HashMap">
+        SELECT 
+            COUNT(*) as totalAccommodations,
+            SUM(CASE WHEN status = 'ACTIVE' THEN 1 ELSE 0 END) as activeAccommodations,
+            (SELECT COUNT(*) FROM rooms) as totalRooms
+        FROM accommodations
+    </select>
+
+    <!-- 예약 통계 정보 조회 -->
+    <select id="getReservationStatistics" resultType="java.util.HashMap">
+        SELECT 
+            COUNT(*) as totalReservations,
+            SUM(CASE WHEN status = 'COMPLETED' THEN 1 ELSE 0 END) as completedReservations,
+            SUM(CASE WHEN status = 'CANCELLED' THEN 1 ELSE 0 END) as cancelledReservations
+        FROM reservations
+    </select>
+
+    <!-- 모든 시도 정보 조회 -->
+    <select id="getAllSidos" resultType="com.ssafy.trip.map.MapDTO$Sido">
+        SELECT sido_code as code, sido_name as name FROM sidos ORDER BY sido_code
+    </select>
+
+    <!-- 시도 코드로 구군 목록 조회 -->
+    <select id="getGugunsBySido" resultType="com.ssafy.trip.map.MapDTO$Gugun">
+        SELECT gugun_code as code, gugun_name as name FROM guguns WHERE sido_code = #{sidoCode} ORDER BY gugun_code
+    </select>
+
+    <!-- 모든 시도 데이터 삭제 -->
+    <delete id="clearAllSidos">
+        DELETE FROM sidos
+    </delete>
+
+    <!-- 특정 시도에 속한 모든 구군 데이터 삭제 -->
+    <delete id="clearGugunsBySido">
+        DELETE FROM guguns WHERE sido_code = #{sidoCode}
+    </delete>
+
+    <!-- TourAPI에서 가져온 시도 데이터 저장 -->
+    <insert id="importSidos">
+        INSERT INTO sidos (sido_code, sido_name)
+        VALUES 
+        <foreach collection="list" item="sido" separator=",">
+            (#{sido.code}, #{sido.name})
+        </foreach>
+        ON DUPLICATE KEY UPDATE sido_name = VALUES(sido_name)
+    </insert>
+
+    <!-- TourAPI에서 가져온 구군 데이터 저장 -->
+    <insert id="importGuguns">
+        INSERT INTO guguns (gugun_code, gugun_name, sido_code)
+        VALUES 
+        <foreach collection="guguns" item="gugun" separator=",">
+            (#{gugun.code}, #{gugun.name}, #{sidoCode})
+        </foreach>
+        ON DUPLICATE KEY UPDATE gugun_name = VALUES(gugun_name)
+    </insert>
+
+</mapper>

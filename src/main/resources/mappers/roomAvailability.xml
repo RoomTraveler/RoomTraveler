@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.ssafy.trip.accommodation.dao.RoomAvailabilityDao">
+
+    <!-- 새 객실 가용성 정보 등록 -->
+    <insert id="insert" useGeneratedKeys="true" keyProperty="availabilityId">
+        INSERT INTO room_availability (
+            room_id, date, available_count, price
+        ) VALUES (
+            #{roomId}, #{date}, #{availableCount}, #{price}
+        )
+    </insert>
+    
+    <!-- 가용성 ID로 객실 가용성 정보 조회 -->
+    <select id="getAvailabilityById" resultType="com.ssafy.trip.accommodation.model.RoomAvailability">
+        SELECT ra.*,
+               r.name AS roomName,
+               r.accommodation_id AS accommodationId,
+               a.title AS accommodationTitle,
+               r.price AS basePrice
+        FROM room_availability ra
+        JOIN rooms r ON ra.room_id = r.room_id
+        JOIN accommodations a ON r.accommodation_id = a.accommodation_id
+        WHERE ra.availability_id = #{availabilityId}
+    </select>
+    
+    <!-- 객실 ID와 날짜로 객실 가용성 정보 조회 -->
+    <select id="getAvailabilityByRoomIdAndDate" resultType="com.ssafy.trip.accommodation.model.RoomAvailability">
+        SELECT ra.*,
+               r.name AS roomName,
+               r.accommodation_id AS accommodationId,
+               a.title AS accommodationTitle,
+               r.price AS basePrice
+        FROM room_availability ra
+        JOIN rooms r ON ra.room_id = r.room_id
+        JOIN accommodations a ON r.accommodation_id = a.accommodation_id
+        WHERE ra.room_id = #{param1}
+        AND ra.date = #{param2}
+    </select>
+    
+    <!-- 객실 ID로 객실 가용성 정보 목록 조회 -->
+    <select id="getAvailabilitiesByRoomId" resultType="com.ssafy.trip.accommodation.model.RoomAvailability">
+        SELECT ra.*,
+               r.name AS roomName,
+               r.accommodation_id AS accommodationId,
+               a.title AS accommodationTitle,
+               r.price AS basePrice
+        FROM room_availability ra
+        JOIN rooms r ON ra.room_id = r.room_id
+        JOIN accommodations a ON r.accommodation_id = a.accommodation_id
+        WHERE ra.room_id = #{roomId}
+        ORDER BY ra.date ASC
+    </select>
+    
+    <!-- 객실 ID와 날짜 범위로 객실 가용성 정보 목록 조회 -->
+    <select id="getAvailabilitiesByRoomIdAndDateRange" resultType="com.ssafy.trip.accommodation.model.RoomAvailability">
+        SELECT ra.*,
+               r.name AS roomName,
+               r.accommodation_id AS accommodationId,
+               a.title AS accommodationTitle,
+               r.price AS basePrice
+        FROM room_availability ra
+        JOIN rooms r ON ra.room_id = r.room_id
+        JOIN accommodations a ON r.accommodation_id = a.accommodation_id
+        WHERE ra.room_id = #{param1}
+        AND ra.date BETWEEN #{param2} AND #{param3}
+        ORDER BY ra.date ASC
+    </select>
+    
+    <!-- 숙소 ID와 날짜 범위로 객실 가용성 정보 목록 조회 -->
+    <select id="getAvailabilitiesByAccommodationIdAndDateRange" resultType="com.ssafy.trip.accommodation.model.RoomAvailability">
+        SELECT ra.*,
+               r.name AS roomName,
+               r.accommodation_id AS accommodationId,
+               a.title AS accommodationTitle,
+               r.price AS basePrice
+        FROM room_availability ra
+        JOIN rooms r ON ra.room_id = r.room_id
+        JOIN accommodations a ON r.accommodation_id = a.accommodation_id
+        WHERE r.accommodation_id = #{param1}
+        AND ra.date BETWEEN #{param2} AND #{param3}
+        ORDER BY r.name, ra.date ASC
+    </select>
+    
+    <!-- 객실 가용성 정보 업데이트 -->
+    <update id="updateAvailability">
+        UPDATE room_availability
+        SET available_count = #{availableCount},
+            price = #{price}
+        WHERE availability_id = #{availabilityId}
+    </update>
+    
+    <!-- 객실 ID와 날짜로 가용 객실 수 업데이트 -->
+    <update id="updateAvailableCount">
+        INSERT INTO room_availability (room_id, date, available_count, price)
+        VALUES (#{param1}, #{param2}, #{param3}, (SELECT price FROM rooms WHERE room_id = #{param1}))
+        ON DUPLICATE KEY UPDATE available_count = #{param3}
+    </update>
+    
+    <!-- 객실 ID와 날짜로 특별 가격 업데이트 -->
+    <update id="updatePrice">
+        INSERT INTO room_availability (room_id, date, available_count, price)
+        VALUES (#{param1}, #{param2}, (SELECT room_count FROM rooms WHERE room_id = #{param1}), #{param3})
+        ON DUPLICATE KEY UPDATE price = #{param3}
+    </update>
+    
+    <!-- 객실 가용성 정보 삭제 -->
+    <delete id="deleteAvailability">
+        DELETE FROM room_availability
+        WHERE availability_id = #{availabilityId}
+    </delete>
+    
+    <!-- 객실 ID와 날짜로 객실 가용성 정보 삭제 -->
+    <delete id="deleteAvailabilityByRoomIdAndDate">
+        DELETE FROM room_availability
+        WHERE room_id = #{param1}
+        AND date = #{param2}
+    </delete>
+    
+    <!-- 객실 ID로 모든 객실 가용성 정보 삭제 -->
+    <delete id="deleteAvailabilitiesByRoomId">
+        DELETE FROM room_availability
+        WHERE room_id = #{roomId}
+    </delete>
+    
+    <!-- 필터링된 객실 가용성 정보 목록 조회 -->
+    <select id="getFilteredAvailabilities" resultType="com.ssafy.trip.accommodation.model.RoomAvailability">
+        SELECT ra.*,
+               r.name AS roomName,
+               r.accommodation_id AS accommodationId,
+               a.title AS accommodationTitle,
+               r.price AS basePrice
+        FROM room_availability ra
+        JOIN rooms r ON ra.room_id = r.room_id
+        JOIN accommodations a ON r.accommodation_id = a.accommodation_id
+        <where>
+            <if test="roomId != null">
+                AND ra.room_id = #{roomId}
+            </if>
+            <if test="accommodationId != null">
+                AND r.accommodation_id = #{accommodationId}
+            </if>
+            <if test="startDate != null">
+                AND ra.date &gt;= #{startDate}
+            </if>
+            <if test="endDate != null">
+                AND ra.date &lt;= #{endDate}
+            </if>
+            <if test="minAvailableCount != null">
+                AND ra.available_count &gt;= #{minAvailableCount}
+            </if>
+            <if test="maxPrice != null">
+                AND ra.price &lt;= #{maxPrice}
+            </if>
+        </where>
+        ORDER BY 
+        <choose>
+            <when test="sortBy != null and sortBy == 'price'">
+                ra.price
+            </when>
+            <when test="sortBy != null and sortBy == 'availableCount'">
+                ra.available_count
+            </when>
+            <otherwise>
+                ra.date
+            </otherwise>
+        </choose>
+        <choose>
+            <when test="sortOrder != null and sortOrder == 'desc'">
+                DESC
+            </when>
+            <otherwise>
+                ASC
+            </otherwise>
+        </choose>
+    </select>
+</mapper>
