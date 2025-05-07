@@ -14,8 +14,9 @@ public class MapDTO {
     @AllArgsConstructor
     @Builder
     public static class PlanStoreDTO {
-        private String id;
-        private List<Integer> attractionIds;
+        private Long userId;
+        private Long planId;
+        private List<Long> attractionIds;
     }
 
     @Data
@@ -35,38 +36,30 @@ public class MapDTO {
         private String overview;
     }
 
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
-    @Builder
-    public static class ShortestPlanRequest {
-        private RegionTripResDto startLocation;
-        private List<RegionTripResDto> locations;
-    }
+//    @Data
+//    @NoArgsConstructor
+//    @AllArgsConstructor
+//    @Builder
+//    public static class ShortestPlanRequest {
+//        private RegionTripResDto startLocation;
+//        private List<RegionTripResDto> locations;
+//    }
 
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
-    @Builder
-    public static class Plan {
-        private int planId;
-    }
-
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class Sido {
-    	private int code;
-        private String name;
-    }
-
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class Gugun {
-        private int code;
-        private String name;
-    }
+//    @Data
+//    @NoArgsConstructor
+//    @AllArgsConstructor
+//    public static class Sido {
+//    	private int code;
+//        private String name;
+//    }
+//
+//    @Data
+//    @NoArgsConstructor
+//    @AllArgsConstructor
+//    public static class Gugun {
+//        private int code;
+//        private String name;
+//    }
 
     @Data
     @NoArgsConstructor
@@ -90,5 +83,12 @@ public class MapDTO {
     public static class MapBound {
         private LatLng southWest;
         private LatLng northEast;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class TotalPage {
+        private int totalPages;
     }
 }

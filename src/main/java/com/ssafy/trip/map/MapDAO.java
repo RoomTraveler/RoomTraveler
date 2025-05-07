@@ -3,7 +3,7 @@ package com.ssafy.trip.map;
 import com.ssafy.trip.map.MapDTO.*;
 
 import org.apache.ibatis.annotations.Mapper;
-import org.apache.ibatis.annotations.Param;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 
@@ -26,13 +26,16 @@ public interface MapDAO{
     //List<RegionTripResDto> getInfoByLocalContent(int sidoCode, int gugunCode, int contentTypeId);
 
     // 7) 계획(plan) 생성 & 생성된 PK(plan_id) 획득
-    int insertPlan(Long userId);
+    long insertPlan(MapDTO.PlanStoreDTO planStoreDTO);
 
     // 8) plan↔attraction 매핑 테이블에 복수 삽입
     int insertPlanAttractions(MapDTO.PlanStoreDTO planStoreDTO);
 
+    List<Long> getPlanIds(Long userId);
     // 9) 사용자별 계획 조회
-    List<Plan> getPlan(Long userId);
+    List<Long> getPlans(Long planIds);
 
-    List<RegionTripResDto> getRegionTripWithinMapRange(MapBound mapBound);
+    List<RegionTripResDto> getRegionTripWithinMapRange(MapBound mapBound, Pageable pageable);
+
+    Integer countRegionTrips(MapBound mapBound);
 }

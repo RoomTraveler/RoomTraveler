@@ -16,53 +16,53 @@
     <result property="longitude" column="longitude"/>
   </resultMap>
 
-  <select id="getRegionTrip" resultMap="RegionTripResDtoMap">
-    SELECT no,
-           title,
-           first_image1 AS image,
-           addr1,
-           addr2,
-           tel,
-           latitude,
-           longitude
-      FROM attractions
-     WHERE si_gun_gu_code = #{gugunCode}
-       AND area_code  = #{sidoCode}
-  </select>
+<!--  <select id="getRegionTrip" resultMap="RegionTripResDtoMap">-->
+<!--    SELECT no,-->
+<!--           title,-->
+<!--           first_image1 AS image,-->
+<!--           addr1,-->
+<!--           addr2,-->
+<!--           tel,-->
+<!--           latitude,-->
+<!--           longitude-->
+<!--      FROM attractions-->
+<!--     WHERE si_gun_gu_code = #{gugunCode}-->
+<!--       AND area_code  = #{sidoCode}-->
+<!--  </select>-->
 
-  <select id="getInfoByLocalContent" resultMap="RegionTripResDtoMap">
-    SELECT no,
-           title,
-           first_image1 AS image,
-           addr1,
-           addr2,
-           tel,
-           latitude,
-           longitude
-      FROM attractions
-    WHERE si_gun_gu_code = #{gugunCode}
-      AND area_code  = #{sidoCode}
-       AND content_type_id = #{contentTypeId}
-  </select>
+<!--  <select id="getInfoByLocalContent" resultMap="RegionTripResDtoMap">-->
+<!--    SELECT no,-->
+<!--           title,-->
+<!--           first_image1 AS image,-->
+<!--           addr1,-->
+<!--           addr2,-->
+<!--           tel,-->
+<!--           latitude,-->
+<!--           longitude-->
+<!--      FROM attractions-->
+<!--    WHERE si_gun_gu_code = #{gugunCode}-->
+<!--      AND area_code  = #{sidoCode}-->
+<!--       AND content_type_id = #{contentTypeId}-->
+<!--  </select>-->
 
   <!-- 2) 시도/구군/컨텐츠타입 조회 -->
-  <resultMap id="SidoMap" type="com.ssafy.trip.map.MapDTO$Sido">
-    <result property="name" column="sido_name"/>
-    <result property="code" column="sido_code"/>
-  </resultMap>
-  <select id="getSidos" resultMap="SidoMap">
-    SELECT DISTINCT sido_name, sido_code FROM sidos
-  </select>
+<!--  <resultMap id="SidoMap" type="com.ssafy.trip.map.MapDTO$Sido">-->
+<!--    <result property="name" column="sido_name"/>-->
+<!--    <result property="code" column="sido_code"/>-->
+<!--  </resultMap>-->
+<!--  <select id="getSidos" resultMap="SidoMap">-->
+<!--    SELECT DISTINCT sido_name, sido_code FROM sidos-->
+<!--  </select>-->
 
-  <resultMap id="GugunMap" type="com.ssafy.trip.map.MapDTO$Gugun">
-    <result property="name" column="gugun_name"/>
-      <result property="code" column="gugun_code"/>
-  </resultMap>
-  <select id="getGuguns" resultMap="GugunMap">
-    SELECT DISTINCT gugun_name, gugun_code
-    FROM guguns
-    WHERE sido_code = #{sido}
-  </select>
+<!--  <resultMap id="GugunMap" type="com.ssafy.trip.map.MapDTO$Gugun">-->
+<!--    <result property="name" column="gugun_name"/>-->
+<!--      <result property="code" column="gugun_code"/>-->
+<!--  </resultMap>-->
+<!--  <select id="getGuguns" resultMap="GugunMap">-->
+<!--    SELECT DISTINCT gugun_name, gugun_code-->
+<!--    FROM guguns-->
+<!--    WHERE sido_code = #{sido}-->
+<!--  </select>-->
 
   <resultMap id="ContentTypeMap" type="com.ssafy.trip.map.MapDTO$ContentType">
     <result property="code" column="content_type_id"/>
@@ -85,12 +85,15 @@
     </foreach>
   </insert>
 
-  <resultMap id="PlanMap" type="com.ssafy.trip.map.MapDTO$Plan">
-    <id property="planId" column="plan_id"/>
-  </resultMap>
-  <select id="getPlan" resultMap="PlanMap">
+  <select id="getPlanIds">
     SELECT plan_id FROM plan WHERE user_id = #{userId}
   </select>
+
+    <select id="getPlans">
+        SELECT attraction_id
+        FROM plan_attraction
+        WHERE plan_id = #{planId}
+    </select>
 
     <select id="getRegionTripWithinMapRange" resultMap="RegionTripResDtoMap">
         SELECT no,
@@ -101,6 +104,14 @@
             tel,
             latitude,
             longitude
+        FROM attractions
+        WHERE latitude BETWEEN #{mapBound.southWest.latitude} AND #{mapBound.northEast.latitude}
+          AND longitude BETWEEN #{mapBound.southWest.longitude} AND #{mapBound.northEast.longitude}
+        LIMIT ${pageable.offset}, ${pageable.pageSize}
+    </select>
+
+    <select id="countRegionTrips" resultType="int">
+        select count(*) as region_trip_count
         FROM attractions
         WHERE latitude BETWEEN #{southWest.latitude} AND #{northEast.latitude}
           AND longitude BETWEEN #{southWest.longitude} AND #{northEast.longitude}

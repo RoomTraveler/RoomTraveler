@@ -2,10 +2,8 @@
 package com.ssafy.trip.map;
 
 import com.ssafy.trip.map.MapDTO.ContentType;
-import com.ssafy.trip.map.MapDTO.Gugun;
-import com.ssafy.trip.map.MapDTO.Plan;
 import com.ssafy.trip.map.MapDTO.RegionTripResDto;
-import com.ssafy.trip.map.MapDTO.Sido;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 
@@ -16,7 +14,8 @@ public interface MapService {
     List<ContentType>       getContentTypes();
 //    List<RegionTripResDto>  getInfoByLocalContent(int sidoCode, int gugunCode, int contentTypeId);
     void                    savePlan(MapDTO.PlanStoreDTO planStoreDTO);
-    List<Plan>              getPlan(Long userId);
+    List<MapDTO.PlanStoreDTO>              getPlan(Long userId);
 //    List<RegionTripResDto>  findShortestPlan(RegionTripResDto startLocation, List<RegionTripResDto> locations);
-    List<RegionTripResDto>  getRegionTripWithinMapRange(MapDTO.MapBound mapBound);
+    List<RegionTripResDto>  getRegionTripWithinMapRange(MapDTO.MapBound mapBound, Pageable pageable);
+    MapDTO.TotalPage getRegionTripTotalPage(MapDTO.MapBound mapBound);
 }

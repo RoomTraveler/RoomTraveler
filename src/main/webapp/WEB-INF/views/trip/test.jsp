@@ -67,10 +67,8 @@
                     <h5>여행 일정 선택</h5>
                 </div>
                 <div class="card-body">
-                    <form method="get" action="${root}/trip">
-                        <input type="hidden" name="action" value="save-plan" />
-                        <input type="hidden" name="email" value="${email}" />
-
+                    <form method="get" action="map/plan">
+                        <input type="hidden" name="id" value="${id}" />
                         <ul id="selectedList" class="list-group mb-3" style="max-height:600px; overflow-y:auto;">
                             <!-- JS로 선택된 장소 채움 -->
                         </ul>
@@ -89,6 +87,7 @@
     // 초기 맵 세팅
     let map, mapMarkers = [], infoWindows = [];
     let currentOpenInfoWindow = null;
+    let mapBound = null;
     function initMap() {
         const defaultLat = 35.205432, defaultLng = 126.811591;
         const container = document.getElementById('map');
@@ -120,6 +119,25 @@
     // 페이지 로드시 자동 실행
     window.addEventListener("DOMContentLoaded", loadContentList);
 
+    async function fetchTourSpots(page) {
+
+        const params = new URLSearchParams({
+            mapBound: JSON.stringify(mapBound),
+            page: page,
+            size: 10
+        });
+
+        const response = await fetch(`/map/regions-content?\${params.toString()}`, {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json"
+            }
+        });
+        const data = await response.json();
+        renderSpots(data);
+        updateMap(data);
+    }
+
     // Spot 리스트 렌더링 (페이지네이션 고려)
     function renderSpots(spots) {
         const ul = document.getElementById("spotList");
@@ -140,10 +158,78 @@
         });
     }
 
+    function setPagination(totalPages, currentPage) {
+        const pagination = document.getElementById("pagination");
+        pagination.innerHTML = "";
+
+        const blockSize = 5; // 한번에 보여줄 페이지 수
+        const currentBlock = Math.floor(currentPage / blockSize);
+        const startPage = currentBlock * blockSize;
+        const endPage = Math.min(startPage + blockSize, totalPages);
+
+        // < 버튼 (이전 블럭)
+        if (startPage > 0) {
+            const prevLi = document.createElement("li");
+            prevLi.className = "page-item";
+            const prevA = document.createElement("a");
+            prevA.className = "page-link";
+            prevA.href = "#";
+            prevA.innerHTML = "&laquo;"; // <<
+            prevA.onclick = () => {
+                fetchTourSpots(startPage - 1);
+                return false;
+            };
+            prevLi.appendChild(prevA);
+            pagination.appendChild(prevLi);
+        }
+
+        // 페이지 번호 버튼
+        for (let i = startPage; i < endPage; i++) {
+            const li = document.createElement("li");
+            li.className = `page-item \${i === currentPage ? 'active' : ''}`;
+
+            const a = document.createElement("a");
+            a.className = "page-link";
+            a.href = "/map/regions-content?page=${i}";
+            a.textContent = i + 1;
+            a.onclick = () => {
+                fetchTourSpots(i);
+                return false;
+            };
+
+            li.appendChild(a);
+            pagination.appendChild(li);
+        }
+
+        // > 버튼 (다음 블럭)
+        if (endPage < totalPages) {
+            const nextLi = document.createElement("li");
+            nextLi.className = "page-item";
+            const nextA = document.createElement("a");
+            nextA.className = "page-link";
+            nextA.href = "#";
+            nextA.innerHTML = "&raquo;"; // >>
+            nextA.onclick = () => {
+                fetchTourSpots(endPage);
+                return false;
+            };
+            nextLi.appendChild(nextA);
+            pagination.appendChild(nextLi);
+        }
+    }
+
+    function removeMarkers() {
+        for (let i = 0; i < mapMarkers.length; i++) {
+            mapMarkers[i].setMap(null);
+        }
+        mapMarkers = [];
+        infoWindows = [];
+    }
+
     const updateMap = (infos) => {
         try {
-            mapMarkers = [];
-            infoWindows = [];
+            removeMarkers();
+
             for (let i = 0; i < infos.length; i++) {
                 const info = infos[i];
                 const markerPosition = new kakao.maps.LatLng(info.latitude, info.longitude);
@@ -195,11 +281,8 @@
     };
 
     const panTo = (x, y) => {
-        // 이동할 위도 경도 위치를 생성합니다
         var moveLatLon = new kakao.maps.LatLng(x, y);
 
-        // 지도 중심을 부드럽게 이동시킵니다
-        // 만약 이동할 거리가 지도 화면보다 크면 부드러운 효과 없이 이동합니다
         map.panTo(moveLatLon);
     }
 
@@ -215,7 +298,7 @@
     // 필터 버튼 이벤트
     document.getElementById('attractionBtn').addEventListener('click', async () => {
         const bounds = map.getBounds();
-        const mapBound = {
+        mapBound = {
             southWest: {
                 latitude: bounds.getSouthWest().getLat(),
                 longitude: bounds.getSouthWest().getLng()
@@ -225,16 +308,29 @@
                 longitude: bounds.getNorthEast().getLng()
             }
         };
-        const response = await fetch("/map/regions-content", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify(mapBound)
+
+        const params = new URLSearchParams({
+            mapBound: JSON.stringify(mapBound),
+            page: 0,
+            size: 10
+        });
+
+        const response = await fetch(`/map/regions-content?\${params.toString()}`, {
+            method: "GET"
         });
         const data = await response.json();
         renderSpots(data);
         updateMap(data);
+
+        const param = new URLSearchParams({
+            mapBound: JSON.stringify(mapBound)
+        });
+
+        const responseForPage = await fetch(`/map/regions-content-total-page?\${param.toString()}`, {
+            method: "GET"
+        });
+        const dataForPage = await responseForPage.json();
+        setPagination(dataForPage.totalPages, 0);
     });
 
     // 체크박스 클릭으로 선택 추가
@@ -242,6 +338,11 @@
         if (e.target.matches('input[type="checkbox"]')) {
             const id = e.target.dataset.id;
             const title = e.target.dataset.title;
+            console.log(e);
+            console.log(e.target);
+            console.log(e.target.dataset);
+            console.log(id);
+            console.log(title);
             if (e.target.checked) updateSelected(id, title);
             else {
                 // 체크 해제 시 선택 목록에서 제거

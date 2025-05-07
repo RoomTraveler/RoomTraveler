@@ -1,16 +1,14 @@
 // src/main/java/com/ssafy/trip/controller/MapController.java
 package com.ssafy.trip.map;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.trip.map.MapDTO.ContentType;
-import com.ssafy.trip.map.MapDTO.Gugun;
-import com.ssafy.trip.map.MapDTO.Plan;
 import com.ssafy.trip.map.MapDTO.RegionTripResDto;
-import com.ssafy.trip.map.MapDTO.ShortestPlanRequest;
-import com.ssafy.trip.map.MapDTO.Sido;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -21,6 +19,7 @@ import java.util.List;
 public class MapController {
 
     private final MapService mapService;
+    private final ObjectMapper objectMapper;
 
 //    @Value("${trip.key.vworld}")
 //    private String keyVworld;
@@ -47,10 +46,18 @@ public class MapController {
 //        return mapService.getRegionTrip(sidoCode, gugunCode);
 //    }
 
-    @PostMapping("/regions-content")
+    @GetMapping("/regions-content")
     @ResponseBody
-    public List<RegionTripResDto> getRegionTripWithContent(@RequestBody MapDTO.MapBound mapBound) {
-        return mapService.getRegionTripWithinMapRange(mapBound);
+    public List<RegionTripResDto> getRegionTripWithContent(@RequestParam String mapBound, @PageableDefault(size = 10) Pageable pageable) throws JsonProcessingException {
+        MapDTO.MapBound mapBoundObj = objectMapper.readValue(mapBound, MapDTO.MapBound.class);
+        return mapService.getRegionTripWithinMapRange(mapBoundObj, pageable);
+    }
+
+    @GetMapping("/regions-content-total-page")
+    @ResponseBody
+    public MapDTO.TotalPage getRegionTripTotalPage(@RequestParam String mapBound) throws JsonProcessingException {
+        MapDTO.MapBound mapBoundObj = objectMapper.readValue(mapBound, MapDTO.MapBound.class);
+        return mapService.getRegionTripTotalPage(mapBoundObj);
     }
 
     @GetMapping("/content-types")
@@ -72,7 +79,7 @@ public class MapController {
     }
 
     @GetMapping("/plan")
-    public List<Plan> getPlan(@RequestParam Long mno) {
+    public List<MapDTO.PlanStoreDTO> getPlan(@RequestParam Long mno) {
         return mapService.getPlan(mno);
     }
 }

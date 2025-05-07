@@ -2,13 +2,11 @@
 package com.ssafy.trip.map;
 
 import com.ssafy.trip.map.MapDTO.ContentType;
-import com.ssafy.trip.map.MapDTO.Gugun;
-import com.ssafy.trip.map.MapDTO.Plan;
 import com.ssafy.trip.map.MapDTO.RegionTripResDto;
-import com.ssafy.trip.map.MapDTO.Sido;
-import com.ssafy.trip.user.UserDao;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -44,18 +42,35 @@ public class MapServiceImpl implements MapService {
 //    }
 
     @Override
+    @Transactional
     public void savePlan(MapDTO.PlanStoreDTO planStoreDTO) {
+        mapDAO.insertPlan(planStoreDTO);
         mapDAO.insertPlanAttractions(planStoreDTO);
     }
 
     @Override
-    public List<Plan> getPlan(Long userId) {
-        return mapDAO.getPlan(userId);
+    public List<MapDTO.PlanStoreDTO> getPlan(Long userId) {
+        List<Long> planIds = mapDAO.getPlanIds(userId);
+        List<MapDTO.PlanStoreDTO> plans = new ArrayList<>();
+        for (Long planId : planIds) {
+            List<Long> planList = mapDAO.getPlans(planId);
+            MapDTO.PlanStoreDTO planStoreDTO = new MapDTO.PlanStoreDTO();
+            planStoreDTO.setUserId(userId);
+            planStoreDTO.setPlanId(planId);
+            planStoreDTO.setAttractionIds(planList);
+            plans.add(planStoreDTO);
+        }
+        return plans;
     }
 
     @Override
-    public List<RegionTripResDto> getRegionTripWithinMapRange(MapDTO.MapBound mapBound) {
-        return mapDAO.getRegionTripWithinMapRange(mapBound);
+    public List<RegionTripResDto> getRegionTripWithinMapRange(MapDTO.MapBound mapBound, Pageable pageable) {
+        return mapDAO.getRegionTripWithinMapRange(mapBound, pageable);
+    }
+
+    @Override
+    public MapDTO.TotalPage getRegionTripTotalPage(MapDTO.MapBound mapBound) {
+        return new MapDTO.TotalPage(mapDAO.countRegionTrips(mapBound));
     }
 
 //    @Override
