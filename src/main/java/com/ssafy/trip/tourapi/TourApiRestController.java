@@ -734,7 +734,7 @@ public class TourApiRestController {
             if (items.isMissingNode() || items.isEmpty()) {
                 return ResponseEntity.ok(Map.of(
                     "items", new ArrayList<>(),
-                    "totalCount", totalCount,
+                    "totalCount", 0,
                     "pageNo", pageNoResult,
                     "numOfRows", numOfRowsResult
                 ));
@@ -746,14 +746,41 @@ public class TourApiRestController {
                 items = jsonMapper.createArrayNode().add(singleItem);
             }
 
-            // 결과 반환
-            List<Object> accommodations = jsonMapper.convertValue(
+            // 결과를 List로 변환
+            List<Map<String, Object>> accommodations = jsonMapper.convertValue(
                     items,
-                    jsonMapper.getTypeFactory().constructCollectionType(List.class, Object.class)
+                    jsonMapper.getTypeFactory().constructCollectionType(List.class, 
+                        jsonMapper.getTypeFactory().constructMapType(Map.class, String.class, Object.class))
             );
 
+            // 객실이 있고 썸네일 이미지가 있는 숙소만 필터링
+            List<Map<String, Object>> filteredAccommodations = new ArrayList<>();
+
+            for (Map<String, Object> accommodation : accommodations) {
+                String contentId = accommodation.get("contentid").toString();
+                Object firstImage = accommodation.get("firstimage");
+                // 객실이 있고 썸네일 이미지가 있는 경우만 추가
+                if (hasRooms(contentId) && firstImage != null && !firstImage.toString().isEmpty()) {
+                    filteredAccommodations.add(accommodation);
+                }
+            }
+
+            // 필터링된 결과의 실제 개수를 totalCount로 사용
+            int filteredCount = filteredAccommodations.size();
+
+            // 시군구 코드가 비어있는 경우("전체" 선택) 원래 totalCount 값을 유지
+            // 이렇게 하면 "전체" 선택 시 모든 결과가 표시됨
+            if (sigunguCode == null || sigunguCode.isBlank()) {
+                // totalCount는 그대로 유지 (API에서 반환한 전체 개수)
+                logger.debug("Using original totalCount {} for 'All' sigungu selection", totalCount);
+            } else {
+                // 특정 시군구가 선택된 경우 필터링된 개수를 사용
+                totalCount = filteredCount;
+                logger.debug("Using filtered totalCount {} for specific sigungu {}", filteredCount, sigunguCode);
+            }
+
             return ResponseEntity.ok(Map.of(
-                "items", accommodations,
+                "items", filteredAccommodations,
                 "totalCount", totalCount,
                 "pageNo", pageNoResult,
                 "numOfRows", numOfRowsResult
@@ -764,6 +791,54 @@ public class TourApiRestController {
             logger.error("Exception while fetching accommodations", e);
             return ResponseEntity.status(500)
                     .body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    /**
+     * 숙박 시설에 객실이 있는지 확인하는 메소드
+     * @param contentId 콘텐츠 ID
+     * @return 객실이 있으면 true, 없으면 false
+     */
+    private boolean hasRooms(String contentId) {
+        try {
+            // 서비스 키 유효성 검증
+            String serviceKey = props.getServiceKey();
+            if (serviceKey == null || serviceKey.isBlank()) {
+                logger.error("TourAPI serviceKey is not configured");
+                return false;
+            }
+
+            // 객실 정보 요청 URL 빌더 초기화
+            UriComponentsBuilder roomBuilder = UriComponentsBuilder
+                    .fromHttpUrl(props.getBaseUrl() + "/detailInfo1")
+                    .queryParam("serviceKey", serviceKey)
+                    .queryParam("MobileOS", props.getMobileOs())
+                    .queryParam("MobileApp", props.getMobileApp())
+                    .queryParam("_type", "json")
+                    .queryParam("contentId", contentId)
+                    .queryParam("contentTypeId", "32"); // 숙박 타입 ID
+
+            // 객실 정보 요청
+            URI roomUri = new URI(roomBuilder.build(false).toUriString());
+            logger.debug("Checking rooms for accommodation {}: {}", contentId, roomUri);
+
+            String roomRaw = rest.getForObject(roomUri, String.class);
+            if (roomRaw == null || roomRaw.trim().startsWith("<")) {
+                return false;
+            }
+
+            JsonNode roomRoot = jsonMapper.readTree(roomRaw.trim());
+            JsonNode roomRespNode = roomRoot.path("response");
+            if (roomRespNode.isMissingNode()) {
+                return false;
+            }
+
+            JsonNode roomItems = roomRespNode.path("body").path("items").path("item");
+            return !roomItems.isMissingNode() && !roomItems.isEmpty();
+
+        } catch (Exception e) {
+            logger.error("Exception while checking rooms for accommodation {}", contentId, e);
+            return false;
         }
     }
 

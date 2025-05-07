@@ -341,11 +341,9 @@
                 data.items.forEach(item => {
                     const card = $('<div>').addClass('accommodation-card').attr('data-id', item.contentid);
 
-                    // 이미지 추가
+                    // 이미지 추가 (백엔드에서 이미지가 있는 것만 필터링했지만 안전하게 체크)
                     if (item.firstimage) {
                         card.append($('<img>').attr('src', item.firstimage).attr('alt', item.title));
-                    } else {
-                        card.append($('<img>').attr('src', 'https://via.placeholder.com/300x200?text=No+Image').attr('alt', 'No Image'));
                     }
 
                     // 정보 추가
