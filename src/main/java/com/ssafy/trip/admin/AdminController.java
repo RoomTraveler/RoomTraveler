@@ -150,6 +150,16 @@ public class AdminController {
         try {
             List<Accommodation> accommodations = accommodationService.getAllAccommodations();
             model.addAttribute("accommodations", accommodations);
+
+            // 시도 목록을 가져와서 모델에 추가
+            try {
+                List<Sido> sidos = adminService.getAllSidos();
+                model.addAttribute("sidos", sidos);
+            } catch (Exception e) {
+                logger.warn("시도 목록을 가져오는 중 오류 발생", e);
+                // 오류가 발생해도 페이지는 계속 로드
+            }
+
             return "admin/accommodations";
         } catch (Exception e) {
             logger.error("숙소 관리 페이지 로딩 중 오류 발생", e);
@@ -212,6 +222,67 @@ public class AdminController {
             Map<String, Object> response = new HashMap<>();
             response.put("success", false);
             response.put("message", "숙소 삭제 중 오류가 발생했습니다: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
+
+    /**
+     * 모든 숙소를 삭제합니다.
+     */
+    @DeleteMapping("/accommodations/all")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> deleteAllAccommodations() {
+        try {
+            // 모든 숙소 조회
+            List<Accommodation> accommodations = accommodationService.getAllAccommodations();
+            int totalCount = accommodations.size();
+
+            if (totalCount == 0) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", true);
+                response.put("message", "삭제할 숙소가 없습니다.");
+                return ResponseEntity.ok(response);
+            }
+
+            // 트랜잭션 내에서 모든 숙소 삭제 시도
+            int successCount = 0;
+
+            // 각 숙소에 대해 삭제 시도
+            for (Accommodation acc : accommodations) {
+                try {
+                    // 숙소 삭제 전에 관련 데이터 확인
+                    Long accommodationId = acc.getAccommodationId();
+                    logger.info("숙소 삭제 시도: ID={}, 제목={}", accommodationId, acc.getTitle());
+
+                    // 숙소 삭제 실행
+                    int result = accommodationService.deleteAccommodation(accommodationId);
+
+                    if (result > 0) {
+                        successCount++;
+                        logger.info("숙소 삭제 성공: ID={}", accommodationId);
+                    } else {
+                        logger.warn("숙소 삭제 실패: ID={}, 영향받은 행 수: {}", accommodationId, result);
+                    }
+                } catch (Exception e) {
+                    logger.error("개별 숙소 삭제 중 오류 발생: ID=" + acc.getAccommodationId(), e);
+                }
+            }
+
+            Map<String, Object> response = new HashMap<>();
+            if (successCount == totalCount) {
+                response.put("success", true);
+                response.put("message", "모든 숙소가 성공적으로 삭제되었습니다. (총 " + successCount + "개)");
+            } else {
+                response.put("success", true);
+                response.put("message", "일부 숙소만 삭제되었습니다. (" + successCount + "/" + totalCount + ")");
+            }
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            logger.error("모든 숙소 삭제 중 오류 발생", e);
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "모든 숙소 삭제 중 오류가 발생했습니다: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
@@ -381,74 +452,115 @@ public class AdminController {
     public ResponseEntity<Map<String, Object>> importAccommodations(
             @RequestParam(required = false) Integer sidoCode,
             @RequestParam(required = false) Integer gugunCode,
-            @RequestParam(defaultValue = "10") Integer limit,
+            @RequestParam(required = false) Boolean clearExisting,
             HttpSession session) {
         try {
+            // 기존 데이터 삭제 옵션이 활성화된 경우
+            if (clearExisting != null && clearExisting) {
+                logger.info("기존 숙소 데이터를 삭제합니다.");
+                // 모든 숙소 삭제 (이 부분은 실제 구현 필요)
+                List<Accommodation> existingAccommodations = accommodationService.getAllAccommodations();
+                for (Accommodation acc : existingAccommodations) {
+                    accommodationService.deleteAccommodation(acc.getAccommodationId());
+                }
+                logger.info("기존 숙소 데이터 삭제 완료");
+            }
+
             String serviceKey = tourApiProperties.getServiceKey();
             String baseUrl = tourApiProperties.getBaseUrl();
-
-            UriComponentsBuilder builder = UriComponentsBuilder
-                    .fromHttpUrl(baseUrl + "/searchStay1")
-                    .queryParam("serviceKey", serviceKey)
-                    .queryParam("MobileOS", tourApiProperties.getMobileOs())
-                    .queryParam("MobileApp", tourApiProperties.getMobileApp())
-                    .queryParam("_type", "json")
-                    .queryParam("listYN", "Y")
-                    .queryParam("arrange", "A")
-                    .queryParam("numOfRows", 1000)  // 최대한 많은 데이터를 가져오기 위해 큰 값 설정
-                    .queryParam("pageNo", 1);
-
-            // 선택적 파라미터 추가
-            if (sidoCode != null) {
-                builder.queryParam("areaCode", sidoCode);
-            }
-            if (gugunCode != null) {
-                builder.queryParam("sigunguCode", gugunCode);
-            }
-
-            URI uri = new URI(builder.build(false).toUriString());
-            String response = restTemplate.getForObject(uri, String.class);
-
-            // JSON 파싱
-            JsonNode root = objectMapper.readTree(response);
-            JsonNode items = root.path("response").path("body").path("items").path("item");
-
             int importedCount = 0;
+            int pageNo = 1;
+            int totalPages = 1;
+            int numOfRows = 100; // 한 페이지당 가져올 데이터 수
 
-            if (items.isArray()) {
-                for (JsonNode item : items) {
-                    String contentId = item.path("contentid").asText();
+            // 중복 체크를 위한 Set
+            java.util.Set<String> processedContentIds = new java.util.HashSet<>();
 
-                    // 숙소 상세 정보 가져오기
-                    Accommodation accommodation = fetchAccommodationDetail(contentId, session);
-                    if (accommodation == null) continue;
+            // 모든 페이지 처리
+            do {
+                UriComponentsBuilder builder = UriComponentsBuilder
+                        .fromHttpUrl(baseUrl + "/searchStay1")
+                        .queryParam("serviceKey", serviceKey)
+                        .queryParam("MobileOS", tourApiProperties.getMobileOs())
+                        .queryParam("MobileApp", tourApiProperties.getMobileApp())
+                        .queryParam("_type", "json")
+                        .queryParam("listYN", "Y")
+                        .queryParam("arrange", "A")
+                        .queryParam("numOfRows", numOfRows)
+                        .queryParam("pageNo", pageNo);
 
-                    // 객실 정보 가져오기
-                    List<Room> rooms = fetchRoomInfo(contentId);
-                    if (rooms.isEmpty()) continue;
+                // 선택적 파라미터 추가
+                if (sidoCode != null) {
+                    builder.queryParam("areaCode", sidoCode);
+                }
+                if (gugunCode != null) {
+                    builder.queryParam("sigunguCode", gugunCode);
+                }
 
-                    // 이미지 정보 가져오기
-                    List<Image> images = fetchImageInfo(contentId);
+                URI uri = new URI(builder.build(false).toUriString());
+                String response = restTemplate.getForObject(uri, String.class);
 
-                    // 썸네일 이미지가 있는지 확인
-                    boolean hasMainImage = false;
-                    for (Image image : images) {
-                        if (image.getIsMain() != null && image.getIsMain()) {
-                            hasMainImage = true;
-                            break;
+                // JSON 파싱
+                JsonNode root = objectMapper.readTree(response);
+                JsonNode body = root.path("response").path("body");
+
+                // 총 페이지 수 계산
+                int totalCount = body.path("totalCount").asInt(0);
+                if (pageNo == 1) { // 첫 페이지에서만 계산
+                    totalPages = (int) Math.ceil((double) totalCount / numOfRows);
+                    logger.info("총 " + totalCount + "개의 숙소 데이터가 있습니다. 총 " + totalPages + "페이지를 처리합니다.");
+                }
+
+                JsonNode items = body.path("items").path("item");
+
+                if (items.isArray()) {
+                    for (JsonNode item : items) {
+                        String contentId = item.path("contentid").asText();
+
+                        // 중복 체크
+                        if (processedContentIds.contains(contentId)) {
+                            logger.info("중복된 contentId: " + contentId + ", 건너뜁니다.");
+                            continue;
+                        }
+
+                        processedContentIds.add(contentId);
+
+                        // 숙소 상세 정보 가져오기
+                        Accommodation accommodation = fetchAccommodationDetail(contentId, session);
+                        if (accommodation == null) continue;
+
+                        // 객실 정보 가져오기
+                        List<Room> rooms = fetchRoomInfo(contentId);
+                        if (rooms.isEmpty()) continue;
+
+                        // 이미지 정보 가져오기
+                        List<Image> images = fetchImageInfo(contentId);
+
+                        // 썸네일 이미지가 있는지 확인
+                        boolean hasMainImage = false;
+                        for (Image image : images) {
+                            if (image.getIsMain() != null && image.getIsMain()) {
+                                hasMainImage = true;
+                                break;
+                            }
+                        }
+
+                        // 썸네일 이미지가 없으면 건너뛰기
+                        if (!hasMainImage) continue;
+
+                        // DB에 저장
+                        Long accommodationId = accommodationService.importFromApi(accommodation, rooms, images);
+                        if (accommodationId != null) {
+                            importedCount++;
+                            logger.info("숙소 데이터 가져오기 진행 중: " + importedCount + "개 완료");
                         }
                     }
-
-                    // 썸네일 이미지가 없으면 건너뛰기
-                    if (!hasMainImage) continue;
-
-                    // DB에 저장
-                    Long accommodationId = accommodationService.importFromApi(accommodation, rooms, images);
-                    if (accommodationId != null) {
-                        importedCount++;
-                    }
                 }
-            }
+
+                pageNo++;
+                logger.info("페이지 " + (pageNo-1) + "/" + totalPages + " 처리 완료");
+
+            } while (pageNo <= totalPages);
 
             Map<String, Object> result = new HashMap<>();
             result.put("success", true);
@@ -511,8 +623,6 @@ public class AdminController {
         // API에서 가져온 시도 코드
         int apiSidoCode = item.path("areacode").asInt(0);
 
-        // 유효한 시도 코드인지 확인하고 설정
-        int validSidoCode = 1; // 기본값으로 서울(1) 설정
         try {
             // 데이터베이스에서 모든 시도 목록 가져오기
             List<Sido> validSidos = adminService.getAllSidos();
@@ -526,45 +636,38 @@ public class AdminController {
             // API에서 가져온 시도 코드가 유효한지 확인
             if (validSidoCodes.contains(apiSidoCode)) {
                 // 유효한 시도 코드면 그대로 사용
-                validSidoCode = apiSidoCode;
+                accommodation.setSidoCode(apiSidoCode);
+
+                // API에서 가져온 구군 코드
+                int apiGugunCode = item.path("sigungucode").asInt(0);
+
+                // 선택된 시도에 해당하는 구군 목록 가져오기
+                List<Gugun> validGuguns = adminService.getGugunsBySido(apiSidoCode);
+
+                // 유효한 구군 코드 목록 생성
+                List<Integer> validGugunCodes = new ArrayList<>();
+                for (Gugun gugun : validGuguns) {
+                    validGugunCodes.add(gugun.getCode());
+                }
+
+                // API에서 가져온 구군 코드가 유효한지 확인
+                if (validGugunCodes.contains(apiGugunCode)) {
+                    // 유효한 구군 코드면 그대로 사용
+                    accommodation.setGugunCode(apiGugunCode);
+                } else {
+                    // 유효하지 않은 구군 코드면 건너뛰기
+                    logger.warn("유효하지 않은 구군 코드: " + apiGugunCode + ", 이 숙소는 건너뜁니다.");
+                    return null; // 유효하지 않은 구군 코드가 있는 숙소는 건너뛰기
+                }
             } else {
-                // 유효하지 않은 시도 코드면 기본값(서울) 사용
-                logger.warn("유효하지 않은 시도 코드: " + apiSidoCode + ", 기본값(1)으로 설정합니다.");
+                // 유효하지 않은 시도 코드면 건너뛰기
+                logger.warn("유효하지 않은 시도 코드: " + apiSidoCode + ", 이 숙소는 건너뜁니다.");
+                return null; // 유효하지 않은 시도 코드가 있는 숙소는 건너뛰기
             }
         } catch (Exception e) {
-            // 시도 목록 조회 중 오류 발생 시 기본값 사용
-            logger.error("시도 목록 조회 중 오류 발생, 기본값(1)으로 설정합니다: " + e.getMessage());
-        }
-
-        accommodation.setSidoCode(validSidoCode);
-
-        // API에서 가져온 구군 코드
-        int apiGugunCode = item.path("sigungucode").asInt(0);
-
-        // 유효한 구군 코드인지 확인하고 설정
-        try {
-            // 선택된 시도에 해당하는 구군 목록 가져오기
-            List<Gugun> validGuguns = adminService.getGugunsBySido(validSidoCode);
-
-            // 유효한 구군 코드 목록 생성
-            List<Integer> validGugunCodes = new ArrayList<>();
-            for (Gugun gugun : validGuguns) {
-                validGugunCodes.add(gugun.getCode());
-            }
-
-            // API에서 가져온 구군 코드가 유효한지 확인
-            if (validGugunCodes.contains(apiGugunCode)) {
-                // 유효한 구군 코드면 그대로 사용
-                accommodation.setGugunCode(apiGugunCode);
-            } else {
-                // 유효하지 않은 구군 코드면 기본값(1) 사용
-                logger.warn("유효하지 않은 구군 코드: " + apiGugunCode + ", 기본값(1)으로 설정합니다.");
-                accommodation.setGugunCode(1); // 기본 구군 코드
-            }
-        } catch (Exception e) {
-            // 구군 목록 조회 중 오류 발생 시 기본값 사용
-            logger.error("구군 목록 조회 중 오류 발생, 기본값(1)으로 설정합니다: " + e.getMessage());
-            accommodation.setGugunCode(1); // 기본 구군 코드
+            // 시도/구군 목록 조회 중 오류 발생 시 건너뛰기
+            logger.error("시도/구군 목록 조회 중 오류 발생, 이 숙소는 건너뜁니다: " + e.getMessage());
+            return null; // 오류가 발생한 숙소는 건너뛰기
         }
 
         // 위도, 경도가 있는 경우에만 설정
@@ -608,6 +711,12 @@ public class AdminController {
 
         URI uri = new URI(builder.build(false).toUriString());
         String response = restTemplate.getForObject(uri, String.class);
+
+        // 응답이 JSON이 아닌 경우 처리 (HTML 등)
+        if (response != null && response.trim().startsWith("<")) {
+            logger.warn("객실 정보 API가 JSON이 아닌 응답을 반환했습니다: " + response.substring(0, Math.min(100, response.length())) + "...");
+            return new ArrayList<>(); // 빈 객실 목록 반환
+        }
 
         // JSON 파싱
         JsonNode root = objectMapper.readTree(response);
@@ -709,7 +818,15 @@ public class AdminController {
                 Image image = new Image();
 
                 // 이미지 정보 매핑
-                image.setImageUrl(item.path("originimgurl").asText(""));
+                String imageUrl = item.path("originimgurl").asText("");
+                // 이미지 URL이 비어있거나 유효하지 않은 경우 플레이스홀더 이미지 사용
+                if (imageUrl == null || imageUrl.isEmpty()) {
+                    imageUrl = "https://via.placeholder.com/800x600?text=No+Image+Available";
+                } else if (!imageUrl.startsWith("http")) {
+                    // URL이 http로 시작하지 않으면 http://를 추가
+                    imageUrl = "http://" + imageUrl;
+                }
+                image.setImageUrl(imageUrl);
                 image.setCaption(item.path("imgname").asText(""));
 
                 // 첫 번째 이미지를 대표 이미지로 설정

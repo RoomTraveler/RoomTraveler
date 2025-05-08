@@ -90,7 +90,15 @@ public class AccommodationServiceImpl implements AccommodationService {
             List<Image> images = imageDao.getImagesByReference(roomId, "ROOM");
             List<String> imageUrls = new ArrayList<>();
             for (Image image : images) {
-                imageUrls.add(image.getImageUrl());
+                String imageUrl = image.getImageUrl();
+                // 이미지 URL이 비어있거나 유효하지 않은 경우 플레이스홀더 이미지 사용
+                if (imageUrl == null || imageUrl.isEmpty()) {
+                    imageUrl = "https://via.placeholder.com/800x600?text=No+Image+Available";
+                } else if (!imageUrl.startsWith("http")) {
+                    // URL이 http로 시작하지 않으면 http://를 추가
+                    imageUrl = "http://" + imageUrl;
+                }
+                imageUrls.add(imageUrl);
             }
             room.setImageUrls(imageUrls);
         }
@@ -117,7 +125,15 @@ public class AccommodationServiceImpl implements AccommodationService {
             List<Image> images = imageDao.getImagesByReference(room.getRoomId(), "ROOM");
             List<String> imageUrls = new ArrayList<>();
             for (Image image : images) {
-                imageUrls.add(image.getImageUrl());
+                String imageUrl = image.getImageUrl();
+                // 이미지 URL이 비어있거나 유효하지 않은 경우 플레이스홀더 이미지 사용
+                if (imageUrl == null || imageUrl.isEmpty()) {
+                    imageUrl = "https://via.placeholder.com/800x600?text=No+Image+Available";
+                } else if (!imageUrl.startsWith("http")) {
+                    // URL이 http로 시작하지 않으면 http://를 추가
+                    imageUrl = "http://" + imageUrl;
+                }
+                imageUrls.add(imageUrl);
             }
             room.setImageUrls(imageUrls);
         }
@@ -268,7 +284,15 @@ public class AccommodationServiceImpl implements AccommodationService {
             List<Image> images = imageDao.getImagesByReference(room.getRoomId(), "ROOM");
             List<String> imageUrls = new ArrayList<>();
             for (Image image : images) {
-                imageUrls.add(image.getImageUrl());
+                String imageUrl = image.getImageUrl();
+                // 이미지 URL이 비어있거나 유효하지 않은 경우 플레이스홀더 이미지 사용
+                if (imageUrl == null || imageUrl.isEmpty()) {
+                    imageUrl = "https://via.placeholder.com/800x600?text=No+Image+Available";
+                } else if (!imageUrl.startsWith("http")) {
+                    // URL이 http로 시작하지 않으면 http://를 추가
+                    imageUrl = "http://" + imageUrl;
+                }
+                imageUrls.add(imageUrl);
             }
             room.setImageUrls(imageUrls);
         }
@@ -353,7 +377,15 @@ public class AccommodationServiceImpl implements AccommodationService {
                 }
 
                 if (mainImage != null) {
-                    accommodation.setMainImageUrl(mainImage.getImageUrl());
+                    String imageUrl = mainImage.getImageUrl();
+                    // 이미지 URL이 비어있거나 유효하지 않은 경우 플레이스홀더 이미지 사용
+                    if (imageUrl == null || imageUrl.isEmpty()) {
+                        imageUrl = "https://via.placeholder.com/800x600?text=No+Image+Available";
+                    } else if (!imageUrl.startsWith("http")) {
+                        // URL이 http로 시작하지 않으면 http://를 추가
+                        imageUrl = "http://" + imageUrl;
+                    }
+                    accommodation.setMainImageUrl(imageUrl);
                 }
             }
         }

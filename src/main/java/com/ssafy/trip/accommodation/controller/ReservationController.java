@@ -2,9 +2,9 @@ package com.ssafy.trip.accommodation.controller;
 
 import com.ssafy.trip.accommodation.model.CartItem;
 import com.ssafy.trip.accommodation.model.Reservation;
-import com.ssafy.trip.accommodation.model.Review;
 import com.ssafy.trip.accommodation.model.Room;
 import com.ssafy.trip.accommodation.model.RoomAvailability;
+import com.ssafy.trip.review.Review;
 import com.ssafy.trip.accommodation.service.AccommodationService;
 import com.ssafy.trip.accommodation.service.CartService;
 import com.ssafy.trip.accommodation.service.ReservationService;

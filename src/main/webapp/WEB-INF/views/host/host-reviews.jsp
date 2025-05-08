@@ -54,7 +54,7 @@
         <div class="card filter-card">
             <div class="card-body">
                 <h5 class="card-title">리뷰 필터링</h5>
-                <form action="/host/reviews" method="get" class="row g-3">
+                <form action="${pageContext.request.contextPath}/host/reviews" method="get" class="row g-3">
                     <div class="col-md-4">
                         <label for="accommodationId" class="form-label">숙소 선택</label>
                         <select class="form-select" id="accommodationId" name="accommodationId">
@@ -148,7 +148,7 @@
                                     <p class="card-text">${review.content}</p>
 
                                     <div class="mt-3">
-                                        <a href="/accommodation/detail?accommodationId=${review.accommodationId}" class="btn btn-sm btn-outline-primary">
+                                        <a href="${pageContext.request.contextPath}/accommodation/detail?accommodationId=${review.accommodationId}" class="btn btn-sm btn-outline-primary">
                                             <i class="bi bi-building"></i> 숙소 보기
                                         </a>
                                     </div>

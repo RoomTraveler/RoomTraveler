@@ -1,9 +1,9 @@
 package com.ssafy.trip.accommodation.service;
 
 import com.ssafy.trip.accommodation.model.Reservation;
-import com.ssafy.trip.accommodation.model.Review;
 import com.ssafy.trip.accommodation.model.Room;
 import com.ssafy.trip.accommodation.model.RoomAvailability;
+import com.ssafy.trip.review.Review;
 
 import java.sql.SQLException;
 import java.time.LocalDate;

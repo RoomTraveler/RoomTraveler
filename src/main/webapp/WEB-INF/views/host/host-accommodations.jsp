@@ -194,11 +194,11 @@
                                                                 </span>
                                                             </div>
                                                             <div>
-                                                                <a href="/accommodation/update-room-form?roomId=${room.roomId}" class="btn btn-sm btn-outline-primary">
+                                                                <a href="${pageContext.request.contextPath}/accommodation/update-room-form?roomId=${room.roomId}" class="btn btn-sm btn-outline-primary">
                                                                     <i class="bi bi-pencil"></i>
                                                                 </a>
                                                                 <button class="btn btn-sm btn-outline-danger" 
-                                                                        onclick="if(confirm('정말로 이 객실을 삭제하시겠습니까?')) location.href='/accommodation/delete-room?roomId=${room.roomId}'">
+                                                                        onclick="if(confirm('정말로 이 객실을 삭제하시겠습니까?')) location.href='${pageContext.request.contextPath}/accommodation/delete-room?roomId=${room.roomId}'">
                                                                     <i class="bi bi-trash"></i>
                                                                 </button>
                                                             </div>
@@ -209,22 +209,22 @@
                                         </c:choose>
 
                                         <!-- 객실 추가 버튼 -->
-                                        <a href="/accommodation/register-room-form?accommodationId=${accommodation.accommodationId}" class="btn btn-sm btn-outline-success w-100 mt-2">
+                                        <a href="${pageContext.request.contextPath}/accommodation/register-room-form?accommodationId=${accommodation.accommodationId}" class="btn btn-sm btn-outline-success w-100 mt-2">
                                             <i class="bi bi-plus-circle"></i> 객실 추가
                                         </a>
                                     </div>
                                 </div>
                                 <div class="card-footer">
                                     <div class="d-flex justify-content-between">
-                                        <a href="/accommodation/detail?accommodationId=${accommodation.accommodationId}" class="btn btn-sm btn-info">
+                                        <a href="${pageContext.request.contextPath}/accommodation/detail?accommodationId=${accommodation.accommodationId}" class="btn btn-sm btn-info">
                                             <i class="bi bi-eye"></i> 보기
                                         </a>
                                         <div>
-                                            <a href="/accommodation/update-form?accommodationId=${accommodation.accommodationId}" class="btn btn-sm btn-primary">
+                                            <a href="${pageContext.request.contextPath}/accommodation/update-form?accommodationId=${accommodation.accommodationId}" class="btn btn-sm btn-primary">
                                                 <i class="bi bi-pencil"></i> 수정
                                             </a>
                                             <button class="btn btn-sm btn-danger" 
-                                                    onclick="if(confirm('정말로 이 숙소를 삭제하시겠습니까? 모든 객실 정보도 함께 삭제됩니다.')) location.href='/accommodation/delete?accommodationId=${accommodation.accommodationId}'">
+                                                    onclick="if(confirm('정말로 이 숙소를 삭제하시겠습니까? 모든 객실 정보도 함께 삭제됩니다.')) location.href='${pageContext.request.contextPath}/accommodation/delete?accommodationId=${accommodation.accommodationId}'">
                                                 <i class="bi bi-trash"></i> 삭제
                                             </button>
                                         </div>
@@ -238,7 +238,7 @@
         </c:choose>
 
         <!-- 숙소 추가 버튼 -->
-        <a href="/accommodation/register-form" class="add-btn">
+        <a href="${pageContext.request.contextPath}/accommodation/register-form" class="add-btn">
             <i class="bi bi-plus-lg"></i>
         </a>
     </div>

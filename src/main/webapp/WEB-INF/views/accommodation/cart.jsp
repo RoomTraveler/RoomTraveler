@@ -42,31 +42,31 @@
 </head>
 <body>
     <jsp:include page="../fragments/header.jsp" />
-    
+
     <div class="container my-5">
         <h2 class="mb-4">장바구니</h2>
-        
+
         <c:if test="${not empty message}">
             <div class="alert alert-success alert-dismissible fade show" role="alert">
                 ${message}
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
         </c:if>
-        
+
         <c:if test="${not empty error}">
             <div class="alert alert-danger alert-dismissible fade show" role="alert">
                 ${error}
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
         </c:if>
-        
+
         <c:choose>
             <c:when test="${empty cart.items}">
                 <div class="empty-cart">
                     <i class="bi bi-cart"></i>
                     <h3>장바구니가 비어있습니다</h3>
                     <p>객실을 장바구니에 추가해보세요!</p>
-                    <a href="/accommodation/list" class="btn btn-primary">객실 둘러보기</a>
+                    <a href="${pageContext.request.contextPath}/accommodation/list" class="btn btn-primary">객실 둘러보기</a>
                 </div>
             </c:when>
             <c:otherwise>
@@ -96,7 +96,7 @@
                                             <strong>가격:</strong> <fmt:formatNumber value="${item.price}" type="currency" currencySymbol="₩" maxFractionDigits="0"/>
                                         </p>
                                         <div class="d-flex justify-content-end">
-                                            <a href="/cart/remove/${item.cartItemId}" class="btn btn-outline-danger">삭제</a>
+                                            <a href="${pageContext.request.contextPath}/cart/remove/${item.cartItemId}" class="btn btn-outline-danger">삭제</a>
                                         </div>
                                     </div>
                                 </div>
@@ -108,21 +108,21 @@
                             <h4 class="mb-3">주문 요약</h4>
                             <p><strong>총 객실 수:</strong> ${cart.totalItems}개</p>
                             <p><strong>총 가격:</strong> <fmt:formatNumber value="${cart.totalPrice}" type="currency" currencySymbol="₩" maxFractionDigits="0"/></p>
-                            
-                            <form action="/cart/checkout" method="post">
+
+                            <form action="${pageContext.request.contextPath}/cart/checkout" method="post">
                                 <button type="submit" class="btn btn-primary w-100 mb-2">예약하기</button>
                             </form>
-                            
-                            <a href="/cart/clear" class="btn btn-outline-secondary w-100">장바구니 비우기</a>
+
+                            <a href="${pageContext.request.contextPath}/cart/clear" class="btn btn-outline-secondary w-100">장바구니 비우기</a>
                         </div>
                     </div>
                 </div>
             </c:otherwise>
         </c:choose>
     </div>
-    
+
     <jsp:include page="../fragments/footer.jsp" />
-    
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

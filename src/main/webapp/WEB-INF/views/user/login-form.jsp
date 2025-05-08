@@ -1,4 +1,5 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%@ taglib uri="jakarta.tags.core" prefix="c" %>
 <!DOCTYPE html>
 <html>
 <head>
@@ -6,10 +7,10 @@
 <title>로그인</title>
 </head>
 <body>
-    <%@ include file="/WEB-INF/views/fragments/header.jsp" %>
+    <jsp:include page="../fragments/header.jsp" />
 
     <h1>로그인</h1>
-    <form action="/user/login" method="post" class="m-3">
+    <form action="${pageContext.request.contextPath}/user/login" method="post" class="m-3">
 
         <div class="mb-3 row">
             <label for="email" class="col-sm-2 col-form-label">이메일</label>
@@ -32,6 +33,6 @@
         <div class="alert alert-danger" role="alert">${error }</div>
     </c:if>
 
-	<%@ include file="/WEB-INF/views/fragments/footer.jsp" %>
+	<jsp:include page="../fragments/footer.jsp" />
 </body>
 </html>

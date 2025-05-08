@@ -25,6 +25,13 @@ CREATE TABLE accommodations (
     FOREIGN KEY (gugun_code) REFERENCES guguns(gugun_code)
 );
 
+-- 숙소 샘플 데이터 추가 (테스트용)
+INSERT INTO accommodations (accommodation_id, host_id, title, description, address, sido_code, gugun_code, check_in_time, check_out_time, status)
+VALUES 
+(1, 4, '서울 시티 호텔', '서울 중심부에 위치한 현대적인 호텔입니다.', '서울특별시 중구 명동길 123', 1, 1, '15:00:00', '11:00:00', 'ACTIVE'),
+(2, 5, '부산 비치 리조트', '해변가에 위치한 아름다운 리조트입니다.', '부산광역시 해운대구 해운대해변로 456', 2, 2, '16:00:00', '10:00:00', 'ACTIVE'),
+(3, 4, '제주 오션 뷰 펜션', '제주 바다가 보이는 아늑한 펜션입니다.', '제주특별자치도 서귀포시 중문관광로 789', 3, 3, '14:00:00', '12:00:00', 'ACTIVE');
+
 -- Rooms Table
 -- rooms 테이블 생성
 CREATE TABLE IF NOT EXISTS rooms (
@@ -81,22 +88,7 @@ CREATE TABLE reservations (
     INDEX (check_in_date, check_out_date)
 );
 
--- Reviews Table
-CREATE TABLE reviews (
-    review_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-    reservation_id BIGINT UNSIGNED NOT NULL,
-    user_id BIGINT UNSIGNED NOT NULL,
-    accommodation_id BIGINT UNSIGNED NOT NULL,
-    rating DECIMAL(2,1) NOT NULL,
-    comment TEXT NULL,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    PRIMARY KEY (review_id),
-    FOREIGN KEY (reservation_id) REFERENCES reservations(reservation_id) ON DELETE CASCADE,
-    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
-    FOREIGN KEY (accommodation_id) REFERENCES accommodations(accommodation_id) ON DELETE CASCADE,
-    UNIQUE (reservation_id)
-);
+-- Reviews Table is now defined in reviews.sql
 
 -- Room Availability Table
 CREATE TABLE room_availability (

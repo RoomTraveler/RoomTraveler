@@ -36,12 +36,12 @@ public class ReviewServiceImpl implements ReviewService {
         if (review.getCreatedAt() == null) {
             review.setCreatedAt(LocalDateTime.now());
         }
-        
+
         // 상태가 설정되지 않은 경우 기본값으로 ACTIVE 설정
         if (review.getStatus() == null) {
             review.setStatus("ACTIVE");
         }
-        
+
         reviewDao.insert(review);
         return review.getReviewId();
     }
@@ -151,5 +151,13 @@ public class ReviewServiceImpl implements ReviewService {
         // TODO: 예약 시스템과 연동하여 사용자가 해당 숙소에 실제로 숙박했는지 확인하는 로직 구현
         // 현재는 간단한 구현으로 모든 사용자가 리뷰를 작성할 수 있도록 함
         return true;
+    }
+
+    /**
+     * 예약 ID로 리뷰를 조회합니다.
+     */
+    @Override
+    public Review getReviewByReservationId(Long reservationId) throws SQLException {
+        return reviewDao.selectByReservationId(reservationId);
     }
 }

@@ -10,6 +10,7 @@
         <id property="reviewId" column="review_id" />
         <result property="accommodationId" column="accommodation_id" />
         <result property="userId" column="user_id" />
+        <result property="reservationId" column="reservation_id" />
         <result property="rating" column="rating" />
         <result property="title" column="title" />
         <result property="content" column="content" />
@@ -25,8 +26,8 @@
 
     <!-- 새 리뷰 추가 -->
     <insert id="insert" useGeneratedKeys="true" keyProperty="reviewId">
-        INSERT INTO reviews (accommodation_id, user_id, rating, title, content, stay_date, is_verified, status)
-        VALUES (#{accommodationId}, #{userId}, #{rating}, #{title}, #{content}, #{stayDate}, #{isVerified}, #{status})
+        INSERT INTO reviews (accommodation_id, user_id, reservation_id, rating, title, content, stay_date, is_verified, status)
+        VALUES (#{accommodationId}, #{userId}, #{reservationId}, #{rating}, #{title}, #{content}, #{stayDate}, #{isVerified}, #{status})
     </insert>
 
     <!-- 리뷰 ID로 리뷰 조회 -->
