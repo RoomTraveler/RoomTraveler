@@ -16,6 +16,7 @@ import java.math.BigDecimal;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -30,6 +31,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import jakarta.servlet.http.HttpSession;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -379,7 +381,8 @@ public class AdminController {
     public ResponseEntity<Map<String, Object>> importAccommodations(
             @RequestParam(required = false) Integer sidoCode,
             @RequestParam(required = false) Integer gugunCode,
-            @RequestParam(defaultValue = "10") Integer limit) {
+            @RequestParam(defaultValue = "10") Integer limit,
+            HttpSession session) {
         try {
             String serviceKey = tourApiProperties.getServiceKey();
             String baseUrl = tourApiProperties.getBaseUrl();
@@ -392,7 +395,7 @@ public class AdminController {
                     .queryParam("_type", "json")
                     .queryParam("listYN", "Y")
                     .queryParam("arrange", "A")
-                    .queryParam("numOfRows", limit)
+                    .queryParam("numOfRows", 1000)  // 최대한 많은 데이터를 가져오기 위해 큰 값 설정
                     .queryParam("pageNo", 1);
 
             // 선택적 파라미터 추가
@@ -417,7 +420,7 @@ public class AdminController {
                     String contentId = item.path("contentid").asText();
 
                     // 숙소 상세 정보 가져오기
-                    Accommodation accommodation = fetchAccommodationDetail(contentId);
+                    Accommodation accommodation = fetchAccommodationDetail(contentId, session);
                     if (accommodation == null) continue;
 
                     // 객실 정보 가져오기
@@ -427,15 +430,22 @@ public class AdminController {
                     // 이미지 정보 가져오기
                     List<Image> images = fetchImageInfo(contentId);
 
+                    // 썸네일 이미지가 있는지 확인
+                    boolean hasMainImage = false;
+                    for (Image image : images) {
+                        if (image.getIsMain() != null && image.getIsMain()) {
+                            hasMainImage = true;
+                            break;
+                        }
+                    }
+
+                    // 썸네일 이미지가 없으면 건너뛰기
+                    if (!hasMainImage) continue;
+
                     // DB에 저장
                     Long accommodationId = accommodationService.importFromApi(accommodation, rooms, images);
                     if (accommodationId != null) {
                         importedCount++;
-                    }
-
-                    // 요청한 개수만큼 가져왔으면 중단
-                    if (importedCount >= limit) {
-                        break;
                     }
                 }
             }
@@ -458,7 +468,7 @@ public class AdminController {
     /**
      * 숙소 상세 정보를 가져옵니다.
      */
-    private Accommodation fetchAccommodationDetail(String contentId) throws Exception {
+    private Accommodation fetchAccommodationDetail(String contentId, HttpSession session) throws Exception {
         String serviceKey = tourApiProperties.getServiceKey();
         String baseUrl = tourApiProperties.getBaseUrl();
 
@@ -497,8 +507,65 @@ public class AdminController {
         accommodation.setTitle(item.path("title").asText(""));
         accommodation.setDescription(item.path("overview").asText(""));
         accommodation.setAddress(item.path("addr1").asText("") + " " + item.path("addr2").asText(""));
-        accommodation.setSidoCode(item.path("areacode").asInt(0));
-        accommodation.setGugunCode(item.path("sigungucode").asInt(0));
+
+        // API에서 가져온 시도 코드
+        int apiSidoCode = item.path("areacode").asInt(0);
+
+        // 유효한 시도 코드인지 확인하고 설정
+        int validSidoCode = 1; // 기본값으로 서울(1) 설정
+        try {
+            // 데이터베이스에서 모든 시도 목록 가져오기
+            List<Sido> validSidos = adminService.getAllSidos();
+
+            // 유효한 시도 코드 목록 생성
+            List<Integer> validSidoCodes = new ArrayList<>();
+            for (Sido sido : validSidos) {
+                validSidoCodes.add(sido.getCode());
+            }
+
+            // API에서 가져온 시도 코드가 유효한지 확인
+            if (validSidoCodes.contains(apiSidoCode)) {
+                // 유효한 시도 코드면 그대로 사용
+                validSidoCode = apiSidoCode;
+            } else {
+                // 유효하지 않은 시도 코드면 기본값(서울) 사용
+                logger.warn("유효하지 않은 시도 코드: " + apiSidoCode + ", 기본값(1)으로 설정합니다.");
+            }
+        } catch (Exception e) {
+            // 시도 목록 조회 중 오류 발생 시 기본값 사용
+            logger.error("시도 목록 조회 중 오류 발생, 기본값(1)으로 설정합니다: " + e.getMessage());
+        }
+
+        accommodation.setSidoCode(validSidoCode);
+
+        // API에서 가져온 구군 코드
+        int apiGugunCode = item.path("sigungucode").asInt(0);
+
+        // 유효한 구군 코드인지 확인하고 설정
+        try {
+            // 선택된 시도에 해당하는 구군 목록 가져오기
+            List<Gugun> validGuguns = adminService.getGugunsBySido(validSidoCode);
+
+            // 유효한 구군 코드 목록 생성
+            List<Integer> validGugunCodes = new ArrayList<>();
+            for (Gugun gugun : validGuguns) {
+                validGugunCodes.add(gugun.getCode());
+            }
+
+            // API에서 가져온 구군 코드가 유효한지 확인
+            if (validGugunCodes.contains(apiGugunCode)) {
+                // 유효한 구군 코드면 그대로 사용
+                accommodation.setGugunCode(apiGugunCode);
+            } else {
+                // 유효하지 않은 구군 코드면 기본값(1) 사용
+                logger.warn("유효하지 않은 구군 코드: " + apiGugunCode + ", 기본값(1)으로 설정합니다.");
+                accommodation.setGugunCode(1); // 기본 구군 코드
+            }
+        } catch (Exception e) {
+            // 구군 목록 조회 중 오류 발생 시 기본값 사용
+            logger.error("구군 목록 조회 중 오류 발생, 기본값(1)으로 설정합니다: " + e.getMessage());
+            accommodation.setGugunCode(1); // 기본 구군 코드
+        }
 
         // 위도, 경도가 있는 경우에만 설정
         if (!item.path("mapx").isMissingNode() && !item.path("mapy").isMissingNode()) {
@@ -517,8 +584,8 @@ public class AdminController {
         accommodation.setAmenities("");  // API에서 제공하지 않음
         accommodation.setStatus("ACTIVE");
 
-        // 호스트 ID는 임시로 1로 설정 (실제 구현에서는 적절한 호스트 ID 할당 필요)
-        accommodation.setHostId(1L);
+        // 임시 호스트 ID 사용 (999L)
+        accommodation.setHostId(999L);
 
         return accommodation;
     }
@@ -574,7 +641,9 @@ public class AdminController {
 
                 room.setRoomCount(1);  // 기본값
                 room.setRoomSize(new java.math.BigDecimal("20"));  // 기본값
+                room.setRoomType("스탠다드");  // 기본값
                 room.setBedType("더블");  // 기본값
+                room.setBathroomCount(1);  // 기본값
                 room.setAmenities("TV, 에어컨, 냉장고, 욕실용품");  // 기본값
                 room.setStatus("AVAILABLE");
 
@@ -594,7 +663,9 @@ public class AdminController {
             defaultRoom.setCapacity(2);
             defaultRoom.setRoomCount(1);
             defaultRoom.setRoomSize(new java.math.BigDecimal("20"));
+            defaultRoom.setRoomType("스탠다드");
             defaultRoom.setBedType("더블");
+            defaultRoom.setBathroomCount(1);
             defaultRoom.setAmenities("TV, 에어컨, 냉장고, 욕실용품");
             defaultRoom.setStatus("AVAILABLE");
             defaultRoom.setRoomId(Long.parseLong(contentId));
@@ -666,23 +737,48 @@ public class AdminController {
      */
     @PostMapping("/create-sample-data")
     @ResponseBody
-    public ResponseEntity<Map<String, Object>> createSampleData() {
+    public ResponseEntity<Map<String, Object>> createSampleData(HttpSession session) {
         try {
-            // 샘플 시도 데이터 생성
-            List<Sido> sampleSidos = createSampleSidos();
-            int sidoCount = adminService.importSidos(sampleSidos);
-
-            // 샘플 구군 데이터 생성
+            // 시도 데이터가 이미 존재하는지 확인
+            List<Sido> existingSidos = adminService.getAllSidos();
+            int sidoCount = 0;
             int gugunCount = 0;
-            for (Sido sido : sampleSidos) {
-                List<Gugun> sampleGuguns = createSampleGuguns(sido.getCode());
-                gugunCount += adminService.importGuguns(sido.getCode(), sampleGuguns);
+
+            // 시도 데이터가 없는 경우에만 샘플 데이터 생성
+            if (existingSidos == null || existingSidos.isEmpty()) {
+                // 샘플 시도 데이터 생성
+                List<Sido> sampleSidos = createSampleSidos();
+                sidoCount = adminService.importSidos(sampleSidos);
+
+                // 샘플 구군 데이터 생성
+                for (Sido sido : sampleSidos) {
+                    List<Gugun> sampleGuguns = createSampleGuguns(sido.getCode());
+                    gugunCount += adminService.importGuguns(sido.getCode(), sampleGuguns);
+                }
+                logger.info("샘플 시도/구군 데이터를 생성했습니다: " + sidoCount + " 시도, " + gugunCount + " 구군");
+            } else {
+                logger.info("시도 데이터가 이미 존재합니다. 샘플 데이터를 생성하지 않습니다.");
+                sidoCount = existingSidos.size();
+
+                // 구군 데이터 개수 확인
+                for (Sido sido : existingSidos) {
+                    List<Gugun> guguns = adminService.getGugunsBySido(sido.getCode());
+                    gugunCount += guguns.size();
+                }
             }
 
             // 샘플 호스트 생성
             Long hostId = createSampleHost();
             if (hostId == null) {
-                throw new RuntimeException("샘플 호스트 생성에 실패했습니다.");
+                // 세션에서 현재 로그인한 사용자의 ID를 가져와 호스트 ID로 사용
+                Long userId = (Long) session.getAttribute("userId");
+                if (userId != null) {
+                    logger.warn("샘플 호스트 생성에 실패했습니다. 현재 로그인한 사용자 ID " + userId + "를 사용합니다.");
+                    hostId = userId;
+                } else {
+                    logger.warn("샘플 호스트 생성에 실패했습니다. 기본값 1L을 사용합니다.");
+                    hostId = 1L;
+                }
             }
 
             // 샘플 숙소 및 객실 데이터 생성
@@ -772,67 +868,73 @@ public class AdminController {
     }
 
     /**
-     * 샘플 호스트 데이터를 생성합니다.
+     * 샘플 호스트(및 샘플 사용자)를 생성하고, 생성된 hostId를 리턴합니다.
+     * - 임시 호스트를 생성하여 모든 작업에 사용합니다.
      */
     private Long createSampleHost() throws SQLException {
-        // 이미 존재하는 호스트 ID 4 (hostkim) 또는 5 (hostlee)를 사용하거나
-        // 호스트가 없는 경우 새로 생성
-
-        // 먼저 ID 4로 시도
-        Host existingHost = hostService.getHostById(4L);
-        if (existingHost != null) {
-            return existingHost.getHostId();
-        }
-
-        // ID 4가 없으면 ID 5로 시도
-        existingHost = hostService.getHostById(5L);
-        if (existingHost != null) {
-            return existingHost.getHostId();
-        }
-
-        // 호스트 생성 - 먼저 ID 4로 시도
-        Host host = new Host();
-        host.setHostId(4L); // users.sql에 있는 hostkim의 ID
-        host.setBusinessName("샘플 호스트 비즈니스");
-        host.setBusinessRegNo("123-45-67890");
-        host.setBankAccount("국민은행 123-456-789012");
-        host.setProfileText("이것은 테스트를 위한 샘플 호스트입니다.");
-        host.setHostStatus("APPROVED");
-
         try {
-            int result = hostService.registHost(host);
-            if (result > 0) {
-                return host.getHostId();
+            // 고정된 임시 호스트 ID 사용 (999L)
+            Long tempHostId = 999L;
+
+            try {
+                // 이미 존재하는지 확인
+                Host existing = hostService.getHostById(tempHostId);
+                if (existing != null) {
+                    logger.info("기존 임시 호스트 ID " + tempHostId + " 를 사용합니다.");
+                    return existing.getHostId();
+                }
+            } catch (Exception e) {
+                logger.info("임시 호스트가 존재하지 않아 새로 생성합니다.");
+            }
+
+            try {
+                // 임시 사용자 생성 시도
+                User tempUser = new User();
+                tempUser.setUserId(tempHostId); // 명시적으로 ID 설정
+                tempUser.setUsername("temphost");
+                tempUser.setEmail("temp.host@example.com");
+                tempUser.setPassword("1234");
+                tempUser.setPhone("010-1234-5678");
+                tempUser.setRole("HOST");
+                tempUser.setStatus("ACTIVE");
+
+                // 사용자 테이블에 직접 삽입 시도
+                try {
+                    userService.registUser(tempUser);
+                    logger.info("임시 사용자 생성 성공, userId=" + tempHostId);
+                } catch (Exception ex) {
+                    logger.warn("임시 사용자 생성 중 예외 발생, 이미 존재할 수 있음: " + ex.getMessage());
+                }
+
+                // 호스트 레코드 생성
+                Host host = new Host();
+                host.setHostId(tempHostId);
+                host.setBusinessName("임시 호스트 비즈니스");
+                host.setBusinessRegNo("999-88-77777");
+                host.setBankAccount("임시은행 999-888-777777");
+                host.setProfileText("이것은 테스트를 위한 임시 호스트입니다.");
+                host.setHostStatus("APPROVED");
+
+                try {
+                    hostService.registHost(host);
+                    logger.info("임시 호스트 생성 성공, hostId=" + tempHostId);
+                } catch (Exception ex) {
+                    logger.warn("임시 호스트 생성 중 예외 발생, 이미 존재할 수 있음: " + ex.getMessage());
+                }
+
+                // 성공 여부와 관계없이 항상 임시 호스트 ID 반환
+                return tempHostId;
+
+            } catch (Exception e) {
+                logger.warn("임시 호스트/사용자 생성 중 예외 발생, 기본값 사용: " + e.getMessage());
+                // 예외가 발생해도 임시 호스트 ID 반환
+                return tempHostId;
             }
         } catch (Exception e) {
-            logger.warn("ID 4로 호스트 생성 실패: " + e.getMessage());
+            logger.error("createSampleHost 예외: " + e.getMessage(), e);
+            // 모든 예외 상황에서도 임시 호스트 ID 반환
+            return 999L;
         }
-
-        // ID 4로 실패하면 ID 5로 시도
-        host.setHostId(5L); // users.sql에 있는 hostlee의 ID
-        try {
-            int result = hostService.registHost(host);
-            if (result > 0) {
-                return host.getHostId();
-            }
-        } catch (Exception e) {
-            logger.warn("ID 5로 호스트 생성 실패: " + e.getMessage());
-        }
-
-        // 모든 시도가 실패하면 새 호스트 ID 생성
-        // 실제 운영 환경에서는 이 부분을 적절히 수정해야 함
-        host.setHostId(1L); // 기본 관리자 계정 사용
-        try {
-            int result = hostService.registHost(host);
-            if (result > 0) {
-                return host.getHostId();
-            }
-        } catch (Exception e) {
-            logger.warn("ID 1로 호스트 생성 실패: " + e.getMessage());
-        }
-
-        // 그래도 실패하면 임의의 ID 사용
-        return 1L; // 기본값으로 1 반환
     }
 
     /**

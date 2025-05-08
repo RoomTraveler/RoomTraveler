@@ -3,32 +3,43 @@ package com.ssafy.trip.tourapi;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
+import lombok.Data;
+
+/**
+ * Tour API 설정 정보를 담는 클래스
+ */
 @Component
 @ConfigurationProperties(prefix = "tourapi")
+@Data
 public class TourApiProperties {
-    private String serviceKey;
-    private String baseUrl;
-    private String mobileOs;
-    private String mobileApp;
-    private int defaultNumOfRows;
-    private int defaultPageNo;
-
-    // getters / setters
-    public String getServiceKey() { return serviceKey; }
-    public void setServiceKey(String serviceKey) { this.serviceKey = serviceKey; }
-
-    public String getBaseUrl() { return baseUrl; }
-    public void setBaseUrl(String baseUrl) { this.baseUrl = baseUrl; }
-
-    public String getMobileOs() { return mobileOs; }
-    public void setMobileOs(String mobileOs) { this.mobileOs = mobileOs; }
-
-    public String getMobileApp() { return mobileApp; }
-    public void setMobileApp(String mobileApp) { this.mobileApp = mobileApp; }
-
-    public int getDefaultNumOfRows() { return defaultNumOfRows; }
-    public void setDefaultNumOfRows(int defaultNumOfRows) { this.defaultNumOfRows = defaultNumOfRows; }
-
-    public int getDefaultPageNo() { return defaultPageNo; }
-    public void setDefaultPageNo(int defaultPageNo) { this.defaultPageNo = defaultPageNo; }
+    
+    /**
+     * API 기본 URL
+     */
+    private String baseUrl = "https://apis.data.go.kr/B551011/KorService1";
+    
+    /**
+     * 서비스 키
+     */
+    private String serviceKey = "YOUR_SERVICE_KEY";
+    
+    /**
+     * 모바일 OS
+     */
+    private String mobileOs = "ETC";
+    
+    /**
+     * 모바일 앱 이름
+     */
+    private String mobileApp = "AppTest";
+    
+    /**
+     * 기본 페이지 번호
+     */
+    private int defaultPageNo = 1;
+    
+    /**
+     * 기본 결과 수
+     */
+    private int defaultNumOfRows = 100;
 }

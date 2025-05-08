@@ -110,4 +110,15 @@
             #{checkInTime}, #{checkOutTime}, #{amenities}, NOW(), NOW()
         )
     </insert>
+
+    <!-- 유사한 숙소 목록을 조회합니다. -->
+    <select id="getSimilarAccommodations" resultType="com.ssafy.trip.accommodation.model.Accommodation">
+        SELECT a.* FROM accommodations a
+        JOIN accommodations base ON a.sido_code = base.sido_code AND a.gugun_code = base.gugun_code
+        WHERE base.accommodation_id = #{accommodationId}
+        AND a.accommodation_id != #{accommodationId}
+        AND a.status = 'ACTIVE'
+        ORDER BY RAND()
+        LIMIT #{limit}
+    </select>
 </mapper>

@@ -7,13 +7,21 @@
 
     <!-- 새 사용자 등록 -->
     <insert id="insert" useGeneratedKeys="true" keyProperty="userId">
-        INSERT INTO users (username, email, passwordHash, phone, role, status)
-        VALUES (#{username}, #{email}, #{password}, #{phone}, 'USER', 'ACTIVE')
+        <choose>
+            <when test="userId != null">
+                INSERT INTO users (user_id, username, email, password, phone, role, status)
+                VALUES (#{userId}, #{username}, #{email}, #{password}, #{phone}, #{role}, #{status})
+            </when>
+            <otherwise>
+                INSERT INTO users (username, email, password, phone, role, status)
+                VALUES (#{username}, #{email}, #{password}, #{phone}, 'USER', 'ACTIVE')
+            </otherwise>
+        </choose>
     </insert>
 
     <!-- 로그인 -->
     <select id="login" resultType="com.ssafy.trip.user.User">
-        SELECT * FROM users WHERE email = #{email} AND passwordHash = #{password} AND status = 'ACTIVE'
+        SELECT * FROM users WHERE email = #{email} AND password = #{password} AND status = 'ACTIVE'
     </select>
 
     <!-- 모든 사용자 조회 -->
@@ -24,7 +32,7 @@
     <!-- 사용자 정보 업데이트 -->
     <update id="updateUser">
         UPDATE users
-        SET username = #{username}, passwordHash = #{password}
+        SET username = #{username}, password = #{password}
         WHERE email = #{email}
     </update>
 
@@ -35,7 +43,7 @@
 
     <!-- 비밀번호 찾기 -->
     <select id="findPassword" resultType="String">
-        SELECT passwordHash FROM users
+        SELECT password FROM users
         WHERE username = #{username} AND email = #{email}
     </select>
 
@@ -43,6 +51,18 @@
     <update id="updateUserStatus">
         UPDATE users
         SET status = #{status}
+        WHERE user_id = #{userId}
+    </update>
+
+    <!-- 이메일로 사용자 조회 -->
+    <select id="getUserByEmail" resultType="com.ssafy.trip.user.User">
+        SELECT * FROM users WHERE email = #{email}
+    </select>
+
+    <!-- 사용자 역할 업데이트 -->
+    <update id="updateUserRole">
+        UPDATE users
+        SET role = #{role}
         WHERE user_id = #{userId}
     </update>
 

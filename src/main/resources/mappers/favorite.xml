@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.ssafy.trip.accommodation.dao.FavoriteDao">
+
+    <!-- 새 즐겨찾기 추가 -->
+    <insert id="insert" useGeneratedKeys="true" keyProperty="favoriteId">
+        INSERT INTO favorites (user_id, accommodation_id)
+        VALUES (#{userId}, #{accommodationId})
+    </insert>
+
+    <!-- 즐겨찾기 삭제 -->
+    <delete id="delete">
+        DELETE FROM favorites 
+        WHERE favorite_id = #{favoriteId} AND user_id = #{userId}
+    </delete>
+
+    <!-- 사용자의 모든 즐겨찾기 조회 -->
+    <select id="selectByUserId" resultType="com.ssafy.trip.accommodation.model.Favorite">
+        SELECT f.favorite_id, f.user_id, f.accommodation_id, f.created_at,
+               a.title as accommodation_title, a.address as accommodation_address,
+               (SELECT i.image_url FROM images i 
+                WHERE i.reference_id = a.accommodation_id 
+                AND i.reference_type = 'ACCOMMODATION' 
+                AND i.is_main = true 
+                LIMIT 1) as main_image_url
+        FROM favorites f
+        JOIN accommodations a ON f.accommodation_id = a.accommodation_id
+        WHERE f.user_id = #{userId}
+        ORDER BY f.created_at DESC
+    </select>
+
+    <!-- 사용자가 특정 숙소를 즐겨찾기에 추가했는지 확인 -->
+    <select id="selectByUserIdAndAccommodationId" resultType="com.ssafy.trip.accommodation.model.Favorite">
+        SELECT favorite_id, user_id, accommodation_id, created_at
+        FROM favorites
+        WHERE user_id = #{userId} AND accommodation_id = #{accommodationId}
+    </select>
+
+    <!-- 즐겨찾기 ID로 즐겨찾기 조회 -->
+    <select id="selectById" resultType="com.ssafy.trip.accommodation.model.Favorite">
+        SELECT f.favorite_id, f.user_id, f.accommodation_id, f.created_at,
+               a.title as accommodation_title, a.address as accommodation_address,
+               (SELECT i.image_url FROM images i 
+                WHERE i.reference_id = a.accommodation_id 
+                AND i.reference_type = 'ACCOMMODATION' 
+                AND i.is_main = true 
+                LIMIT 1) as main_image_url
+        FROM favorites f
+        JOIN accommodations a ON f.accommodation_id = a.accommodation_id
+        WHERE f.favorite_id = #{favoriteId}
+    </select>
+
+</mapper>

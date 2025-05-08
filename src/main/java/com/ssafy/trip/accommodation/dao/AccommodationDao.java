@@ -91,4 +91,12 @@ public interface AccommodationDao {
      * @return 생성된 숙소의 ID
      */
     Long insertFromApi(Accommodation accommodation) throws SQLException;
+
+    /**
+     * 유사한 숙소 목록을 조회합니다.
+     * @param accommodationId 기준 숙소 ID
+     * @param limit 조회할 최대 숙소 수
+     * @return 유사한 숙소 목록
+     */
+    List<Accommodation> getSimilarAccommodations(Long accommodationId, int limit) throws SQLException;
 }

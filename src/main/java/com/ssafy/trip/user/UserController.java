@@ -99,6 +99,8 @@ public class UserController {
 			session.setAttribute("userId", loginUser.getUserId());
 			session.setAttribute("username", loginUser.getUsername());
 			session.setAttribute("email", loginUser.getEmail());
+			// 사용자 역할 정보도 세션에 저장
+			session.setAttribute("role", loginUser.getRole());
 			redir.addFlashAttribute("alertMsg", "로그인에 성공했습니다!");
 			return "redirect:/";
 		} catch (Exception e) {

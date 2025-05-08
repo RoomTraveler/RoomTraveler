@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ssafy.trip.accommodation.dao.CartDao">
+
+    <!-- 장바구니 조회 -->
+    <select id="getCartByUserId" parameterType="long" resultMap="cartResultMap">
+        SELECT c.cart_id, c.user_id, c.created_at, c.updated_at, u.username
+        FROM carts c
+        JOIN users u ON c.user_id = u.user_id
+        WHERE c.user_id = #{userId}
+    </select>
+    
+    <!-- 장바구니 생성 -->
+    <insert id="createCart" parameterType="long" useGeneratedKeys="true" keyProperty="cartId">
+        INSERT INTO carts (user_id)
+        VALUES (#{userId})
+    </insert>
+    
+    <!-- 장바구니 아이템 추가 -->
+    <insert id="addCartItem" parameterType="com.ssafy.trip.accommodation.model.CartItem" useGeneratedKeys="true" keyProperty="cartItemId">
+        INSERT INTO cart_items (cart_id, room_id, check_in_date, check_out_date, guest_count, price)
+        VALUES (#{cartId}, #{roomId}, #{checkInDate}, #{checkOutDate}, #{guestCount}, #{price})
+    </insert>
+    
+    <!-- 장바구니 아이템 조회 -->
+    <select id="getCartItems" parameterType="long" resultMap="cartItemResultMap">
+        SELECT ci.cart_item_id, ci.cart_id, ci.room_id, ci.check_in_date, ci.check_out_date, 
+               ci.guest_count, ci.price, ci.created_at, ci.updated_at,
+               r.name as room_name, a.title as accommodation_title, a.accommodation_id,
+               (SELECT image_url FROM images WHERE reference_id = r.room_id AND reference_type = 'ROOM' AND is_main = true LIMIT 1) as image_url
+        FROM cart_items ci
+        JOIN rooms r ON ci.room_id = r.room_id
+        JOIN accommodations a ON r.accommodation_id = a.accommodation_id
+        WHERE ci.cart_id = #{cartId}
+        ORDER BY ci.created_at DESC
+    </select>
+    
+    <!-- 장바구니 아이템 삭제 -->
+    <delete id="removeCartItem" parameterType="long">
+        DELETE FROM cart_items
+        WHERE cart_item_id = #{cartItemId}
+    </delete>
+    
+    <!-- 장바구니 비우기 -->
+    <delete id="clearCart" parameterType="long">
+        DELETE FROM cart_items
+        WHERE cart_id = #{cartId}
+    </delete>
+    
+    <!-- 장바구니 아이템 업데이트 -->
+    <update id="updateCartItem" parameterType="com.ssafy.trip.accommodation.model.CartItem">
+        UPDATE cart_items
+        SET guest_count = #{guestCount},
+            check_in_date = #{checkInDate},
+            check_out_date = #{checkOutDate},
+            price = #{price}
+        WHERE cart_item_id = #{cartItemId}
+    </update>
+    
+    <!-- 장바구니 결과 매핑 -->
+    <resultMap id="cartResultMap" type="com.ssafy.trip.accommodation.model.Cart">
+        <id property="cartId" column="cart_id" />
+        <result property="userId" column="user_id" />
+        <result property="createdAt" column="created_at" />
+        <result property="updatedAt" column="updated_at" />
+        <result property="userName" column="username" />
+        <collection property="items" column="cart_id" select="getCartItems" />
+    </resultMap>
+    
+    <!-- 장바구니 아이템 결과 매핑 -->
+    <resultMap id="cartItemResultMap" type="com.ssafy.trip.accommodation.model.CartItem">
+        <id property="cartItemId" column="cart_item_id" />
+        <result property="cartId" column="cart_id" />
+        <result property="roomId" column="room_id" />
+        <result property="checkInDate" column="check_in_date" />
+        <result property="checkOutDate" column="check_out_date" />
+        <result property="guestCount" column="guest_count" />
+        <result property="price" column="price" />
+        <result property="createdAt" column="created_at" />
+        <result property="updatedAt" column="updated_at" />
+        <result property="roomName" column="room_name" />
+        <result property="accommodationTitle" column="accommodation_title" />
+        <result property="accommodationId" column="accommodation_id" />
+        <result property="imageUrl" column="image_url" />
+    </resultMap>
+    
+</mapper>

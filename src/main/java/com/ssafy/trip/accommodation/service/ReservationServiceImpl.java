@@ -30,6 +30,7 @@ import lombok.RequiredArgsConstructor;
 public class ReservationServiceImpl implements ReservationService {
 
     private final ReservationDao reservationDao;
+    @org.springframework.beans.factory.annotation.Qualifier("accommodationReviewDao")
     private final ReviewDao reviewDao;
     private final RoomDao roomDao;
     private final RoomAvailabilityDao roomAvailabilityDao;

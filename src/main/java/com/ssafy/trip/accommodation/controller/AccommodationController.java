@@ -4,6 +4,8 @@ import com.ssafy.trip.accommodation.model.Accommodation;
 import com.ssafy.trip.accommodation.model.Room;
 import com.ssafy.trip.accommodation.model.Image;
 import com.ssafy.trip.accommodation.service.AccommodationService;
+import com.ssafy.trip.review.Review;
+import com.ssafy.trip.review.ReviewService;
 
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -28,6 +30,7 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("/accommodation")
 public class AccommodationController {
     private final AccommodationService accommodationService;
+    private final ReviewService reviewService;
 
     /**
      * 숙소 목록 페이지로 이동합니다.
@@ -67,15 +70,37 @@ public class AccommodationController {
 
     /**
      * 숙소 상세 페이지로 이동합니다.
+     * 숙소 정보, 객실 목록, 리뷰 정보를 함께 제공합니다.
      */
     @GetMapping("/detail/{accommodationId}")
     public String accommodationDetail(@PathVariable Long accommodationId, Model model) {
         try {
+            // 숙소 정보 조회
             Accommodation accommodation = accommodationService.getAccommodationById(accommodationId);
             List<Room> rooms = accommodationService.getRoomsByAccommodationId(accommodationId);
 
+            // 유사한 숙소 목록 조회 (최대 3개)
+            List<Accommodation> similarAccommodations = accommodationService.getSimilarAccommodations(accommodationId, 3);
+
+            // 리뷰 정보 조회
+            List<Review> reviews = reviewService.getReviewsByAccommodationId(accommodationId);
+            Double averageRating = reviewService.getAverageRatingByAccommodationId(accommodationId);
+            Integer reviewCount = reviewService.getReviewCountByAccommodationId(accommodationId);
+
+            // 평점 분포 조회 (옵션)
+            Map<Integer, Integer> ratingDistribution = reviewService.getRatingDistributionByAccommodationId(accommodationId);
+
+            // 모델에 데이터 추가
             model.addAttribute("accommodation", accommodation);
             model.addAttribute("rooms", rooms);
+            model.addAttribute("similarAccommodations", similarAccommodations);
+
+            // 리뷰 관련 데이터 추가
+            model.addAttribute("reviews", reviews);
+            model.addAttribute("averageRating", averageRating);
+            model.addAttribute("reviewCount", reviewCount);
+            model.addAttribute("ratingDistribution", ratingDistribution);
+
             return "accommodation/detail";
         } catch (SQLException e) {
             e.printStackTrace();
@@ -108,11 +133,11 @@ public class AccommodationController {
      */
     @GetMapping("/host/accommodations")
     public String hostAccommodations(HttpSession session, Model model) {
-        // 로그인 및 호스트 권한 확인
+        // 로그인 및 호스트/관리자 권한 확인
         Long hostId = (Long) session.getAttribute("userId");
         String role = (String) session.getAttribute("role");
 
-        if (hostId == null || !"HOST".equals(role)) {
+        if (hostId == null || (!"HOST".equals(role) && !"ADMIN".equals(role))) {
             return "redirect:/user/login-form";
         }
 
@@ -132,11 +157,11 @@ public class AccommodationController {
      */
     @GetMapping("/register-form")
     public String registerForm(HttpSession session, Model model) {
-        // 로그인 및 호스트 권한 확인
+        // 로그인 및 호스트/관리자 권한 확인
         Long hostId = (Long) session.getAttribute("userId");
         String role = (String) session.getAttribute("role");
 
-        if (hostId == null || !"HOST".equals(role)) {
+        if (hostId == null || (!"HOST".equals(role) && !"ADMIN".equals(role))) {
             return "redirect:/user/login-form";
         }
 
@@ -148,11 +173,11 @@ public class AccommodationController {
      */
     @GetMapping("/register-room-form/{accommodationId}")
     public String registerRoomForm(@PathVariable Long accommodationId, HttpSession session, Model model) {
-        // 로그인 및 호스트 권한 확인
+        // 로그인 및 호스트/관리자 권한 확인
         Long hostId = (Long) session.getAttribute("userId");
         String role = (String) session.getAttribute("role");
 
-        if (hostId == null || !"HOST".equals(role)) {
+        if (hostId == null || (!"HOST".equals(role) && !"ADMIN".equals(role))) {
             return "redirect:/user/login-form";
         }
 
@@ -186,11 +211,11 @@ public class AccommodationController {
             RedirectAttributes redirectAttributes,
             Model model) {
 
-        // 로그인 및 호스트 권한 확인
+        // 로그인 및 호스트/관리자 권한 확인
         Long hostId = (Long) session.getAttribute("userId");
         String role = (String) session.getAttribute("role");
 
-        if (hostId == null || !"HOST".equals(role)) {
+        if (hostId == null || (!"HOST".equals(role) && !"ADMIN".equals(role))) {
             return "redirect:/user/login-form";
         }
 
@@ -280,11 +305,11 @@ public class AccommodationController {
             RedirectAttributes redirectAttributes,
             Model model) {
 
-        // 로그인 및 호스트 권한 확인
+        // 로그인 및 호스트/관리자 권한 확인
         Long hostId = (Long) session.getAttribute("userId");
         String role = (String) session.getAttribute("role");
 
-        if (hostId == null || !"HOST".equals(role)) {
+        if (hostId == null || (!"HOST".equals(role) && !"ADMIN".equals(role))) {
             return "redirect:/user/login-form";
         }
 
@@ -371,11 +396,11 @@ public class AccommodationController {
      */
     @GetMapping("/update-form/{accommodationId}")
     public String updateForm(@PathVariable Long accommodationId, HttpSession session, Model model) {
-        // 로그인 및 호스트 권한 확인
+        // 로그인 및 호스트/관리자 권한 확인
         Long hostId = (Long) session.getAttribute("userId");
         String role = (String) session.getAttribute("role");
 
-        if (hostId == null || !"HOST".equals(role)) {
+        if (hostId == null || (!"HOST".equals(role) && !"ADMIN".equals(role))) {
             return "redirect:/user/login-form";
         }
 
@@ -402,11 +427,11 @@ public class AccommodationController {
      */
     @GetMapping("/update-room-form/{roomId}")
     public String updateRoomForm(@PathVariable Long roomId, HttpSession session, Model model) {
-        // 로그인 및 호스트 권한 확인
+        // 로그인 및 호스트/관리자 권한 확인
         Long hostId = (Long) session.getAttribute("userId");
         String role = (String) session.getAttribute("role");
 
-        if (hostId == null || !"HOST".equals(role)) {
+        if (hostId == null || (!"HOST".equals(role) && !"ADMIN".equals(role))) {
             return "redirect:/user/login-form";
         }
 
@@ -441,11 +466,11 @@ public class AccommodationController {
             RedirectAttributes redirectAttributes,
             Model model) {
 
-        // 로그인 및 호스트 권한 확인
+        // 로그인 및 호스트/관리자 권한 확인
         Long hostId = (Long) session.getAttribute("userId");
         String role = (String) session.getAttribute("role");
 
-        if (hostId == null || !"HOST".equals(role)) {
+        if (hostId == null || (!"HOST".equals(role) && !"ADMIN".equals(role))) {
             return "redirect:/user/login-form";
         }
 
@@ -501,11 +526,11 @@ public class AccommodationController {
             RedirectAttributes redirectAttributes,
             Model model) {
 
-        // 로그인 및 호스트 권한 확인
+        // 로그인 및 호스트/관리자 권한 확인
         Long hostId = (Long) session.getAttribute("userId");
         String role = (String) session.getAttribute("role");
 
-        if (hostId == null || !"HOST".equals(role)) {
+        if (hostId == null || (!"HOST".equals(role) && !"ADMIN".equals(role))) {
             return "redirect:/user/login-form";
         }
 
@@ -562,11 +587,11 @@ public class AccommodationController {
             RedirectAttributes redirectAttributes,
             Model model) {
 
-        // 로그인 및 호스트 권한 확인
+        // 로그인 및 호스트/관리자 권한 확인
         Long hostId = (Long) session.getAttribute("userId");
         String role = (String) session.getAttribute("role");
 
-        if (hostId == null || !"HOST".equals(role)) {
+        if (hostId == null || (!"HOST".equals(role) && !"ADMIN".equals(role))) {
             return "redirect:/user/login-form";
         }
 
@@ -600,11 +625,11 @@ public class AccommodationController {
             RedirectAttributes redirectAttributes,
             Model model) {
 
-        // 로그인 및 호스트 권한 확인
+        // 로그인 및 호스트/관리자 권한 확인
         Long hostId = (Long) session.getAttribute("userId");
         String role = (String) session.getAttribute("role");
 
-        if (hostId == null || !"HOST".equals(role)) {
+        if (hostId == null || (!"HOST".equals(role) && !"ADMIN".equals(role))) {
             return "redirect:/user/login-form";
         }
 

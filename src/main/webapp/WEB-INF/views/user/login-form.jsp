@@ -19,9 +19,9 @@
         </div>
 
         <div class="mb-3 row">
-            <label for="passwordHash" class="col-sm-2 col-form-label">비밀번호</label>
+            <label for="password" class="col-sm-2 col-form-label">비밀번호</label>
             <div class="col-sm-10">
-                <input type="password" name="passwordHash" id="passwordHash" class="form-control" required />
+                <input type="password" name="password" id="password" class="form-control" required />
             </div>
         </div>
 

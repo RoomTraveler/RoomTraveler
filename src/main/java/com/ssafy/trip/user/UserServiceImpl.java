@@ -59,6 +59,14 @@ public class UserServiceImpl implements UserService {
     }
 
     /**
+     * 사용자 역할을 업데이트합니다.
+     */
+    @Override
+    public int updateUserRole(Long userId, String role) throws SQLException {
+        return dao.updateUserRole(userId, role);
+    }
+
+    /**
      * 사용자를 삭제합니다.
      */
     @Override
@@ -72,5 +80,13 @@ public class UserServiceImpl implements UserService {
     @Override
     public String findPassword(String username, String email) throws SQLException {
     	return dao.findPassword(username, email);
+    }
+
+    /**
+     * 이메일로 사용자를 조회합니다.
+     */
+    @Override
+    public User getUserByEmail(String email) throws SQLException {
+        return dao.getUserByEmail(email);
     }
 }

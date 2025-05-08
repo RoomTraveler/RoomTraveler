@@ -86,7 +86,28 @@
 
             <!-- 숙소 기본 정보 -->
             <div class="col-md-4">
-                <h2>${accommodation.title}</h2>
+                <div class="d-flex justify-content-between align-items-start">
+                    <h2>${accommodation.title}</h2>
+                    <div>
+                        <!-- Social Sharing Buttons -->
+                        <div class="btn-group me-2">
+                            <button type="button" class="btn btn-outline-primary" onclick="shareOnFacebook()">
+                                <i class="bi bi-facebook"></i>
+                            </button>
+                            <button type="button" class="btn btn-outline-info" onclick="shareOnTwitter()">
+                                <i class="bi bi-twitter"></i>
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" onclick="shareViaEmail()">
+                                <i class="bi bi-envelope"></i>
+                            </button>
+                        </div>
+                        <c:if test="${not empty sessionScope.userId}">
+                            <button id="favoriteBtn" class="btn btn-outline-danger" onclick="toggleFavorite()">
+                                <i id="favoriteIcon" class="bi bi-heart"></i> <span id="favoriteText">찜하기</span>
+                            </button>
+                        </c:if>
+                    </div>
+                </div>
                 <p class="text-muted">${accommodation.sidoName} ${accommodation.gugunName}</p>
                 <p><i class="bi bi-geo-alt"></i> ${accommodation.address}</p>
                 <p><i class="bi bi-telephone"></i> ${accommodation.phone}</p>
@@ -172,17 +193,129 @@
             </c:forEach>
         </div>
 
+        <!-- 비슷한 숙소 추천 -->
+        <c:if test="${not empty similarAccommodations}">
+            <h3 class="mb-4">이런 숙소는 어떠세요?</h3>
+            <div class="row mb-5">
+                <c:forEach var="similar" items="${similarAccommodations}">
+                    <div class="col-md-4 mb-4">
+                        <div class="card room-card">
+                            <c:choose>
+                                <c:when test="${not empty similar.mainImageUrl}">
+                                    <img src="${similar.mainImageUrl}" class="card-img-top" alt="${similar.title}">
+                                </c:when>
+                                <c:otherwise>
+                                    <img src="${pageContext.request.contextPath}/resources/images/no-image.jpg" class="card-img-top" alt="이미지 없음">
+                                </c:otherwise>
+                            </c:choose>
+                            <div class="card-body">
+                                <h5 class="card-title">${similar.title}</h5>
+                                <p class="card-text text-muted">${similar.sidoName} ${similar.gugunName}</p>
+                                <p class="card-text">${similar.address}</p>
+                                <div class="d-grid">
+                                    <a href="${pageContext.request.contextPath}/accommodation/detail/${similar.accommodationId}" class="btn btn-outline-primary">상세 보기</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </c:forEach>
+            </div>
+        </c:if>
+
         <!-- 리뷰 섹션 -->
         <h3 class="mb-4">리뷰</h3>
         <div class="row mb-5">
             <div class="col-12">
-                <div id="reviewsContainer">
-                    <!-- 리뷰는 JavaScript로 동적 로드 -->
-                    <div class="text-center py-3">
-                        <div class="spinner-border text-primary" role="status">
-                            <span class="visually-hidden">Loading...</span>
-                        </div>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                        <c:if test="${not empty averageRating}">
+                            <div class="d-flex align-items-center">
+                                <h4 class="me-2 mb-0">평균 평점: <span class="star-rating">${averageRating}</span> / 5.0</h4>
+                                <div class="star-rating ms-2">
+                                    <c:forEach begin="1" end="5" var="i">
+                                        <c:choose>
+                                            <c:when test="${i <= averageRating}">
+                                                <i class="bi bi-star-fill"></i>
+                                            </c:when>
+                                            <c:when test="${i <= averageRating + 0.5}">
+                                                <i class="bi bi-star-half"></i>
+                                            </c:when>
+                                            <c:otherwise>
+                                                <i class="bi bi-star"></i>
+                                            </c:otherwise>
+                                        </c:choose>
+                                    </c:forEach>
+                                </div>
+                            </div>
+                            <p class="text-muted">총 ${reviewCount}개의 리뷰</p>
+                        </c:if>
+                        <c:if test="${empty averageRating}">
+                            <p>아직 리뷰가 없습니다.</p>
+                        </c:if>
                     </div>
+                    <div>
+                        <a href="${pageContext.request.contextPath}/review/write/${accommodation.accommodationId}" class="btn btn-primary">
+                            <i class="bi bi-pencil-square"></i> 리뷰 작성
+                        </a>
+                        <a href="${pageContext.request.contextPath}/review/accommodation/${accommodation.accommodationId}" class="btn btn-outline-primary">
+                            <i class="bi bi-list-ul"></i> 모든 리뷰 보기
+                        </a>
+                    </div>
+                </div>
+
+                <!-- 리뷰 목록 (최근 3개만 표시) -->
+                <div id="reviewsContainer">
+                    <c:if test="${empty reviews}">
+                        <div class="alert alert-info">
+                            아직 리뷰가 없습니다. 첫 번째 리뷰를 작성해보세요!
+                        </div>
+                    </c:if>
+
+                    <c:forEach var="review" items="${reviews}" begin="0" end="2">
+                        <div class="card review-card mb-3">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h5 class="card-title">${review.title}</h5>
+                                    <div class="star-rating">
+                                        <c:forEach begin="1" end="${review.rating}">
+                                            <i class="bi bi-star-fill"></i>
+                                        </c:forEach>
+                                        <c:forEach begin="${review.rating + 1}" end="5">
+                                            <i class="bi bi-star"></i>
+                                        </c:forEach>
+                                    </div>
+                                </div>
+                                <div class="review-meta mb-2">
+                                    <span><i class="bi bi-person-circle"></i> ${review.username}</span>
+                                    <span class="ms-3"><i class="bi bi-calendar3"></i> 
+                                        <fmt:formatDate value="${review.stayDate}" pattern="yyyy-MM-dd" />
+                                    </span>
+                                    <span class="ms-3"><i class="bi bi-clock"></i> 
+                                        <fmt:formatDate value="${review.createdAt}" pattern="yyyy-MM-dd" />
+                                    </span>
+                                </div>
+                                <p class="card-text">${review.content}</p>
+
+                                <!-- 리뷰 작성자 또는 관리자만 수정/삭제 가능 -->
+                                <c:if test="${review.userId == sessionScope.userId || sessionScope.role == 'ADMIN'}">
+                                    <div class="d-flex justify-content-end">
+                                        <a href="${pageContext.request.contextPath}/review/edit/${review.reviewId}" class="btn btn-sm btn-outline-primary me-2">수정</a>
+                                        <a href="${pageContext.request.contextPath}/review/delete/${review.reviewId}" 
+                                           class="btn btn-sm btn-outline-danger"
+                                           onclick="return confirm('정말 삭제하시겠습니까?');">삭제</a>
+                                    </div>
+                                </c:if>
+                            </div>
+                        </div>
+                    </c:forEach>
+
+                    <c:if test="${reviewCount > 3}">
+                        <div class="text-center mt-3">
+                            <a href="${pageContext.request.contextPath}/review/accommodation/${accommodation.accommodationId}" class="btn btn-outline-primary">
+                                더 많은 리뷰 보기 (${reviewCount - 3}개 더)
+                            </a>
+                        </div>
+                    </c:if>
                 </div>
             </div>
         </div>
@@ -261,68 +394,7 @@
             reservationModal.show();
         }
 
-        // 리뷰 로드
-        function loadReviews() {
-            fetch('${pageContext.request.contextPath}/accommodation/api/reviews?accommodationId=${accommodation.accommodationId}')
-                .then(response => response.json())
-                .then(data => {
-                    const reviewsContainer = document.getElementById('reviewsContainer');
-                    reviewsContainer.innerHTML = '';
-
-                    if (data.length === 0) {
-                        reviewsContainer.innerHTML = '<p class="text-center">아직 리뷰가 없습니다.</p>';
-                        return;
-                    }
-
-                    // 평균 평점 계산
-                    const totalRating = data.reduce((sum, review) => sum + review.rating, 0);
-                    const averageRating = totalRating / data.length;
-
-                    // 평균 평점 표시
-                    const ratingDiv = document.createElement('div');
-                    ratingDiv.className = 'mb-4';
-                    ratingDiv.innerHTML = `
-                        <h4>평균 평점: <span class="star-rating">${averageRating.toFixed(1)}</span> / 5.0</h4>
-                        <p>총 ${data.length}개의 리뷰</p>
-                    `;
-                    reviewsContainer.appendChild(ratingDiv);
-
-                    // 리뷰 목록 표시
-                    data.forEach(review => {
-                        const reviewCard = document.createElement('div');
-                        reviewCard.className = 'card review-card';
-
-                        // 별점 표시
-                        let stars = '';
-                        for (let i = 0; i < 5; i++) {
-                            if (i < Math.floor(review.rating)) {
-                                stars += '<i class="bi bi-star-fill star-rating"></i>';
-                            } else if (i < review.rating) {
-                                stars += '<i class="bi bi-star-half star-rating"></i>';
-                            } else {
-                                stars += '<i class="bi bi-star star-rating"></i>';
-                            }
-                        }
-
-                        reviewCard.innerHTML = `
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <h5 class="card-title">${review.userName}</h5>
-                                    <div>${stars} ${review.rating.toFixed(1)}</div>
-                                </div>
-                                <p class="card-text">${review.comment}</p>
-                                <p class="card-text"><small class="text-muted">작성일: \${new Date(review.createdAt).toLocaleDateString()}</small></p>
-                            </div>
-                        `;
-
-                        reviewsContainer.appendChild(reviewCard);
-                    });
-                })
-                .catch(error => {
-                    console.error('Error loading reviews:', error);
-                    document.getElementById('reviewsContainer').innerHTML = '<p class="text-center text-danger">리뷰를 불러오는 중 오류가 발생했습니다.</p>';
-                });
-        }
+        // 리뷰 관련 함수는 서버 사이드 렌더링으로 대체되었습니다.
 
         // 지도 초기화
         function initMap() {
@@ -354,10 +426,137 @@
             infowindow.open(map, marker);
         }
 
+        // 즐겨찾기 토글
+        let isFavorite = false;
+        let favoriteId = null;
+
+        function toggleFavorite() {
+            const accommodationId = ${accommodation.accommodationId};
+
+            if (isFavorite) {
+                // 즐겨찾기 삭제
+                fetch('${pageContext.request.contextPath}/accommodation/remove-favorite', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `favoriteId=${favoriteId}`
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        isFavorite = false;
+                        favoriteId = null;
+                        updateFavoriteButton();
+                        showToast('즐겨찾기에서 삭제되었습니다.');
+                    } else {
+                        showToast('오류가 발생했습니다: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showToast('오류가 발생했습니다.');
+                });
+            } else {
+                // 즐겨찾기 추가
+                fetch('${pageContext.request.contextPath}/accommodation/add-favorite', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `accommodationId=${accommodationId}`
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        isFavorite = true;
+                        favoriteId = data.favoriteId;
+                        updateFavoriteButton();
+                        showToast('즐겨찾기에 추가되었습니다.');
+                    } else {
+                        showToast('오류가 발생했습니다: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showToast('오류가 발생했습니다.');
+                });
+            }
+        }
+
+        function updateFavoriteButton() {
+            const favoriteIcon = document.getElementById('favoriteIcon');
+            const favoriteText = document.getElementById('favoriteText');
+            const favoriteBtn = document.getElementById('favoriteBtn');
+
+            if (isFavorite) {
+                favoriteIcon.className = 'bi bi-heart-fill';
+                favoriteText.textContent = '찜 취소';
+                favoriteBtn.className = 'btn btn-danger';
+            } else {
+                favoriteIcon.className = 'bi bi-heart';
+                favoriteText.textContent = '찜하기';
+                favoriteBtn.className = 'btn btn-outline-danger';
+            }
+        }
+
+        function checkFavoriteStatus() {
+            const accommodationId = ${accommodation.accommodationId};
+
+            <c:if test="${not empty sessionScope.userId}">
+                fetch(`${pageContext.request.contextPath}/accommodation/check-favorite?accommodationId=${accommodationId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        isFavorite = data.isFavorite;
+                        if (isFavorite) {
+                            favoriteId = data.favoriteId;
+                        }
+                        updateFavoriteButton();
+                    })
+                    .catch(error => {
+                        console.error('Error checking favorite status:', error);
+                    });
+            </c:if>
+        }
+
+        function showToast(message) {
+            // 토스트 메시지 표시 (부트스트랩 토스트 사용)
+            const toastContainer = document.getElementById('toastContainer');
+            if (!toastContainer) {
+                const container = document.createElement('div');
+                container.id = 'toastContainer';
+                container.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+                document.body.appendChild(container);
+            }
+
+            const toastId = 'toast-' + Date.now();
+            const toastHtml = `
+                <div id="${toastId}" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="toast-header">
+                        <strong class="me-auto">알림</strong>
+                        <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                    <div class="toast-body">
+                        ${message}
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('toastContainer').insertAdjacentHTML('beforeend', toastHtml);
+            const toastElement = document.getElementById(toastId);
+            const toast = new bootstrap.Toast(toastElement);
+            toast.show();
+
+            // 3초 후 자동으로 제거
+            setTimeout(() => {
+                toastElement.remove();
+            }, 3000);
+        }
+
         // 페이지 로드 시 실행
         document.addEventListener('DOMContentLoaded', function() {
-            // 리뷰 로드
-            loadReviews();
+            // 즐겨찾기 상태 확인
+            checkFavoriteStatus();
 
             // 지도 초기화
             // initMap(); // Kakao Maps API 키가 필요합니다
@@ -384,7 +583,60 @@
                     checkOutDate.value = formatDate(minCheckOutDate);
                 }
             });
+
+            // Initialize social sharing functionality
+            initSocialSharing();
         });
+
+        // Social sharing functions
+        function initSocialSharing() {
+            // Add meta tags for better social sharing
+            const head = document.querySelector('head');
+            const title = "${accommodation.title}";
+            const description = "${accommodation.description}".substring(0, 150) + "...";
+            const url = window.location.href;
+
+            // Add Open Graph meta tags if they don't exist
+            if (!document.querySelector('meta[property="og:title"]')) {
+                const metaTags = `
+                    <meta property="og:title" content="${title}">
+                    <meta property="og:description" content="${description}">
+                    <meta property="og:url" content="${url}">
+                    <meta property="og:type" content="website">
+                `;
+                head.insertAdjacentHTML('beforeend', metaTags);
+            }
+        }
+
+        function shareOnFacebook() {
+            const url = encodeURIComponent(window.location.href);
+            const shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${url}`;
+            window.open(shareUrl, 'facebook-share', 'width=580,height=520');
+            showToast('Facebook에 공유되었습니다.');
+        }
+
+        function shareOnTwitter() {
+            const url = encodeURIComponent(window.location.href);
+            const text = encodeURIComponent("${accommodation.title} - 이 숙소를 확인해보세요!");
+            const shareUrl = `https://twitter.com/intent/tweet?text=${text}&url=${url}`;
+            window.open(shareUrl, 'twitter-share', 'width=580,height=520');
+            showToast('Twitter에 공유되었습니다.');
+        }
+
+        function shareViaEmail() {
+            const subject = encodeURIComponent("${accommodation.title} - 숙소 추천");
+            const body = encodeURIComponent(
+                "안녕하세요,\n\n" +
+                "이 숙소를 추천합니다: ${accommodation.title}\n\n" +
+                "위치: ${accommodation.address}\n" +
+                "상세 정보: " + window.location.href + "\n\n" +
+                "즐거운 여행 되세요!"
+            );
+            window.location.href = `mailto:?subject=${subject}&body=${body}`;
+            showToast('이메일로 공유되었습니다.');
+        }
     </script>
+    <!-- 토스트 컨테이너 -->
+    <div id="toastContainer" class="toast-container position-fixed bottom-0 end-0 p-3"></div>
 </body>
 </html>

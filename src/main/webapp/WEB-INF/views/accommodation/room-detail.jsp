@@ -48,7 +48,7 @@
 </head>
 <body>
     <jsp:include page="../fragments/header.jsp" />
-    
+
     <div class="container mt-5">
         <c:if test="${not empty message}">
             <div class="alert alert-success alert-dismissible fade show" role="alert">
@@ -56,7 +56,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
         </c:if>
-        
+
         <!-- 객실 정보 -->
         <div class="row mb-5">
             <!-- 이미지 캐러셀 -->
@@ -93,14 +93,14 @@
                     </button>
                 </div>
             </div>
-            
+
             <!-- 객실 기본 정보 및 예약 카드 -->
             <div class="col-md-4">
                 <div class="card booking-card">
                     <div class="card-body">
                         <h2 class="card-title">${room.name}</h2>
                         <p class="text-muted">${accommodation.title}</p>
-                        
+
                         <div class="mb-3">
                             <h5>객실 정보</h5>
                             <p><i class="bi bi-people"></i> 최대 ${room.capacity}인</p>
@@ -108,7 +108,7 @@
                             <p><i class="bi bi-door-closed"></i> 객실 수: ${room.roomCount}개</p>
                             <p><i class="bi bi-currency-dollar"></i> 가격: <fmt:formatNumber value="${room.price}" type="currency" currencySymbol="₩" maxFractionDigits="0"/>/박</p>
                         </div>
-                        
+
                         <!-- 예약 폼 -->
                         <form action="${pageContext.request.contextPath}/reservation/form/${room.roomId}" method="get">
                             <input type="hidden" name="roomId" value="${room.roomId}">
@@ -124,11 +124,23 @@
                                 <label for="guestCount" class="form-label">인원 수</label>
                                 <input type="number" class="form-control" id="guestCount" name="guestCount" min="1" max="${room.capacity}" value="1" required>
                             </div>
-                            <div class="d-grid">
+                            <div class="d-grid gap-2">
                                 <button type="submit" class="btn btn-primary">예약하기</button>
                             </div>
                         </form>
-                        
+
+                        <!-- 장바구니 추가 폼 -->
+                        <form action="${pageContext.request.contextPath}/cart/add" method="post" class="mt-2">
+                            <input type="hidden" name="roomId" value="${room.roomId}">
+                            <input type="hidden" id="cartCheckInDate" name="checkInDate">
+                            <input type="hidden" id="cartCheckOutDate" name="checkOutDate">
+                            <input type="hidden" id="cartGuestCount" name="guestCount">
+                            <input type="hidden" id="cartPrice" name="price">
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-outline-primary">장바구니에 담기</button>
+                            </div>
+                        </form>
+
                         <!-- 호스트인 경우 수정/삭제 버튼 표시 -->
                         <c:if test="${sessionScope.userId == accommodation.hostId}">
                             <div class="mt-4">
@@ -140,7 +152,7 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- 객실 상세 설명 -->
         <div class="row mb-5">
             <div class="col-12">
@@ -148,10 +160,10 @@
                     <div class="card-body">
                         <h4 class="card-title">객실 설명</h4>
                         <p class="card-text">${room.description}</p>
-                        
+
                         <h5 class="mt-4">침대 유형</h5>
                         <p>${room.bedType}</p>
-                        
+
                         <h5 class="mt-4">편의시설</h5>
                         <c:if test="${not empty room.amenities}">
                             <ul class="amenities-list">
@@ -164,7 +176,7 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- 가용성 캘린더 -->
         <div class="row mb-5">
             <div class="col-12">
@@ -185,7 +197,7 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- 숙소 정보 링크 -->
         <div class="row mb-5">
             <div class="col-12">
@@ -201,24 +213,24 @@
             </div>
         </div>
     </div>
-    
+
     <jsp:include page="../fragments/footer.jsp" />
-    
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         // 오늘 날짜 설정
         const today = new Date();
         let currentMonth = today.getMonth();
         let currentYear = today.getFullYear();
-        
+
         // 페이지 로드 시 실행
         document.addEventListener('DOMContentLoaded', function() {
             // 체크인/체크아웃 날짜 초기화
             initDatePickers();
-            
+
             // 캘린더 초기화
             renderCalendar(currentMonth, currentYear);
-            
+
             // 이전/다음 달 버튼 이벤트
             document.getElementById('prevMonth').addEventListener('click', function() {
                 currentMonth--;
@@ -228,7 +240,7 @@
                 }
                 renderCalendar(currentMonth, currentYear);
             });
-            
+
             document.getElementById('nextMonth').addEventListener('click', function() {
                 currentMonth++;
                 if (currentMonth > 11) {
@@ -237,76 +249,85 @@
                 }
                 renderCalendar(currentMonth, currentYear);
             });
-            
+
             // 체크아웃 날짜 유효성 검사
             document.getElementById('checkInDate').addEventListener('change', function() {
                 validateDates();
+                updateCartFormFields();
             });
-            
+
             document.getElementById('checkOutDate').addEventListener('change', function() {
                 validateDates();
+                updateCartFormFields();
             });
+
+            document.getElementById('guestCount').addEventListener('change', function() {
+                updateCartFormFields();
+            });
+
+            // 초기 카트 폼 필드 업데이트
+            updateCartFormFields();
         });
-        
+
         // 체크인/체크아웃 날짜 초기화
         function initDatePickers() {
             const tomorrow = new Date(today);
             tomorrow.setDate(tomorrow.getDate() + 1);
-            
+
             const formatDate = (date) => {
                 const year = date.getFullYear();
                 const month = String(date.getMonth() + 1).padStart(2, '0');
                 const day = String(date.getDate()).padStart(2, '0');
                 return `${year}-${month}-${day}`;
             };
-            
+
             document.getElementById('checkInDate').value = formatDate(today);
             document.getElementById('checkInDate').min = formatDate(today);
             document.getElementById('checkOutDate').value = formatDate(tomorrow);
             document.getElementById('checkOutDate').min = formatDate(tomorrow);
         }
-        
+
         // 날짜 유효성 검사
         function validateDates() {
             const checkInDate = new Date(document.getElementById('checkInDate').value);
             const checkOutDate = document.getElementById('checkOutDate');
-            
+
             // 체크아웃 날짜가 체크인 날짜보다 이전이면 체크인 다음날로 설정
             const minCheckOutDate = new Date(checkInDate);
             minCheckOutDate.setDate(minCheckOutDate.getDate() + 1);
-            
+
             const formatDate = (date) => {
                 const year = date.getFullYear();
                 const month = String(date.getMonth() + 1).padStart(2, '0');
                 const day = String(date.getDate()).padStart(2, '0');
                 return `${year}-${month}-${day}`;
             };
-            
+
             checkOutDate.min = formatDate(minCheckOutDate);
-            
+
             if (new Date(checkOutDate.value) <= checkInDate) {
                 checkOutDate.value = formatDate(minCheckOutDate);
             }
         }
-        
+
         // 캘린더 렌더링
         function renderCalendar(month, year) {
             const monthNames = ["1월", "2월", "3월", "4월", "5월", "6월", "7월", "8월", "9월", "10월", "11월", "12월"];
             const daysInMonth = new Date(year, month + 1, 0).getDate();
             const firstDay = new Date(year, month, 1).getDay();
-            
+
             document.getElementById('currentMonth').textContent = `${year}년 ${monthNames[month]}`;
-            
+
             let calendarHTML = '<table class="calendar">';
             calendarHTML += '<thead><tr>';
             calendarHTML += '<th>일</th><th>월</th><th>화</th><th>수</th><th>목</th><th>금</th><th>토</th>';
             calendarHTML += '</tr></thead><tbody>';
-            
+
             // 날짜 채우기
             let date = 1;
             for (let i = 0; i < 6; i++) {
                 calendarHTML += '<tr>';
-                
+
                 for (let j = 0; j < 7; j++) {
                     if (i === 0 && j < firstDay) {
                         calendarHTML += '<td></td>';
@@ -316,31 +337,31 @@
                         const currentDate = new Date(year, month, date);
                         const isToday = currentDate.toDateString() === today.toDateString();
                         const isPast = currentDate < today;
-                        
+
                         // 가용성 확인 (실제로는 API 호출 필요)
                         const isAvailable = !isPast && Math.random() > 0.3; // 임시로 랜덤하게 가용성 설정
-                        
+
                         let cellClass = '';
                         if (isToday) cellClass += ' today';
                         if (isPast || !isAvailable) cellClass += ' unavailable';
                         else cellClass += ' available';
-                        
+
                         calendarHTML += `<td class="${cellClass}">${date}</td>`;
                         date++;
                     }
                 }
-                
+
                 calendarHTML += '</tr>';
                 if (date > daysInMonth) break;
             }
-            
+
             calendarHTML += '</tbody></table>';
             document.getElementById('calendar').innerHTML = calendarHTML;
-            
+
             // 실제 구현에서는 여기서 API를 호출하여 가용성 정보를 가져와 캘린더에 표시
             loadAvailability(year, month);
         }
-        
+
         // 가용성 정보 로드 (실제 구현에서는 API 호출)
         function loadAvailability(year, month) {
             // 예시: API 호출하여 가용성 정보 가져오기
@@ -352,18 +373,18 @@
             //     })
             //     .catch(error => console.error('Error loading availability:', error));
         }
-        
+
         // 캘린더 가용성 업데이트 (실제 구현에서 사용)
         function updateCalendarAvailability(availabilityData) {
             const calendar = document.getElementById('calendar');
             const cells = calendar.querySelectorAll('td');
-            
+
             cells.forEach(cell => {
                 const day = parseInt(cell.textContent);
                 if (!isNaN(day) && day > 0) {
                     const date = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                     const availability = availabilityData.find(a => a.date === date);
-                    
+
                     if (availability) {
                         if (availability.availableCount > 0) {
                             cell.classList.add('available');
@@ -375,6 +396,36 @@
                     }
                 }
             });
+        }
+
+        // 장바구니 폼 필드 업데이트
+        function updateCartFormFields() {
+            // 예약 폼에서 값 가져오기
+            const checkInDate = document.getElementById('checkInDate').value;
+            const checkOutDate = document.getElementById('checkOutDate').value;
+            const guestCount = document.getElementById('guestCount').value;
+
+            // 장바구니 폼 필드 업데이트
+            document.getElementById('cartCheckInDate').value = checkInDate;
+            document.getElementById('cartCheckOutDate').value = checkOutDate;
+            document.getElementById('cartGuestCount').value = guestCount;
+
+            // 가격 계산
+            if (checkInDate && checkOutDate) {
+                const nights = calculateNights(checkInDate, checkOutDate);
+                const pricePerNight = ${room.price};
+                const totalPrice = nights * pricePerNight;
+                document.getElementById('cartPrice').value = totalPrice;
+            }
+        }
+
+        // 숙박 일수 계산
+        function calculateNights(checkInDate, checkOutDate) {
+            const start = new Date(checkInDate);
+            const end = new Date(checkOutDate);
+            const diffTime = Math.abs(end - start);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            return diffDays;
         }
     </script>
 </body>

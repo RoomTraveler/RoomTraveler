@@ -3,6 +3,7 @@ package com.ssafy.trip.accommodation.dao;
 import com.ssafy.trip.accommodation.model.Review;
 
 import org.apache.ibatis.annotations.Mapper;
+import org.springframework.stereotype.Component;
 
 import java.sql.SQLException;
 import java.util.List;
@@ -11,7 +12,7 @@ import java.util.Map;
 /**
  * 리뷰 데이터 액세스 인터페이스
  */
-@Mapper
+@Component("accommodationReviewDao")
 public interface ReviewDao {
 
     /**

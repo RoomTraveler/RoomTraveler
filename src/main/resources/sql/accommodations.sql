@@ -20,29 +20,33 @@ CREATE TABLE accommodations (
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (accommodation_id),
-    FOREIGN KEY (host_id) REFERENCES hosts(host_id) ON DELETE CASCADE,
+    FOREIGN KEY (host_id) REFERENCES users(user_id) ON DELETE CASCADE,
     FOREIGN KEY (sido_code) REFERENCES sidos(sido_code),
     FOREIGN KEY (gugun_code) REFERENCES guguns(gugun_code)
 );
 
 -- Rooms Table
-CREATE TABLE rooms (
-    room_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-    accommodation_id BIGINT UNSIGNED NOT NULL,
-    name VARCHAR(100) NOT NULL,
-    description TEXT NOT NULL,
-    price DECIMAL(10,2) NOT NULL,
-    capacity INT NOT NULL,
-    room_count INT NOT NULL DEFAULT 1,
-    room_size DECIMAL(8,2) NULL,
-    bed_type VARCHAR(50) NULL,
-    amenities TEXT NULL,
-    status ENUM('AVAILABLE', 'UNAVAILABLE') NOT NULL DEFAULT 'AVAILABLE',
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    PRIMARY KEY (room_id),
-    FOREIGN KEY (accommodation_id) REFERENCES accommodations(accommodation_id) ON DELETE CASCADE
+-- rooms 테이블 생성
+CREATE TABLE IF NOT EXISTS rooms (
+  room_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  accommodation_id BIGINT UNSIGNED NOT NULL,
+  name VARCHAR(100)       NOT NULL,
+  description TEXT,
+  capacity INT,
+  price_per_night DECIMAL(10,2) NOT NULL DEFAULT 0,
+  room_type VARCHAR(50),
+                                     bed_type VARCHAR(50),
+                                     bathroom_count INT,
+                                     amenities TEXT,
+                                     status VARCHAR(20),
+                                     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                                     PRIMARY KEY (room_id),
+                                     FOREIGN KEY (accommodation_id)
+                                         REFERENCES accommodations(accommodation_id)
+                                         ON DELETE CASCADE
 );
+
 
 -- Images Table
 CREATE TABLE images (
