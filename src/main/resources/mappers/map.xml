@@ -78,21 +78,36 @@
   </insert>
 
   <insert id="insertPlanAttractions" parameterType="map">
-    INSERT INTO plan_attraction (plan_id, attraction_id)
+    INSERT INTO plan_attraction (plan_id, attraction_id, order_num)
     VALUES
-    <foreach collection="attractionIds" item="id" separator=",">
-      (#{planId}, #{id})
+    <foreach collection="attractionIds" item="id" index="idx" separator=",">
+      (#{planId}, #{id}, #{idx})
     </foreach>
   </insert>
 
-  <select id="getPlanIds">
-    SELECT plan_id FROM plan WHERE user_id = #{userId}
-  </select>
+    <resultMap id="PlanWithAttractions" type="com.ssafy.trip.map.MapDTO$PlanDTO">
+        <id property="planId" column="plan_id"/>
+        <collection property="planAttractions" ofType="com.ssafy.trip.map.MapDTO$PlanAttractionDTO">
+            <result property="attractionId" column="attraction_id"/>
+            <result property="order"  column="order_num"/>
+            <result property="title"  column="title"/>
+        </collection>
+    </resultMap>
 
-    <select id="getPlans">
-        SELECT attraction_id
-        FROM plan_attraction
-        WHERE plan_id = #{planId}
+    <select id="getPlans" resultMap="PlanWithAttractions">
+        SELECT
+            p.plan_id        AS plan_id,
+            pa.attraction_id,
+            pa.order_num,
+            a.title,
+            a.addr1,
+            a.addr2,
+            a.tel
+        FROM plan p
+                 JOIN plan_attraction pa  ON p.plan_id = pa.plan_id
+                 JOIN attractions    a    ON pa.attraction_id = a.no
+        WHERE p.user_id = #{userId}
+        ORDER BY p.user_id, pa.order_num
     </select>
 
     <select id="getRegionTripWithinMapRange" resultMap="RegionTripResDtoMap">

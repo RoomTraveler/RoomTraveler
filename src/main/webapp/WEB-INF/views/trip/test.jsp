@@ -67,13 +67,10 @@
                     <h5>여행 일정 선택</h5>
                 </div>
                 <div class="card-body">
-                    <form method="get" action="map/plan">
-                        <input type="hidden" name="id" value="${id}" />
-                        <ul id="selectedList" class="list-group mb-3" style="max-height:600px; overflow-y:auto;">
-                            <!-- JS로 선택된 장소 채움 -->
-                        </ul>
-                        <button type="submit" class="btn btn-success w-100">선택한 장소 저장</button>
-                    </form>
+                    <ul id="selectedList" class="list-group mb-3" style="max-height:600px; overflow-y:auto;">
+                        <!-- JS로 선택된 장소 채움 -->
+                    </ul>
+                    <button id="planStoreBtn" type="submit" class="btn btn-success w-100">선택한 장소 저장</button>
                 </div>
             </div>
         </div>
@@ -88,6 +85,7 @@
     let map, mapMarkers = [], infoWindows = [];
     let currentOpenInfoWindow = null;
     let mapBound = null;
+    const id = 1; // 아이디 일단 번호 나중엔 JWT에서 가져오는 식이 되려나...
     function initMap() {
         const defaultLat = 35.205432, defaultLng = 126.811591;
         const container = document.getElementById('map');
@@ -291,7 +289,9 @@
         const ul = document.getElementById('selectedList');
         const li = document.createElement('li');
         li.className = 'list-group-item';
+        li.draggable = true;
         li.textContent = title;
+        li.value = id;
         ul.appendChild(li);
     }
 
@@ -333,22 +333,73 @@
         setPagination(dataForPage.totalPages, 0);
     });
 
-    // 체크박스 클릭으로 선택 추가
     document.getElementById('spotList').addEventListener('change', (e) => {
         if (e.target.matches('input[type="checkbox"]')) {
-            const id = e.target.dataset.id;
-            const title = e.target.dataset.title;
-            console.log(e);
-            console.log(e.target);
-            console.log(e.target.dataset);
-            console.log(id);
-            console.log(title);
+            const checkedCheckbox = e.target;
+            const id = checkedCheckbox.value;
+            const title = checkedCheckbox.parentElement.querySelector("strong").textContent;
             if (e.target.checked) updateSelected(id, title);
             else {
-                // 체크 해제 시 선택 목록에서 제거
                 const items = document.querySelectorAll('#selectedList li');
                 items.forEach(li => { if (li.textContent === title) li.remove(); });
             }
+        }
+    });
+
+    const container = document.getElementById('selectedList');
+    let draggedItem = null;
+
+    container.addEventListener('dragstart', (e) => {
+        if (e.target.classList.contains('list-group-item')) {
+            draggedItem = e.target;
+            e.dataTransfer.effectAllowed = 'move';
+        }
+    });
+
+    container.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        const target = e.target;
+        if (target !== draggedItem && target.classList.contains('list-group-item')) {
+            const bounding = target.getBoundingClientRect();
+            const offset = bounding.y + bounding.height / 2;
+            if (e.clientY - offset > 0) {
+                target.after(draggedItem);
+            } else {
+                target.before(draggedItem);
+            }
+        }
+    });
+
+    container.addEventListener('drop', (e) => {
+        e.preventDefault();
+    });
+
+    // private Long userId;
+    // private Long planId;
+    // private List<Long> attractionIds;
+    document.getElementById('planStoreBtn').addEventListener('click', async () => {
+        const selectedList = document.querySelector("#selectedList");
+        const attractionIds = Array.from(selectedList.children).map(li => li.getAttribute('value'));
+        try {
+            const response = await fetch('/map/plan', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    userId: id,
+                    attractionIds: attractionIds
+                })
+            });
+
+            if (!response.ok) throw new Error('서버 응답 실패');
+
+            const result = await response.text();
+            alert(result);
+            location.reload();
+        } catch (error) {
+            console.error('저장 실패:', error);
+            alert('저장 중 오류가 발생했습니다.');
         }
     });
 </script>

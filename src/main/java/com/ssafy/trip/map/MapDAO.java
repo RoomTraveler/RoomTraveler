@@ -30,10 +30,8 @@ public interface MapDAO{
 
     // 8) plan↔attraction 매핑 테이블에 복수 삽입
     int insertPlanAttractions(MapDTO.PlanStoreDTO planStoreDTO);
-
-    List<Long> getPlanIds(Long userId);
     // 9) 사용자별 계획 조회
-    List<Long> getPlans(Long planIds);
+    List<MapDTO.PlanDTO> getPlans(Long planIds);
 
     List<RegionTripResDto> getRegionTripWithinMapRange(MapBound mapBound, Pageable pageable);
 

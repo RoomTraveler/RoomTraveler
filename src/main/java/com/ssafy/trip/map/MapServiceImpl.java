@@ -49,18 +49,9 @@ public class MapServiceImpl implements MapService {
     }
 
     @Override
-    public List<MapDTO.PlanStoreDTO> getPlan(Long userId) {
-        List<Long> planIds = mapDAO.getPlanIds(userId);
-        List<MapDTO.PlanStoreDTO> plans = new ArrayList<>();
-        for (Long planId : planIds) {
-            List<Long> planList = mapDAO.getPlans(planId);
-            MapDTO.PlanStoreDTO planStoreDTO = new MapDTO.PlanStoreDTO();
-            planStoreDTO.setUserId(userId);
-            planStoreDTO.setPlanId(planId);
-            planStoreDTO.setAttractionIds(planList);
-            plans.add(planStoreDTO);
-        }
-        return plans;
+    @Transactional
+    public List<MapDTO.PlanDTO> getPlans(Long userId) {
+        return mapDAO.getPlans(userId);
     }
 
     @Override

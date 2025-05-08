@@ -111,13 +111,13 @@ COMMENT = '명소정보테이블';
 -- Table `ssafytrip`.`plan`
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `ssafytrip`.`plan` (
-  `plan_id` INT NOT NULL AUTO_INCREMENT,
-  `member_id` INT NOT NULL,
-  PRIMARY KEY (`plan_id`),
-  INDEX `fk_travel_member1_idx` (`member_id` ASC) VISIBLE,
-  CONSTRAINT `fk_travel_member1`
-    FOREIGN KEY (`member_id`)
-    REFERENCES `ssafytrip`.`member` (`mno`))
+    `plan_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+    `user_id` bigint unsigned NOT NULL,
+    PRIMARY KEY (`plan_id`),
+    INDEX `fk_travel_user1_idx` (`user_id` ASC) VISIBLE,
+    CONSTRAINT `fk_travel_user1`
+        FOREIGN KEY (`user_id`)
+        REFERENCES `ssafytrip`.`users` (`user_id`))
 ENGINE = InnoDB
 AUTO_INCREMENT = 3
 DEFAULT CHARACTER SET = utf8mb4
@@ -128,22 +128,23 @@ COLLATE = utf8mb4_0900_ai_ci;
 -- Table `ssafytrip`.`plan_attraction`
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `ssafytrip`.`plan_attraction` (
-  `plan_attraction_id` INT NOT NULL AUTO_INCREMENT,
-  `attraction_id` INT NOT NULL,
-  `plan_id` INT NOT NULL,
-  PRIMARY KEY (`plan_attraction_id`),
-  INDEX `fk_plan_attraction_attractions1_idx` (`attraction_id` ASC) VISIBLE,
-  INDEX `fk_plan_attraction_plan1_idx` (`plan_id` ASC) VISIBLE,
-  CONSTRAINT `fk_plan_attraction_attractions1`
-    FOREIGN KEY (`attraction_id`)
-    REFERENCES `ssafytrip`.`attractions` (`no`),
-  CONSTRAINT `fk_plan_attraction_plan1`
-    FOREIGN KEY (`plan_id`)
-    REFERENCES `ssafytrip`.`plan` (`plan_id`))
-ENGINE = InnoDB
-AUTO_INCREMENT = 9
-DEFAULT CHARACTER SET = utf8mb4
-COLLATE = utf8mb4_0900_ai_ci;
+    `plan_attraction_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+    `attraction_id` INT NOT NULL,
+    `plan_id` bigint unsigned NOT NULL,
+    `order_num` INT NOT NULL,
+    PRIMARY KEY (`plan_attraction_id`),
+    INDEX `fk_plan_attraction_attractions1_idx` (`attraction_id` ASC) VISIBLE,
+    INDEX `fk_plan_attraction_plan1_idx` (`plan_id` ASC) VISIBLE,
+        CONSTRAINT `fk_plan_attraction_attractions1`
+            FOREIGN KEY (`attraction_id`)
+            REFERENCES `ssafytrip`.`attractions` (`no`),
+        CONSTRAINT `fk_plan_attraction_plan1`
+            FOREIGN KEY (`plan_id`)
+            REFERENCES `ssafytrip`.`plan` (`plan_id`))
+    ENGINE = InnoDB
+    AUTO_INCREMENT = 9
+    DEFAULT CHARACTER SET = utf8mb4
+    COLLATE = utf8mb4_0900_ai_ci;
 
 
 SET SQL_MODE=@OLD_SQL_MODE;

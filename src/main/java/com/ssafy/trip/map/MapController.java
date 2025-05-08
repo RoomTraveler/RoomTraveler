@@ -79,7 +79,7 @@ public class MapController {
     }
 
     @GetMapping("/plan")
-    public List<MapDTO.PlanStoreDTO> getPlan(@RequestParam Long mno) {
-        return mapService.getPlan(mno);
+    public List<MapDTO.PlanDTO> getPlan(@RequestParam Long mno) {
+        return mapService.getPlans(mno);
     }
 }

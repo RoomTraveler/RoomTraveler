@@ -36,6 +36,25 @@ public class MapDTO {
         private String overview;
     }
 
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class PlanAttractionDTO {
+        private Long attractionId;
+        private int order;
+        private String title;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class PlanDTO {
+        private Long planId;
+        private List<PlanAttractionDTO> planAttractions;
+    }
+
 //    @Data
 //    @NoArgsConstructor
 //    @AllArgsConstructor
