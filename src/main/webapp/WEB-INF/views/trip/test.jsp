@@ -29,8 +29,7 @@
                         <div class="col-md-4">
                             <label for="keywordInput" class="form-label">키워드 검색</label>
                             <div class="input-group">
-                                <input type="text" id="keywordInput" class="form-control" placeholder="검색어 입력">
-                                <button type="button" id="keywordSearchBtn" class="btn btn-outline-secondary">검색</button>
+                                <input type="text" id="keywordInput" class="form-control" placeholder="검색어 입력(2자 이상)">
                             </div>
                         </div>
                         <div class="col-md-4 align-self-end text-end">
@@ -79,12 +78,13 @@
 
 <!-- Bootstrap JS & Kakao Maps SDK -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<script src="//dapi.kakao.com/v2/maps/sdk.js?appkey=18dcaec57ee4149f30695dab2b7cc784"></script>
+<script src="//dapi.kakao.com/v2/maps/sdk.js?appkey=18dcaec57ee4149f30695dab2b7cc784&libraries=clusterer"></script>
 <script>
     // 초기 맵 세팅
     let map, mapMarkers = [], infoWindows = [];
     let currentOpenInfoWindow = null;
     let mapBound = null;
+    let selectedPlaces = [];
     const id = 1; // 아이디 일단 번호 나중엔 JWT에서 가져오는 식이 되려나...
     function initMap() {
         const defaultLat = 35.205432, defaultLng = 126.811591;
@@ -117,15 +117,29 @@
     // 페이지 로드시 자동 실행
     window.addEventListener("DOMContentLoaded", loadContentList);
 
+    function containsNonKorean(text) {
+        // 한글 이외의 문자가 하나라도 있으면 true
+        return /[^가-힣]/.test(text);
+    }
+
     async function fetchTourSpots(page) {
+
+        let selectedValue = parseInt(document.getElementById("contentDropdown").value);
+        if (!(selectedValue === 12 || selectedValue === 14 || selectedValue === 15 || selectedValue === 25 || selectedValue === 28
+            || selectedValue === 32 || selectedValue === 38 || selectedValue === 39)) selectedValue = -1;
+
+        let keywordTextContent = document.getElementById("keywordInput").textContent;
+        if (keywordTextContent.length < 2 || containsNonKorean(keywordTextContent)) keywordTextContent = '';
 
         const params = new URLSearchParams({
             mapBound: JSON.stringify(mapBound),
-            page: page,
-            size: 10
+            page,
+            size: 10,
+            contentType: selectedValue,
+            keyword: keywordTextContent
         });
 
-        const response = await fetch(`/map/regions-content?\${params.toString()}`, {
+        const response = await fetch(`/map/region-contents?\${params.toString()}`, {
             method: "GET",
             headers: {
                 "Content-Type": "application/json"
@@ -151,7 +165,9 @@
             </label><br/>
             <img src="\${spot.image}" class="img-thumbnail" style="max-width: 100px; height: 100px;"><br/>
             \${spot.addr1 || ""} \${spot.addr2 || ""}<br/>
-            \${spot.tel || ""}`;
+            \${spot.tel || ""}
+            <input type="hidden" name="latitude" value="\${spot.latitude}">
+            <input type="hidden" name="longitude" value="\${spot.longitude}">`;
             ul.appendChild(li);
         });
     }
@@ -161,38 +177,38 @@
         pagination.innerHTML = "";
 
         const blockSize = 5; // 한번에 보여줄 페이지 수
-        const currentBlock = Math.floor(currentPage / blockSize);
-        const startPage = currentBlock * blockSize;
-        const endPage = Math.min(startPage + blockSize, totalPages);
+        const currentBlock = Math.floor((currentPage - 1) / blockSize);
+        const startPage = currentBlock * blockSize + 1;
+        const endPage = Math.min(startPage + blockSize - 1, totalPages);
 
         // < 버튼 (이전 블럭)
-        if (startPage > 0) {
+        if (startPage > 1) {
             const prevLi = document.createElement("li");
             prevLi.className = "page-item";
             const prevA = document.createElement("a");
             prevA.className = "page-link";
-            prevA.href = "#";
-            prevA.innerHTML = "&laquo;"; // <<
-            prevA.onclick = () => {
-                fetchTourSpots(startPage - 1);
-                return false;
+            prevA.innerHTML = "&laquo;";
+            prevA.onclick = (e) => {
+                e.preventDefault();
+                fetchTourSpots(currentPage - 1);
+                setPagination(totalPages, currentPage - 1);
             };
             prevLi.appendChild(prevA);
             pagination.appendChild(prevLi);
         }
 
         // 페이지 번호 버튼
-        for (let i = startPage; i < endPage; i++) {
+        for (let i = startPage; i <= endPage; i++) {
             const li = document.createElement("li");
-            li.className = `page-item \${i === currentPage ? 'active' : ''}`;
+            li.className = `page-item\${i === currentPage ? ' active' : ''}`;
 
             const a = document.createElement("a");
             a.className = "page-link";
-            a.href = "/map/regions-content?page=${i}";
-            a.textContent = i + 1;
-            a.onclick = () => {
-                fetchTourSpots(i);
-                return false;
+            a.textContent = i;
+            a.onclick = (e) => {
+                e.preventDefault();
+                fetchTourSpots(i - 1);
+                setPagination(totalPages, i);
             };
 
             li.appendChild(a);
@@ -205,11 +221,11 @@
             nextLi.className = "page-item";
             const nextA = document.createElement("a");
             nextA.className = "page-link";
-            nextA.href = "#";
-            nextA.innerHTML = "&raquo;"; // >>
-            nextA.onclick = () => {
-                fetchTourSpots(endPage);
-                return false;
+            nextA.innerHTML = "&raquo;";
+            nextA.onclick = (e) => {
+                e.preventDefault();
+                fetchTourSpots(currentPage + 1);
+                setPagination(totalPages, currentPage + 1);
             };
             nextLi.appendChild(nextA);
             pagination.appendChild(nextLi);
@@ -222,8 +238,17 @@
         }
         mapMarkers = [];
         infoWindows = [];
+        //clusterer.clear();
     }
 
+    // 일단 클러스터러 안되서 패쓰!!!
+    // const clusterer = new kakao.maps.MarkerClusterer({
+    //     map: map,
+    //     averageCenter: true,
+    //     gridSize: 35,
+    //     minLevel: 10,
+    //     disableClickZoom: true,
+    // });
     const updateMap = (infos) => {
         try {
             removeMarkers();
@@ -273,6 +298,7 @@
                 mapMarkers.push(marker);
                 infoWindows.push(infoWindow);
             }
+            //clusterer.addMarkers(mapMarkers);
         } catch (e) {
             console.log(e);
         }
@@ -309,13 +335,22 @@
             }
         };
 
+        let selectedValue = parseInt(document.getElementById("contentDropdown").value);
+        if (!(selectedValue === 12 || selectedValue === 14 || selectedValue === 15 || selectedValue === 25 || selectedValue === 28
+            || selectedValue === 32 || selectedValue === 38 || selectedValue === 39)) selectedValue = -1;
+
+        let keywordTextContent = document.getElementById("keywordInput").value;
+        if (keywordTextContent.length < 2 || containsNonKorean(keywordTextContent)) keywordTextContent = '';
+
         const params = new URLSearchParams({
             mapBound: JSON.stringify(mapBound),
             page: 0,
-            size: 10
+            size: 10,
+            contentType: selectedValue,
+            keyword: keywordTextContent
         });
 
-        const response = await fetch(`/map/regions-content?\${params.toString()}`, {
+        const response = await fetch(`/map/region-contents?\${params.toString()}`, {
             method: "GET"
         });
         const data = await response.json();
@@ -323,28 +358,57 @@
         updateMap(data);
 
         const param = new URLSearchParams({
-            mapBound: JSON.stringify(mapBound)
+            mapBound: JSON.stringify(mapBound),
+            contentType: selectedValue,
+            keyword: keywordTextContent
         });
 
-        const responseForPage = await fetch(`/map/regions-content-total-page?\${param.toString()}`, {
+        const responseForPage = await fetch(`/map/region-content-total-page?\${param.toString()}`, {
             method: "GET"
         });
         const dataForPage = await responseForPage.json();
-        setPagination(dataForPage.totalPages, 0);
+        setPagination(Math.ceil(dataForPage.totalPages / 10), 1);
     });
 
     document.getElementById('spotList').addEventListener('change', (e) => {
         if (e.target.matches('input[type="checkbox"]')) {
             const checkedCheckbox = e.target;
             const id = checkedCheckbox.value;
-            const title = checkedCheckbox.parentElement.querySelector("strong").textContent;
-            if (e.target.checked) updateSelected(id, title);
+            const li = checkedCheckbox.parentElement;
+            const title = li.querySelector("strong").textContent;
+            const latitude = li.parentElement.querySelector('input[name="latitude"]').value;
+            const longitude = li.parentElement.querySelector('input[name="longitude"]').value;
+            if (e.target.checked) {
+                updateSelected(id, title);
+                selectedPlaces.push({title, latitude, longitude, id});
+            }
             else {
                 const items = document.querySelectorAll('#selectedList li');
                 items.forEach(li => { if (li.textContent === title) li.remove(); });
+                selectedPlaces = selectedPlaces.filter(place => place.title !== title);
             }
+            drawLines();
         }
     });
+
+    let savePolyline = null;
+    const drawLines = () => {
+        if (savePolyline !== null)
+            savePolyline.setMap(null);
+        const linePath = [];
+        for (let i = 0; i < selectedPlaces.length; i++) {
+            linePath.push(new kakao.maps.LatLng(selectedPlaces[i].latitude, selectedPlaces[i].longitude));
+        }
+        const polyline = new kakao.maps.Polyline({
+            path: linePath,
+            strokeWeight: 3,
+            strokeColor: '#005666',
+            strokeOpacity: 0.7,
+            strokeStyle: 'solid'
+        });
+        savePolyline = polyline;
+        polyline.setMap(map);
+    };
 
     const container = document.getElementById('selectedList');
     let draggedItem = null;
@@ -372,6 +436,15 @@
 
     container.addEventListener('drop', (e) => {
         e.preventDefault();
+
+        const reorderedIds = Array.from(container.querySelectorAll('li'))
+            .map(li => li.getAttribute('value'));
+
+        selectedPlaces = reorderedIds.map(id =>
+            selectedPlaces.find(place => place.id === id)
+        );
+
+        drawLines();
     });
 
     // private Long userId;
@@ -381,14 +454,14 @@
         const selectedList = document.querySelector("#selectedList");
         const attractionIds = Array.from(selectedList.children).map(li => li.getAttribute('value'));
         try {
-            const response = await fetch('/map/plan', {
+            const response = await fetch('/map/plans', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
                     userId: id,
-                    attractionIds: attractionIds
+                    attractionIds: selectedPlaces.map(place => place.id)
                 })
             });
 

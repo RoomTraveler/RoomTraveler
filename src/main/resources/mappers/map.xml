@@ -91,6 +91,8 @@
             <result property="attractionId" column="attraction_id"/>
             <result property="order"  column="order_num"/>
             <result property="title"  column="title"/>
+            <result property="contentType" column="content_type_id"/>
+            <result property="imageUrl"  column="first_image1"/>
         </collection>
     </resultMap>
 
@@ -100,17 +102,16 @@
             pa.attraction_id,
             pa.order_num,
             a.title,
-            a.addr1,
-            a.addr2,
-            a.tel
+            a.content_type_id,
+            a.first_image1
         FROM plan p
                  JOIN plan_attraction pa  ON p.plan_id = pa.plan_id
                  JOIN attractions    a    ON pa.attraction_id = a.no
         WHERE p.user_id = #{userId}
-        ORDER BY p.user_id, pa.order_num
     </select>
 
     <select id="getRegionTripWithinMapRange" resultMap="RegionTripResDtoMap">
+        <bind name="likeKeyword" value="'%' + keyword + '%'" />
         SELECT no,
             title,
             first_image1 AS image,
@@ -121,15 +122,28 @@
             longitude
         FROM attractions
         WHERE latitude BETWEEN #{mapBound.southWest.latitude} AND #{mapBound.northEast.latitude}
-          AND longitude BETWEEN #{mapBound.southWest.longitude} AND #{mapBound.northEast.longitude}
+            AND longitude BETWEEN #{mapBound.southWest.longitude} AND #{mapBound.northEast.longitude}
+        <if test="contentType != null and contentType != -1">
+            AND content_type_id = #{contentType}
+        </if>
+        <if test="keyword != null and keyword != ''">
+            AND title LIKE #{likeKeyword}
+        </if>
         LIMIT ${pageable.offset}, ${pageable.pageSize}
     </select>
 
     <select id="countRegionTrips" resultType="int">
+        <bind name="likeKeyword" value="'%' + keyword + '%'" />
         select count(*) as region_trip_count
         FROM attractions
-        WHERE latitude BETWEEN #{southWest.latitude} AND #{northEast.latitude}
-          AND longitude BETWEEN #{southWest.longitude} AND #{northEast.longitude}
+        WHERE latitude BETWEEN #{mapBound.southWest.latitude} AND #{mapBound.northEast.latitude}
+          AND longitude BETWEEN #{mapBound.southWest.longitude} AND #{mapBound.northEast.longitude}
+        <if test="contentType != null and contentType != -1">
+            AND content_type_id = #{contentType}
+        </if>
+        <if test="keyword != null and keyword != ''">
+            AND title LIKE #{likeKeyword}
+        </if>
     </select>
 
 </mapper>

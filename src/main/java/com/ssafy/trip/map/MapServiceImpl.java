@@ -55,13 +55,13 @@ public class MapServiceImpl implements MapService {
     }
 
     @Override
-    public List<RegionTripResDto> getRegionTripWithinMapRange(MapDTO.MapBound mapBound, Pageable pageable) {
-        return mapDAO.getRegionTripWithinMapRange(mapBound, pageable);
+    public List<RegionTripResDto> getRegionTripWithinMapRange(MapDTO.MapBound mapBound, int contentType, String keyword, Pageable pageable) {
+        return mapDAO.getRegionTripWithinMapRange(mapBound, contentType, keyword, pageable);
     }
 
     @Override
-    public MapDTO.TotalPage getRegionTripTotalPage(MapDTO.MapBound mapBound) {
-        return new MapDTO.TotalPage(mapDAO.countRegionTrips(mapBound));
+    public MapDTO.TotalPage getRegionTripTotalPage(MapDTO.MapBound mapBound, int contentType, String keyword) {
+        return new MapDTO.TotalPage(mapDAO.countRegionTrips(mapBound, contentType, keyword));
     }
 
 //    @Override

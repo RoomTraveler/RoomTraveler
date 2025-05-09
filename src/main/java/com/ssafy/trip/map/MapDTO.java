@@ -44,6 +44,8 @@ public class MapDTO {
         private Long attractionId;
         private int order;
         private String title;
+        private String imageUrl;
+        private String contentType;
     }
 
     @Data

@@ -46,18 +46,23 @@ public class MapController {
 //        return mapService.getRegionTrip(sidoCode, gugunCode);
 //    }
 
-    @GetMapping("/regions-content")
+    @GetMapping("/region-contents")
     @ResponseBody
-    public List<RegionTripResDto> getRegionTripWithContent(@RequestParam String mapBound, @PageableDefault(size = 10) Pageable pageable) throws JsonProcessingException {
+    public List<RegionTripResDto> getRegionTripWithContent(@RequestParam String mapBound,
+                                                           @RequestParam(required = false) int contentType,
+                                                           @RequestParam(required = false) String keyword,
+                                                           @PageableDefault(size = 10) Pageable pageable) throws JsonProcessingException {
         MapDTO.MapBound mapBoundObj = objectMapper.readValue(mapBound, MapDTO.MapBound.class);
-        return mapService.getRegionTripWithinMapRange(mapBoundObj, pageable);
+        return mapService.getRegionTripWithinMapRange(mapBoundObj, contentType, keyword, pageable);
     }
 
-    @GetMapping("/regions-content-total-page")
+    @GetMapping("/region-content-total-page")
     @ResponseBody
-    public MapDTO.TotalPage getRegionTripTotalPage(@RequestParam String mapBound) throws JsonProcessingException {
+    public MapDTO.TotalPage getRegionTripTotalPage(@RequestParam String mapBound,
+                                                   @RequestParam(required = false) int contentType,
+                                                   @RequestParam(required = false) String keyword) throws JsonProcessingException {
         MapDTO.MapBound mapBoundObj = objectMapper.readValue(mapBound, MapDTO.MapBound.class);
-        return mapService.getRegionTripTotalPage(mapBoundObj);
+        return mapService.getRegionTripTotalPage(mapBoundObj, contentType, keyword);
     }
 
     @GetMapping("/content-types")
@@ -72,14 +77,15 @@ public class MapController {
 //        return mapService.getInfoByLocalContent(sidoCode, gugunCode, contentTypeId);
 //    }
 
-    @PostMapping("/plan")
+
+    @PostMapping("/plans")
     public ResponseEntity<String> savePlan(@RequestBody MapDTO.PlanStoreDTO planStoreDTO) {
         mapService.savePlan(planStoreDTO);
         return ResponseEntity.ok("Plan Saved");
     }
 
-    @GetMapping("/plan")
-    public List<MapDTO.PlanDTO> getPlan(@RequestParam Long mno) {
-        return mapService.getPlans(mno);
+    @GetMapping("/plans/{userId}")
+    public List<MapDTO.PlanDTO> getPlans(@PathVariable Long userId) {
+        return mapService.getPlans(userId);
     }
 }

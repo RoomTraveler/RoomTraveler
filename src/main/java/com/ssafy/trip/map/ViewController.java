@@ -13,4 +13,9 @@ public class ViewController {
     public String regionTripForm() {
         return "trip/test";
     }
+
+    @GetMapping("/plansPage")
+    public String plansPage() {
+        return "trip/plans";
+    }
 }

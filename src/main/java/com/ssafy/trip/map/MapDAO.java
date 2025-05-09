@@ -33,7 +33,7 @@ public interface MapDAO{
     // 9) 사용자별 계획 조회
     List<MapDTO.PlanDTO> getPlans(Long planIds);
 
-    List<RegionTripResDto> getRegionTripWithinMapRange(MapBound mapBound, Pageable pageable);
+    List<RegionTripResDto> getRegionTripWithinMapRange(MapBound mapBound, int contentType, String keyword, Pageable pageable);
 
-    Integer countRegionTrips(MapBound mapBound);
+    Integer countRegionTrips(MapBound mapBound, int contentType, String keyword);
 }

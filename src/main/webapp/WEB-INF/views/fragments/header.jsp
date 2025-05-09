@@ -29,7 +29,7 @@ pageEncoding="UTF-8"%> <%-- 페이지들이 가져갈 공통적인 내용들 위
   </header>
   <div class="d-flex justify-content-end">
     <a href="${root }/user" class="mx-3">메인으로</a> |
-    <a href = "${root }/trip?action=get-plan" class="mx-3">나의 여행지 리스트</a>
+    <a href = "${root }/map/plansPage" class="mx-3">나의 여행지 리스트</a>
     <!-- 회원가입을 위한 페이지를 요청하는 링크 -->
     <c:if test="${empty username }">
     	| <a href="/user/regist-user-form" class="mx-3">회원가입</a> |
