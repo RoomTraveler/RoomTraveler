@@ -508,17 +508,30 @@ public class AdminController {
                         }
 
                         processedContentIds.add(contentId);
+                        logger.info("처리 중인 contentId: " + contentId);
 
                         // 숙소 상세 정보 가져오기
                         Accommodation accommodation = fetchAccommodationDetail(contentId, session);
-                        if (accommodation == null) continue;
+                        if (accommodation == null) {
+                            logger.info("contentId: " + contentId + " - 숙소 상세 정보를 가져오지 못했습니다. 건너뜁니다.");
+                            continue;
+                        }
 
                         // 객실 정보 가져오기
                         List<Room> rooms = fetchRoomInfo(contentId);
-                        if (rooms.isEmpty()) continue;
+                        if (rooms.isEmpty()) {
+                            logger.info("contentId: " + contentId + " - 객실 정보를 가져오지 못했습니다. 건너뜁니다.");
+                            continue;
+                        }
 
                         // 이미지 정보 가져오기
                         List<Image> images = fetchImageInfo(contentId);
+
+                        // 이미지가 없으면 건너뛰기
+                        if (images.isEmpty()) {
+                            logger.info("contentId: " + contentId + " - 이미지가 없습니다. 건너뜁니다.");
+                            continue;
+                        }
 
                         // 썸네일 이미지가 있는지 확인
                         boolean hasMainImage = false;
@@ -530,13 +543,19 @@ public class AdminController {
                         }
 
                         // 썸네일 이미지가 없으면 건너뛰기
-                        if (!hasMainImage) continue;
+                        if (!hasMainImage) {
+                            logger.info("contentId: " + contentId + " - 썸네일 이미지가 없습니다. 건너뜁니다.");
+                            continue;
+                        }
 
                         // DB에 저장
                         Long accommodationId = accommodationService.importFromApi(accommodation, rooms, images);
                         if (accommodationId != null) {
                             importedCount++;
+                            logger.info("contentId: " + contentId + " - 숙소 데이터 저장 성공. 숙소 ID: " + accommodationId);
                             logger.info("숙소 데이터 가져오기 진행 중: " + importedCount + "개 완료");
+                        } else {
+                            logger.warn("contentId: " + contentId + " - 숙소 데이터 저장 실패");
                         }
                     }
                 }
@@ -839,6 +858,12 @@ public class AdminController {
 
                 images.add(image);
             }
+        }
+
+        // 이미지가 없는 경우 빈 리스트 반환 (기본 이미지를 추가하지 않음)
+        if (images.isEmpty()) {
+            logger.info("contentId: " + contentId + " - 이미지가 없습니다.");
+            // 빈 리스트 반환 - 이 숙소는 필터링됩니다
         }
 
         return images;
