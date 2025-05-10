@@ -25,7 +25,9 @@ public class Room {
     private Integer capacity;         // 수용 인원
     private Integer roomCount;        // 객실 수
     private BigDecimal roomSize;      // 객실 크기
+    private String roomType;          // 객실 유형
     private String bedType;           // 침대 유형
+    private Integer bathroomCount;    // 욕실 수
     private String amenities;         // 편의시설
     private String status;            // 상태 (AVAILABLE, UNAVAILABLE)
     private LocalDateTime createdAt;  // 생성 시간

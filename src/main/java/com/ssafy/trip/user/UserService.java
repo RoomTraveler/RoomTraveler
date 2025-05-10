@@ -41,6 +41,11 @@ public interface UserService {
     int updateUserStatus(Long userId, String status) throws SQLException;
 
     /**
+     * 사용자 역할을 업데이트합니다.
+     */
+    int updateUserRole(Long userId, String role) throws SQLException;
+
+    /**
      * 사용자를 삭제합니다.
      */
     int deleteUser(String email) throws SQLException;
@@ -49,4 +54,9 @@ public interface UserService {
      * 이름과 이메일로 비밀번호를 찾습니다.
      */
     String findPassword(String username, String email) throws SQLException;
+
+    /**
+     * 이메일로 사용자를 조회합니다.
+     */
+    User getUserByEmail(String email) throws SQLException;
 }

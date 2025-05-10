@@ -27,7 +27,7 @@
 <body>
     <div class="container mt-4">
         <h1 class="mb-4">관리자 대시보드</h1>
-        
+
         <div class="row">
             <!-- 사용자 통계 -->
             <div class="col-md-4">
@@ -41,7 +41,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <!-- 숙소 통계 -->
             <div class="col-md-4">
                 <div class="card stats-card">
@@ -54,7 +54,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <!-- 예약 통계 -->
             <div class="col-md-4">
                 <div class="card stats-card">
@@ -68,7 +68,7 @@
                 </div>
             </div>
         </div>
-        
+
         <div class="row mt-4">
             <div class="col-12">
                 <div class="card">
@@ -78,18 +78,19 @@
                             <a href="/admin/users" class="btn btn-primary btn-action">사용자 관리</a>
                             <a href="/admin/accommodations" class="btn btn-primary btn-action">숙소 관리</a>
                             <a href="/admin/regions" class="btn btn-primary btn-action">지역 데이터 관리</a>
+                            <a href="/admin/api-config" class="btn btn-primary btn-action">API 설정 관리</a>
                             <button id="createSampleDataBtn" class="btn btn-success btn-action">샘플 객실 및 지역 데이터 생성</button>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-        
+
         <!-- 결과 메시지 표시 영역 -->
         <div id="resultMessage" class="alert alert-success mt-3" style="display: none;"></div>
         <div id="errorMessage" class="alert alert-danger mt-3" style="display: none;"></div>
     </div>
-    
+
     <script>
         $(document).ready(function() {
             // 샘플 데이터 생성 버튼 클릭 이벤트
@@ -106,7 +107,7 @@
                             if (response.success) {
                                 $("#resultMessage").text(response.message).show();
                                 $("#errorMessage").hide();
-                                
+
                                 // 3초 후 페이지 새로고침
                                 setTimeout(function() {
                                     location.reload();

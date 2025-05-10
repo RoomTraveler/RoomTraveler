@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.ssafy.trip.payment.PaymentDao">
+
+    <!-- 결과 매핑 정의 -->
+    <resultMap id="paymentResultMap" type="com.ssafy.trip.payment.Payment">
+        <id property="paymentId" column="payment_id" />
+        <result property="reservationId" column="reservation_id" />
+        <result property="userId" column="user_id" />
+        <result property="paymentMethod" column="payment_method" />
+        <result property="paymentKey" column="payment_key" />
+        <result property="amount" column="amount" />
+        <result property="currency" column="currency" />
+        <result property="status" column="status" />
+        <result property="cardInfo" column="card_info" />
+        <result property="bankInfo" column="bank_info" />
+        <result property="phoneInfo" column="phone_info" />
+        <result property="paidAt" column="paid_at" />
+        <result property="cancelledAt" column="cancelled_at" />
+        <result property="failReason" column="fail_reason" />
+        <result property="cancelReason" column="cancel_reason" />
+        <result property="createdAt" column="created_at" />
+        <result property="updatedAt" column="updated_at" />
+        <result property="userName" column="user_name" />
+        <result property="accommodationTitle" column="accommodation_title" />
+        <result property="roomName" column="room_name" />
+    </resultMap>
+
+    <!-- 새 결제 정보 등록 -->
+    <insert id="insert" useGeneratedKeys="true" keyProperty="paymentId">
+        INSERT INTO payments (
+            reservation_id, user_id, payment_method, payment_key, amount, currency, status,
+            card_info, bank_info, phone_info, paid_at, created_at, updated_at
+        ) VALUES (
+            #{reservationId}, #{userId}, #{paymentMethod}, #{paymentKey}, #{amount}, #{currency}, #{status},
+            #{cardInfo}, #{bankInfo}, #{phoneInfo}, #{paidAt}, #{createdAt}, #{updatedAt}
+        )
+    </insert>
+
+    <!-- 결제 ID로 결제 정보 조회 -->
+    <select id="selectById" resultMap="paymentResultMap">
+        SELECT p.*, u.username as user_name, a.title as accommodation_title, r.name as room_name
+        FROM payments p
+        LEFT JOIN users u ON p.user_id = u.user_id
+        LEFT JOIN reservations res ON p.reservation_id = res.reservation_id
+        LEFT JOIN rooms r ON res.room_id = r.room_id
+        LEFT JOIN accommodations a ON r.accommodation_id = a.accommodation_id
+        WHERE p.payment_id = #{paymentId}
+    </select>
+
+    <!-- 예약 ID로 결제 정보 조회 -->
+    <select id="selectByReservationId" resultMap="paymentResultMap">
+        SELECT p.*, u.username as user_name, a.title as accommodation_title, r.name as room_name
+        FROM payments p
+        LEFT JOIN users u ON p.user_id = u.user_id
+        LEFT JOIN reservations res ON p.reservation_id = res.reservation_id
+        LEFT JOIN rooms r ON res.room_id = r.room_id
+        LEFT JOIN accommodations a ON r.accommodation_id = a.accommodation_id
+        WHERE p.reservation_id = #{reservationId}
+    </select>
+
+    <!-- 사용자 ID로 결제 목록 조회 -->
+    <select id="selectByUserId" resultMap="paymentResultMap">
+        SELECT p.*, u.username as user_name, a.title as accommodation_title, r.name as room_name
+        FROM payments p
+        LEFT JOIN users u ON p.user_id = u.user_id
+        LEFT JOIN reservations res ON p.reservation_id = res.reservation_id
+        LEFT JOIN rooms r ON res.room_id = r.room_id
+        LEFT JOIN accommodations a ON r.accommodation_id = a.accommodation_id
+        WHERE p.user_id = #{userId}
+        ORDER BY p.created_at DESC
+    </select>
+
+    <!-- 결제 상태 업데이트 -->
+    <update id="updateStatus">
+        UPDATE payments
+        SET status = #{status}, updated_at = #{updatedAt}
+        WHERE payment_id = #{paymentId}
+    </update>
+
+    <!-- 결제 취소 -->
+    <update id="cancelPayment">
+        UPDATE payments
+        SET status = 'CANCELLED', cancel_reason = #{cancelReason}, cancelled_at = #{cancelledAt}, updated_at = #{cancelledAt}
+        WHERE payment_id = #{paymentId}
+    </update>
+
+    <!-- 결제 실패 정보 업데이트 -->
+    <update id="updateFailInfo">
+        UPDATE payments
+        SET status = 'FAILED', fail_reason = #{failReason}, updated_at = #{updatedAt}
+        WHERE payment_id = #{paymentId}
+    </update>
+
+    <!-- 결제 정보 삭제 -->
+    <delete id="delete">
+        DELETE FROM payments
+        WHERE payment_id = #{paymentId}
+    </delete>
+
+    <!-- 필터링된 결제 목록 조회 -->
+    <select id="selectFiltered" resultMap="paymentResultMap">
+        SELECT p.*, u.username as user_name, a.title as accommodation_title, r.name as room_name
+        FROM payments p
+        LEFT JOIN users u ON p.user_id = u.user_id
+        LEFT JOIN reservations res ON p.reservation_id = res.reservation_id
+        LEFT JOIN rooms r ON res.room_id = r.room_id
+        LEFT JOIN accommodations a ON r.accommodation_id = a.accommodation_id
+        <where>
+            <if test="userId != null">
+                AND p.user_id = #{userId}
+            </if>
+            <if test="reservationId != null">
+                AND p.reservation_id = #{reservationId}
+            </if>
+            <if test="status != null">
+                AND p.status = #{status}
+            </if>
+            <if test="paymentMethod != null">
+                AND p.payment_method = #{paymentMethod}
+            </if>
+            <if test="startDate != null">
+                AND p.created_at >= #{startDate}
+            </if>
+            <if test="endDate != null">
+                AND p.created_at &lt;= #{endDate}
+            </if>
+            <if test="minAmount != null">
+                AND p.amount >= #{minAmount}
+            </if>
+            <if test="maxAmount != null">
+                AND p.amount &lt;= #{maxAmount}
+            </if>
+        </where>
+        ORDER BY p.created_at DESC
+    </select>
+
+    <!-- 결제 통계 조회 -->
+    <select id="selectStatistics" resultType="java.util.HashMap">
+        SELECT 
+            COUNT(*) as total_count,
+            SUM(amount) as total_amount,
+            SUM(CASE WHEN status = 'COMPLETED' THEN 1 ELSE 0 END) as completed_count,
+            SUM(CASE WHEN status = 'COMPLETED' THEN amount ELSE 0 END) as completed_amount,
+            SUM(CASE WHEN status = 'CANCELLED' THEN 1 ELSE 0 END) as cancelled_count,
+            SUM(CASE WHEN status = 'CANCELLED' THEN amount ELSE 0 END) as cancelled_amount,
+            SUM(CASE WHEN status = 'FAILED' THEN 1 ELSE 0 END) as failed_count,
+            SUM(CASE WHEN payment_method = 'CARD' THEN 1 ELSE 0 END) as card_count,
+            SUM(CASE WHEN payment_method = 'BANK_TRANSFER' THEN 1 ELSE 0 END) as bank_transfer_count,
+            SUM(CASE WHEN payment_method = 'PHONE' THEN 1 ELSE 0 END) as phone_count
+        FROM payments
+        <where>
+            <if test="startDate != null">
+                AND created_at >= #{startDate}
+            </if>
+            <if test="endDate != null">
+                AND created_at &lt;= #{endDate}
+            </if>
+        </where>
+    </select>
+</mapper>

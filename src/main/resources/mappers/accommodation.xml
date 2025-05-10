@@ -5,6 +5,29 @@
 
 <mapper namespace="com.ssafy.trip.accommodation.dao.AccommodationDao">
 
+    <!-- Accommodation 결과 매핑 -->
+    <resultMap id="accommodationResultMap" type="com.ssafy.trip.accommodation.model.Accommodation">
+        <id property="accommodationId" column="accommodation_id" />
+        <result property="hostId" column="host_id" />
+        <result property="title" column="title" />
+        <result property="description" column="description" />
+        <result property="address" column="address" />
+        <result property="sidoCode" column="sido_code" />
+        <result property="gugunCode" column="gugun_code" />
+        <result property="latitude" column="latitude" />
+        <result property="longitude" column="longitude" />
+        <result property="accommodationType" column="accommodation_type" />
+        <result property="phone" column="phone" />
+        <result property="email" column="email" />
+        <result property="website" column="website" />
+        <result property="checkInTime" column="check_in_time" />
+        <result property="checkOutTime" column="check_out_time" />
+        <result property="amenities" column="amenities" />
+        <result property="status" column="status" />
+        <result property="createdAt" column="created_at" />
+        <result property="updatedAt" column="updated_at" />
+    </resultMap>
+
     <!-- 새 숙소를 등록합니다. -->
     <insert id="insert" useGeneratedKeys="true" keyProperty="accommodationId">
         INSERT INTO accommodations (
@@ -20,17 +43,17 @@
     </insert>
 
     <!-- 숙소 ID로 숙소를 조회합니다. -->
-    <select id="getAccommodationById" resultType="com.ssafy.trip.accommodation.model.Accommodation">
+    <select id="getAccommodationById" resultMap="accommodationResultMap">
         SELECT * FROM accommodations WHERE accommodation_id = #{accommodationId}
     </select>
 
     <!-- 호스트 ID로 숙소 목록을 조회합니다. -->
-    <select id="getAccommodationsByHostId" resultType="com.ssafy.trip.accommodation.model.Accommodation">
+    <select id="getAccommodationsByHostId" resultMap="accommodationResultMap">
         SELECT * FROM accommodations WHERE host_id = #{hostId}
     </select>
 
     <!-- 지역 코드로 숙소 목록을 조회합니다. -->
-    <select id="getAccommodationsByRegion" resultType="com.ssafy.trip.accommodation.model.Accommodation">
+    <select id="getAccommodationsByRegion" resultMap="accommodationResultMap">
         SELECT * FROM accommodations 
         WHERE sido_code = #{sidoCode}
         <if test="gugunCode != null">
@@ -39,7 +62,7 @@
     </select>
 
     <!-- 키워드로 숙소를 검색합니다. -->
-    <select id="searchAccommodations" resultType="com.ssafy.trip.accommodation.model.Accommodation">
+    <select id="searchAccommodations" resultMap="accommodationResultMap">
         SELECT * FROM accommodations 
         WHERE title LIKE CONCAT('%', #{keyword}, '%')
         OR description LIKE CONCAT('%', #{keyword}, '%')
@@ -76,17 +99,25 @@
         DELETE FROM accommodations WHERE accommodation_id = #{accommodationId}
     </delete>
 
+    <!-- 모든 숙소를 삭제합니다. -->
+    <delete id="deleteAllAccommodations">
+        DELETE FROM accommodations
+    </delete>
+
     <!-- 모든 숙소를 조회합니다. -->
-    <select id="getAllAccommodations" resultType="com.ssafy.trip.accommodation.model.Accommodation">
+    <select id="getAllAccommodations" resultMap="accommodationResultMap">
         SELECT * FROM accommodations
+        WHERE accommodation_id IS NOT NULL
     </select>
 
+
     <!-- 필터링된 숙소 목록을 조회합니다. -->
-    <select id="getFilteredAccommodations" resultType="com.ssafy.trip.accommodation.model.Accommodation">
+    <select id="getFilteredAccommodations" resultMap="accommodationResultMap">
         SELECT * FROM accommodations
         <where>
+            accommodation_id IS NOT NULL
             <if test="sidoCode != null">
-                sido_code = #{sidoCode}
+                AND sido_code = #{sidoCode}
             </if>
             <if test="gugunCode != null">
                 AND gugun_code = #{gugunCode}
@@ -98,7 +129,7 @@
     </select>
 
     <!-- 외부 API에서 가져온 숙소 정보를 저장합니다. -->
-    <insert id="insertFromApi" useGeneratedKeys="true" keyProperty="accommodationId">
+    <insert id="insertFromApi" parameterType="com.ssafy.trip.accommodation.model.Accommodation" useGeneratedKeys="true" keyProperty="accommodationId">
         INSERT INTO accommodations (
             host_id, title, description, address, sido_code, gugun_code, 
             latitude, longitude, status, 
@@ -110,4 +141,16 @@
             #{checkInTime}, #{checkOutTime}, #{amenities}, NOW(), NOW()
         )
     </insert>
+
+    <!-- 유사한 숙소 목록을 조회합니다. -->
+    <select id="getSimilarAccommodations" resultMap="accommodationResultMap">
+        SELECT a.* FROM accommodations a
+        JOIN accommodations base ON a.sido_code = base.sido_code AND a.gugun_code = base.gugun_code
+        WHERE base.accommodation_id = #{accommodationId}
+        AND a.accommodation_id IS NOT NULL
+        AND a.accommodation_id != #{accommodationId}
+        AND a.status = 'ACTIVE'
+        ORDER BY RAND()
+        LIMIT #{limit}
+    </select>
 </mapper>

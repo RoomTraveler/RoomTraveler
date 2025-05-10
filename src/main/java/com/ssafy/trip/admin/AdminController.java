@@ -16,6 +16,7 @@ import java.math.BigDecimal;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -30,6 +31,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import jakarta.servlet.http.HttpSession;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -147,7 +149,29 @@ public class AdminController {
     public String manageAccommodations(Model model) {
         try {
             List<Accommodation> accommodations = accommodationService.getAllAccommodations();
+
+            // 숙소 ID가 null인 숙소 개수 확인
+            int nullIdCount = 0;
+            for (Accommodation acc : accommodations) {
+                if (acc.getAccommodationId() == null) {
+                    nullIdCount++;
+                    logger.warn("숙소 ID가 null입니다. 제목: {}", acc.getTitle());
+                }
+            }
+
+            logger.info("총 숙소 수: {}, null ID 숙소 수: {}", accommodations.size(), nullIdCount);
+
             model.addAttribute("accommodations", accommodations);
+
+            // 시도 목록을 가져와서 모델에 추가
+            try {
+                List<Sido> sidos = adminService.getAllSidos();
+                model.addAttribute("sidos", sidos);
+            } catch (Exception e) {
+                logger.warn("시도 목록을 가져오는 중 오류 발생", e);
+                // 오류가 발생해도 페이지는 계속 로드
+            }
+
             return "admin/accommodations";
         } catch (Exception e) {
             logger.error("숙소 관리 페이지 로딩 중 오류 발생", e);
@@ -210,6 +234,39 @@ public class AdminController {
             Map<String, Object> response = new HashMap<>();
             response.put("success", false);
             response.put("message", "숙소 삭제 중 오류가 발생했습니다: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
+
+    /**
+     * 모든 숙소를 삭제합니다.
+     */
+    @DeleteMapping("/accommodations/all")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> deleteAllAccommodations() {
+        try {
+            logger.info("모든 숙소 삭제 시도");
+
+            // 모든 숙소 삭제 실행
+            int deletedCount = accommodationService.deleteAllAccommodations();
+
+            logger.info("모든 숙소 삭제 완료: {} 개의 숙소가 삭제되었습니다.", deletedCount);
+
+            Map<String, Object> response = new HashMap<>();
+            if (deletedCount > 0) {
+                response.put("success", true);
+                response.put("message", "모든 숙소가 성공적으로 삭제되었습니다. (총 " + deletedCount + "개)");
+            } else {
+                response.put("success", true);
+                response.put("message", "삭제할 숙소가 없습니다.");
+            }
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            logger.error("모든 숙소 삭제 중 오류 발생", e);
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "모든 숙소 삭제 중 오류가 발생했습니다: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
@@ -379,66 +436,134 @@ public class AdminController {
     public ResponseEntity<Map<String, Object>> importAccommodations(
             @RequestParam(required = false) Integer sidoCode,
             @RequestParam(required = false) Integer gugunCode,
-            @RequestParam(defaultValue = "10") Integer limit) {
+            @RequestParam(required = false) Boolean clearExisting,
+            HttpSession session) {
         try {
+            // 기존 데이터 삭제 옵션이 활성화된 경우
+            if (clearExisting != null && clearExisting) {
+                logger.info("기존 숙소 데이터를 삭제합니다.");
+                // 모든 숙소 삭제 (이 부분은 실제 구현 필요)
+                List<Accommodation> existingAccommodations = accommodationService.getAllAccommodations();
+                for (Accommodation acc : existingAccommodations) {
+                    accommodationService.deleteAccommodation(acc.getAccommodationId());
+                }
+                logger.info("기존 숙소 데이터 삭제 완료");
+            }
+
             String serviceKey = tourApiProperties.getServiceKey();
             String baseUrl = tourApiProperties.getBaseUrl();
-
-            UriComponentsBuilder builder = UriComponentsBuilder
-                    .fromHttpUrl(baseUrl + "/searchStay1")
-                    .queryParam("serviceKey", serviceKey)
-                    .queryParam("MobileOS", tourApiProperties.getMobileOs())
-                    .queryParam("MobileApp", tourApiProperties.getMobileApp())
-                    .queryParam("_type", "json")
-                    .queryParam("listYN", "Y")
-                    .queryParam("arrange", "A")
-                    .queryParam("numOfRows", limit)
-                    .queryParam("pageNo", 1);
-
-            // 선택적 파라미터 추가
-            if (sidoCode != null) {
-                builder.queryParam("areaCode", sidoCode);
-            }
-            if (gugunCode != null) {
-                builder.queryParam("sigunguCode", gugunCode);
-            }
-
-            URI uri = new URI(builder.build(false).toUriString());
-            String response = restTemplate.getForObject(uri, String.class);
-
-            // JSON 파싱
-            JsonNode root = objectMapper.readTree(response);
-            JsonNode items = root.path("response").path("body").path("items").path("item");
-
             int importedCount = 0;
+            int pageNo = 1;
+            int totalPages = 1;
+            int numOfRows = 100; // 한 페이지당 가져올 데이터 수
 
-            if (items.isArray()) {
-                for (JsonNode item : items) {
-                    String contentId = item.path("contentid").asText();
+            // 중복 체크를 위한 Set
+            java.util.Set<String> processedContentIds = new java.util.HashSet<>();
 
-                    // 숙소 상세 정보 가져오기
-                    Accommodation accommodation = fetchAccommodationDetail(contentId);
-                    if (accommodation == null) continue;
+            // 모든 페이지 처리
+            do {
+                UriComponentsBuilder builder = UriComponentsBuilder
+                        .fromHttpUrl(baseUrl + "/searchStay1")
+                        .queryParam("serviceKey", serviceKey)
+                        .queryParam("MobileOS", tourApiProperties.getMobileOs())
+                        .queryParam("MobileApp", tourApiProperties.getMobileApp())
+                        .queryParam("_type", "json")
+                        .queryParam("listYN", "Y")
+                        .queryParam("arrange", "A")
+                        .queryParam("numOfRows", numOfRows)
+                        .queryParam("pageNo", pageNo);
 
-                    // 객실 정보 가져오기
-                    List<Room> rooms = fetchRoomInfo(contentId);
-                    if (rooms.isEmpty()) continue;
+                // 선택적 파라미터 추가
+                if (sidoCode != null) {
+                    builder.queryParam("areaCode", sidoCode);
+                }
+                if (gugunCode != null) {
+                    builder.queryParam("sigunguCode", gugunCode);
+                }
 
-                    // 이미지 정보 가져오기
-                    List<Image> images = fetchImageInfo(contentId);
+                URI uri = new URI(builder.build(false).toUriString());
+                String response = restTemplate.getForObject(uri, String.class);
 
-                    // DB에 저장
-                    Long accommodationId = accommodationService.importFromApi(accommodation, rooms, images);
-                    if (accommodationId != null) {
-                        importedCount++;
-                    }
+                // JSON 파싱
+                JsonNode root = objectMapper.readTree(response);
+                JsonNode body = root.path("response").path("body");
 
-                    // 요청한 개수만큼 가져왔으면 중단
-                    if (importedCount >= limit) {
-                        break;
+                // 총 페이지 수 계산
+                int totalCount = body.path("totalCount").asInt(0);
+                if (pageNo == 1) { // 첫 페이지에서만 계산
+                    totalPages = (int) Math.ceil((double) totalCount / numOfRows);
+                    logger.info("총 " + totalCount + "개의 숙소 데이터가 있습니다. 총 " + totalPages + "페이지를 처리합니다.");
+                }
+
+                JsonNode items = body.path("items").path("item");
+
+                if (items.isArray()) {
+                    for (JsonNode item : items) {
+                        String contentId = item.path("contentid").asText();
+
+                        // 중복 체크
+                        if (processedContentIds.contains(contentId)) {
+                            logger.info("중복된 contentId: " + contentId + ", 건너뜁니다.");
+                            continue;
+                        }
+
+                        processedContentIds.add(contentId);
+                        logger.info("처리 중인 contentId: " + contentId);
+
+                        // 숙소 상세 정보 가져오기
+                        Accommodation accommodation = fetchAccommodationDetail(contentId, session);
+                        if (accommodation == null) {
+                            logger.info("contentId: " + contentId + " - 숙소 상세 정보를 가져오지 못했습니다. 건너뜁니다.");
+                            continue;
+                        }
+
+                        // 객실 정보 가져오기
+                        List<Room> rooms = fetchRoomInfo(contentId);
+                        if (rooms.isEmpty()) {
+                            logger.info("contentId: " + contentId + " - 객실 정보를 가져오지 못했습니다. 건너뜁니다.");
+                            continue;
+                        }
+
+                        // 이미지 정보 가져오기
+                        List<Image> images = fetchImageInfo(contentId);
+
+                        // 이미지가 없으면 건너뛰기
+                        if (images.isEmpty()) {
+                            logger.info("contentId: " + contentId + " - 이미지가 없습니다. 건너뜁니다.");
+                            continue;
+                        }
+
+                        // 썸네일 이미지가 있는지 확인
+                        boolean hasMainImage = false;
+                        for (Image image : images) {
+                            if (image.getIsMain() != null && image.getIsMain()) {
+                                hasMainImage = true;
+                                break;
+                            }
+                        }
+
+                        // 썸네일 이미지가 없으면 건너뛰기
+                        if (!hasMainImage) {
+                            logger.info("contentId: " + contentId + " - 썸네일 이미지가 없습니다. 건너뜁니다.");
+                            continue;
+                        }
+
+                        // DB에 저장
+                        Long accommodationId = accommodationService.importFromApi(accommodation, rooms, images);
+                        if (accommodationId != null) {
+                            importedCount++;
+                            logger.info("contentId: " + contentId + " - 숙소 데이터 저장 성공. 숙소 ID: " + accommodationId);
+                            logger.info("숙소 데이터 가져오기 진행 중: " + importedCount + "개 완료");
+                        } else {
+                            logger.warn("contentId: " + contentId + " - 숙소 데이터 저장 실패");
+                        }
                     }
                 }
-            }
+
+                pageNo++;
+                logger.info("페이지 " + (pageNo-1) + "/" + totalPages + " 처리 완료");
+
+            } while (pageNo <= totalPages);
 
             Map<String, Object> result = new HashMap<>();
             result.put("success", true);
@@ -458,7 +583,7 @@ public class AdminController {
     /**
      * 숙소 상세 정보를 가져옵니다.
      */
-    private Accommodation fetchAccommodationDetail(String contentId) throws Exception {
+    private Accommodation fetchAccommodationDetail(String contentId, HttpSession session) throws Exception {
         String serviceKey = tourApiProperties.getServiceKey();
         String baseUrl = tourApiProperties.getBaseUrl();
 
@@ -497,8 +622,56 @@ public class AdminController {
         accommodation.setTitle(item.path("title").asText(""));
         accommodation.setDescription(item.path("overview").asText(""));
         accommodation.setAddress(item.path("addr1").asText("") + " " + item.path("addr2").asText(""));
-        accommodation.setSidoCode(item.path("areacode").asInt(0));
-        accommodation.setGugunCode(item.path("sigungucode").asInt(0));
+
+        // API에서 가져온 시도 코드
+        int apiSidoCode = item.path("areacode").asInt(0);
+
+        try {
+            // 데이터베이스에서 모든 시도 목록 가져오기
+            List<Sido> validSidos = adminService.getAllSidos();
+
+            // 유효한 시도 코드 목록 생성
+            List<Integer> validSidoCodes = new ArrayList<>();
+            for (Sido sido : validSidos) {
+                validSidoCodes.add(sido.getCode());
+            }
+
+            // API에서 가져온 시도 코드가 유효한지 확인
+            if (validSidoCodes.contains(apiSidoCode)) {
+                // 유효한 시도 코드면 그대로 사용
+                accommodation.setSidoCode(apiSidoCode);
+
+                // API에서 가져온 구군 코드
+                int apiGugunCode = item.path("sigungucode").asInt(0);
+
+                // 선택된 시도에 해당하는 구군 목록 가져오기
+                List<Gugun> validGuguns = adminService.getGugunsBySido(apiSidoCode);
+
+                // 유효한 구군 코드 목록 생성
+                List<Integer> validGugunCodes = new ArrayList<>();
+                for (Gugun gugun : validGuguns) {
+                    validGugunCodes.add(gugun.getCode());
+                }
+
+                // API에서 가져온 구군 코드가 유효한지 확인
+                if (validGugunCodes.contains(apiGugunCode)) {
+                    // 유효한 구군 코드면 그대로 사용
+                    accommodation.setGugunCode(apiGugunCode);
+                } else {
+                    // 유효하지 않은 구군 코드면 건너뛰기
+                    logger.warn("유효하지 않은 구군 코드: " + apiGugunCode + ", 이 숙소는 건너뜁니다.");
+                    return null; // 유효하지 않은 구군 코드가 있는 숙소는 건너뛰기
+                }
+            } else {
+                // 유효하지 않은 시도 코드면 건너뛰기
+                logger.warn("유효하지 않은 시도 코드: " + apiSidoCode + ", 이 숙소는 건너뜁니다.");
+                return null; // 유효하지 않은 시도 코드가 있는 숙소는 건너뛰기
+            }
+        } catch (Exception e) {
+            // 시도/구군 목록 조회 중 오류 발생 시 건너뛰기
+            logger.error("시도/구군 목록 조회 중 오류 발생, 이 숙소는 건너뜁니다: " + e.getMessage());
+            return null; // 오류가 발생한 숙소는 건너뛰기
+        }
 
         // 위도, 경도가 있는 경우에만 설정
         if (!item.path("mapx").isMissingNode() && !item.path("mapy").isMissingNode()) {
@@ -517,14 +690,16 @@ public class AdminController {
         accommodation.setAmenities("");  // API에서 제공하지 않음
         accommodation.setStatus("ACTIVE");
 
-        // 호스트 ID는 임시로 1로 설정 (실제 구현에서는 적절한 호스트 ID 할당 필요)
-        accommodation.setHostId(1L);
+        // 임시 호스트 ID 사용 (999L)
+        accommodation.setHostId(999L);
 
         return accommodation;
     }
 
     /**
      * 객실 정보를 가져옵니다.
+     * @param contentId 숙소 컨텐츠 ID (TourAPI)
+     * @return 객실 목록
      */
     private List<Room> fetchRoomInfo(String contentId) throws Exception {
         String serviceKey = tourApiProperties.getServiceKey();
@@ -541,6 +716,12 @@ public class AdminController {
 
         URI uri = new URI(builder.build(false).toUriString());
         String response = restTemplate.getForObject(uri, String.class);
+
+        // 응답이 JSON이 아닌 경우 처리 (HTML 등)
+        if (response != null && response.trim().startsWith("<")) {
+            logger.warn("객실 정보 API가 JSON이 아닌 응답을 반환했습니다: " + response.substring(0, Math.min(100, response.length())) + "...");
+            return new ArrayList<>(); // 빈 객실 목록 반환
+        }
 
         // JSON 파싱
         JsonNode root = objectMapper.readTree(response);
@@ -574,12 +755,17 @@ public class AdminController {
 
                 room.setRoomCount(1);  // 기본값
                 room.setRoomSize(new java.math.BigDecimal("20"));  // 기본값
+                room.setRoomType("스탠다드");  // 기본값
                 room.setBedType("더블");  // 기본값
+                room.setBathroomCount(1);  // 기본값
                 room.setAmenities("TV, 에어컨, 냉장고, 욕실용품");  // 기본값
                 room.setStatus("AVAILABLE");
 
                 // 임시 ID 설정 (실제 저장 시 자동 생성됨)
                 room.setRoomId(Long.parseLong(contentId));
+
+                // 숙소 ID 설정 (contentId를 숙소 ID로 사용)
+                room.setAccommodationId(Long.parseLong(contentId));
 
                 rooms.add(room);
             }
@@ -594,10 +780,15 @@ public class AdminController {
             defaultRoom.setCapacity(2);
             defaultRoom.setRoomCount(1);
             defaultRoom.setRoomSize(new java.math.BigDecimal("20"));
+            defaultRoom.setRoomType("스탠다드");
             defaultRoom.setBedType("더블");
+            defaultRoom.setBathroomCount(1);
             defaultRoom.setAmenities("TV, 에어컨, 냉장고, 욕실용품");
             defaultRoom.setStatus("AVAILABLE");
             defaultRoom.setRoomId(Long.parseLong(contentId));
+
+            // 숙소 ID 설정 (contentId를 숙소 ID로 사용)
+            defaultRoom.setAccommodationId(Long.parseLong(contentId));
 
             rooms.add(defaultRoom);
         }
@@ -638,17 +829,28 @@ public class AdminController {
                 Image image = new Image();
 
                 // 이미지 정보 매핑
-                image.setImageUrl(item.path("originimgurl").asText(""));
+                String imageUrl = item.path("originimgurl").asText("");
+                // 이미지 URL이 비어있거나 유효하지 않은 경우 플레이스홀더 이미지 사용
+                if (imageUrl == null || imageUrl.isEmpty()) {
+                    imageUrl = "https://via.placeholder.com/800x600?text=No+Image+Available";
+                } else if (!imageUrl.startsWith("http")) {
+                    // URL이 http로 시작하지 않으면 http://를 추가
+                    imageUrl = "http://" + imageUrl;
+                }
+                image.setImageUrl(imageUrl);
                 image.setCaption(item.path("imgname").asText(""));
 
                 // 첫 번째 이미지를 대표 이미지로 설정
                 if (!hasMainImage) {
                     image.setIsMain(true);
                     image.setReferenceType("ACCOMMODATION");
+                    // accommodationId는 importFromApi에서 설정됨
                     hasMainImage = true;
                 } else {
                     image.setIsMain(false);
                     image.setReferenceType("ROOM");
+                    // roomId는 importFromApi에서 설정됨
+                    // accommodationId는 importFromApi에서 설정됨
                 }
 
                 // 임시 ID 설정 (실제 저장 시 자동 생성됨)
@@ -656,6 +858,12 @@ public class AdminController {
 
                 images.add(image);
             }
+        }
+
+        // 이미지가 없는 경우 빈 리스트 반환 (기본 이미지를 추가하지 않음)
+        if (images.isEmpty()) {
+            logger.info("contentId: " + contentId + " - 이미지가 없습니다.");
+            // 빈 리스트 반환 - 이 숙소는 필터링됩니다
         }
 
         return images;
@@ -666,23 +874,48 @@ public class AdminController {
      */
     @PostMapping("/create-sample-data")
     @ResponseBody
-    public ResponseEntity<Map<String, Object>> createSampleData() {
+    public ResponseEntity<Map<String, Object>> createSampleData(HttpSession session) {
         try {
-            // 샘플 시도 데이터 생성
-            List<Sido> sampleSidos = createSampleSidos();
-            int sidoCount = adminService.importSidos(sampleSidos);
-
-            // 샘플 구군 데이터 생성
+            // 시도 데이터가 이미 존재하는지 확인
+            List<Sido> existingSidos = adminService.getAllSidos();
+            int sidoCount = 0;
             int gugunCount = 0;
-            for (Sido sido : sampleSidos) {
-                List<Gugun> sampleGuguns = createSampleGuguns(sido.getCode());
-                gugunCount += adminService.importGuguns(sido.getCode(), sampleGuguns);
+
+            // 시도 데이터가 없는 경우에만 샘플 데이터 생성
+            if (existingSidos == null || existingSidos.isEmpty()) {
+                // 샘플 시도 데이터 생성
+                List<Sido> sampleSidos = createSampleSidos();
+                sidoCount = adminService.importSidos(sampleSidos);
+
+                // 샘플 구군 데이터 생성
+                for (Sido sido : sampleSidos) {
+                    List<Gugun> sampleGuguns = createSampleGuguns(sido.getCode());
+                    gugunCount += adminService.importGuguns(sido.getCode(), sampleGuguns);
+                }
+                logger.info("샘플 시도/구군 데이터를 생성했습니다: " + sidoCount + " 시도, " + gugunCount + " 구군");
+            } else {
+                logger.info("시도 데이터가 이미 존재합니다. 샘플 데이터를 생성하지 않습니다.");
+                sidoCount = existingSidos.size();
+
+                // 구군 데이터 개수 확인
+                for (Sido sido : existingSidos) {
+                    List<Gugun> guguns = adminService.getGugunsBySido(sido.getCode());
+                    gugunCount += guguns.size();
+                }
             }
 
             // 샘플 호스트 생성
             Long hostId = createSampleHost();
             if (hostId == null) {
-                throw new RuntimeException("샘플 호스트 생성에 실패했습니다.");
+                // 세션에서 현재 로그인한 사용자의 ID를 가져와 호스트 ID로 사용
+                Long userId = (Long) session.getAttribute("userId");
+                if (userId != null) {
+                    logger.warn("샘플 호스트 생성에 실패했습니다. 현재 로그인한 사용자 ID " + userId + "를 사용합니다.");
+                    hostId = userId;
+                } else {
+                    logger.warn("샘플 호스트 생성에 실패했습니다. 기본값 1L을 사용합니다.");
+                    hostId = 1L;
+                }
             }
 
             // 샘플 숙소 및 객실 데이터 생성
@@ -772,67 +1005,73 @@ public class AdminController {
     }
 
     /**
-     * 샘플 호스트 데이터를 생성합니다.
+     * 샘플 호스트(및 샘플 사용자)를 생성하고, 생성된 hostId를 리턴합니다.
+     * - 임시 호스트를 생성하여 모든 작업에 사용합니다.
      */
     private Long createSampleHost() throws SQLException {
-        // 이미 존재하는 호스트 ID 4 (hostkim) 또는 5 (hostlee)를 사용하거나
-        // 호스트가 없는 경우 새로 생성
-
-        // 먼저 ID 4로 시도
-        Host existingHost = hostService.getHostById(4L);
-        if (existingHost != null) {
-            return existingHost.getHostId();
-        }
-
-        // ID 4가 없으면 ID 5로 시도
-        existingHost = hostService.getHostById(5L);
-        if (existingHost != null) {
-            return existingHost.getHostId();
-        }
-
-        // 호스트 생성 - 먼저 ID 4로 시도
-        Host host = new Host();
-        host.setHostId(4L); // users.sql에 있는 hostkim의 ID
-        host.setBusinessName("샘플 호스트 비즈니스");
-        host.setBusinessRegNo("123-45-67890");
-        host.setBankAccount("국민은행 123-456-789012");
-        host.setProfileText("이것은 테스트를 위한 샘플 호스트입니다.");
-        host.setHostStatus("APPROVED");
-
         try {
-            int result = hostService.registHost(host);
-            if (result > 0) {
-                return host.getHostId();
+            // 고정된 임시 호스트 ID 사용 (999L)
+            Long tempHostId = 999L;
+
+            try {
+                // 이미 존재하는지 확인
+                Host existing = hostService.getHostById(tempHostId);
+                if (existing != null) {
+                    logger.info("기존 임시 호스트 ID " + tempHostId + " 를 사용합니다.");
+                    return existing.getHostId();
+                }
+            } catch (Exception e) {
+                logger.info("임시 호스트가 존재하지 않아 새로 생성합니다.");
+            }
+
+            try {
+                // 임시 사용자 생성 시도
+                User tempUser = new User();
+                tempUser.setUserId(tempHostId); // 명시적으로 ID 설정
+                tempUser.setUsername("temphost");
+                tempUser.setEmail("temp.host@example.com");
+                tempUser.setPassword("1234");
+                tempUser.setPhone("010-1234-5678");
+                tempUser.setRole("HOST");
+                tempUser.setStatus("ACTIVE");
+
+                // 사용자 테이블에 직접 삽입 시도
+                try {
+                    userService.registUser(tempUser);
+                    logger.info("임시 사용자 생성 성공, userId=" + tempHostId);
+                } catch (Exception ex) {
+                    logger.warn("임시 사용자 생성 중 예외 발생, 이미 존재할 수 있음: " + ex.getMessage());
+                }
+
+                // 호스트 레코드 생성
+                Host host = new Host();
+                host.setHostId(tempHostId);
+                host.setBusinessName("임시 호스트 비즈니스");
+                host.setBusinessRegNo("999-88-77777");
+                host.setBankAccount("임시은행 999-888-777777");
+                host.setProfileText("이것은 테스트를 위한 임시 호스트입니다.");
+                host.setHostStatus("APPROVED");
+
+                try {
+                    hostService.registHost(host);
+                    logger.info("임시 호스트 생성 성공, hostId=" + tempHostId);
+                } catch (Exception ex) {
+                    logger.warn("임시 호스트 생성 중 예외 발생, 이미 존재할 수 있음: " + ex.getMessage());
+                }
+
+                // 성공 여부와 관계없이 항상 임시 호스트 ID 반환
+                return tempHostId;
+
+            } catch (Exception e) {
+                logger.warn("임시 호스트/사용자 생성 중 예외 발생, 기본값 사용: " + e.getMessage());
+                // 예외가 발생해도 임시 호스트 ID 반환
+                return tempHostId;
             }
         } catch (Exception e) {
-            logger.warn("ID 4로 호스트 생성 실패: " + e.getMessage());
+            logger.error("createSampleHost 예외: " + e.getMessage(), e);
+            // 모든 예외 상황에서도 임시 호스트 ID 반환
+            return 999L;
         }
-
-        // ID 4로 실패하면 ID 5로 시도
-        host.setHostId(5L); // users.sql에 있는 hostlee의 ID
-        try {
-            int result = hostService.registHost(host);
-            if (result > 0) {
-                return host.getHostId();
-            }
-        } catch (Exception e) {
-            logger.warn("ID 5로 호스트 생성 실패: " + e.getMessage());
-        }
-
-        // 모든 시도가 실패하면 새 호스트 ID 생성
-        // 실제 운영 환경에서는 이 부분을 적절히 수정해야 함
-        host.setHostId(1L); // 기본 관리자 계정 사용
-        try {
-            int result = hostService.registHost(host);
-            if (result > 0) {
-                return host.getHostId();
-            }
-        } catch (Exception e) {
-            logger.warn("ID 1로 호스트 생성 실패: " + e.getMessage());
-        }
-
-        // 그래도 실패하면 임의의 ID 사용
-        return 1L; // 기본값으로 1 반환
     }
 
     /**

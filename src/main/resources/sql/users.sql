@@ -20,14 +20,14 @@ CREATE TABLE users (
 
 -- 비밀번호는 평문으로 저장됩니다.
 INSERT INTO users (username, email, password, phone, role, status) VALUES
-('beomsoo',   'beomsoo@example.com',    '5678',    '010-1111-2222', 'USER',  'ACTIVE'),
-('minji',     'minji.kim@example.com',  '5678',    '010-2222-3333', 'USER',  'ACTIVE'),
-('hyunwoo',   'hyunwoo.park@example.com','5678',   '010-3333-4444', 'USER',  'INACTIVE'),
-('hostkim',   'host.kim@example.com',   '5678',    '010-4444-5555', 'HOST',  'ACTIVE'),
-('hostlee',   'host.lee@example.com',   '5678',    '010-5555-6666', 'HOST',  'ACTIVE'),
-('adminlee',  'admin.lee@example.com',  '5678',    '010-6666-7777', 'ADMIN', 'ACTIVE'),
-('adminchoi', 'admin.choi@example.com', '5678',    NULL,            'ADMIN', 'SUSPENDED'),
-('parkmin',   'min.park@example.com',   '5678',    '010-7777-8888', 'USER',  'ACTIVE'),
-('kimyoung',  'young.kim@example.com',  '5678',    '010-8888-9999', 'USER',  'ACTIVE'),
-('choiwon',   'won.choi@example.com',   '5678',    '010-9999-0000', 'USER',  'ACTIVE'),
-('ssafy',     'ssafy@example.com',      '5678',    NULL,            'USER',  'ACTIVE');
+('beomsoo',   'beomsoo@example.com',    '1234',    '010-1111-2222', 'USER',  'ACTIVE'),
+('minji',     'minji.kim@example.com',  '1234',    '010-2222-3333', 'USER',  'ACTIVE'),
+('hyunwoo',   'hyunwoo.park@example.com','1234',   '010-3333-4444', 'USER',  'INACTIVE'),
+('hostkim',   'host.kim@example.com',   '1234',    '010-4444-5555', 'HOST',  'ACTIVE'),
+('hostlee',   'host.lee@example.com',   '1234',    '010-5555-6666', 'HOST',  'ACTIVE'),
+('adminlee',  'admin.lee@example.com',  '1234',    '010-6666-7777', 'ADMIN', 'ACTIVE'),
+('adminchoi', 'admin.choi@example.com', '1234',    NULL,            'ADMIN', 'SUSPENDED'),
+('parkmin',   'min.park@example.com',   '1234',    '010-7777-8888', 'USER',  'ACTIVE'),
+('kimyoung',  'young.kim@example.com',  '1234',    '010-8888-9999', 'USER',  'ACTIVE'),
+('choiwon',   'won.choi@example.com',   '1234',    '010-9999-0000', 'USER',  'ACTIVE'),
+('ssafy',     'ssafy@example.com',      '1234',    NULL,            'USER',  'ACTIVE');

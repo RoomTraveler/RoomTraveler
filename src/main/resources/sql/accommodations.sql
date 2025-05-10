@@ -1,4 +1,4 @@
--- Accommodations Table
+-- 숙소 테이블
 CREATE TABLE accommodations (
     accommodation_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     host_id BIGINT UNSIGNED NOT NULL,
@@ -20,44 +20,60 @@ CREATE TABLE accommodations (
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (accommodation_id),
-    FOREIGN KEY (host_id) REFERENCES hosts(host_id) ON DELETE CASCADE,
+    FOREIGN KEY (host_id) REFERENCES users(user_id) ON DELETE CASCADE,
     FOREIGN KEY (sido_code) REFERENCES sidos(sido_code),
     FOREIGN KEY (gugun_code) REFERENCES guguns(gugun_code)
 );
 
--- Rooms Table
-CREATE TABLE rooms (
-    room_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-    accommodation_id BIGINT UNSIGNED NOT NULL,
-    name VARCHAR(100) NOT NULL,
-    description TEXT NOT NULL,
-    price DECIMAL(10,2) NOT NULL,
-    capacity INT NOT NULL,
-    room_count INT NOT NULL DEFAULT 1,
-    room_size DECIMAL(8,2) NULL,
-    bed_type VARCHAR(50) NULL,
-    amenities TEXT NULL,
-    status ENUM('AVAILABLE', 'UNAVAILABLE') NOT NULL DEFAULT 'AVAILABLE',
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    PRIMARY KEY (room_id),
-    FOREIGN KEY (accommodation_id) REFERENCES accommodations(accommodation_id) ON DELETE CASCADE
+-- 숙소 샘플 데이터 추가 (테스트용)
+INSERT INTO accommodations (accommodation_id, host_id, title, description, address, sido_code, gugun_code, check_in_time, check_out_time, status)
+VALUES 
+(1, 4, '서울 시티 호텔', '서울 중심부에 위치한 현대적인 호텔입니다.', '서울특별시 중구 명동길 123', 1, 1, '15:00:00', '11:00:00', 'ACTIVE'),
+(2, 5, '부산 비치 리조트', '해변가에 위치한 아름다운 리조트입니다.', '부산광역시 해운대구 해운대해변로 456', 2, 2, '16:00:00', '10:00:00', 'ACTIVE'),
+(3, 4, '제주 오션 뷰 펜션', '제주 바다가 보이는 아늑한 펜션입니다.', '제주특별자치도 서귀포시 중문관광로 789', 3, 3, '14:00:00', '12:00:00', 'ACTIVE');
+
+-- 객실 테이블
+CREATE TABLE IF NOT EXISTS rooms (
+  room_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  accommodation_id BIGINT UNSIGNED NOT NULL,
+  name VARCHAR(100)       NOT NULL,
+  description TEXT,
+  capacity INT,
+  price_per_night DECIMAL(10,2) NOT NULL DEFAULT 0,
+  room_type VARCHAR(50),
+                                     bed_type VARCHAR(50),
+                                     bathroom_count INT,
+                                     amenities TEXT,
+                                     status VARCHAR(20),
+                                     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                                     PRIMARY KEY (room_id),
+                                     FOREIGN KEY (accommodation_id)
+                                         REFERENCES accommodations(accommodation_id)
+                                         ON DELETE CASCADE
 );
 
--- Images Table
+
+-- 이미지 테이블
 CREATE TABLE images (
     image_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     reference_id BIGINT UNSIGNED NOT NULL,
     reference_type ENUM('ACCOMMODATION', 'ROOM') NOT NULL,
+    accommodation_id BIGINT UNSIGNED NULL,
+    room_id BIGINT UNSIGNED NULL,
     image_url VARCHAR(255) NOT NULL,
     caption VARCHAR(255) NULL,
     is_main BOOLEAN NOT NULL DEFAULT FALSE,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (image_id),
-    INDEX (reference_id, reference_type)
+    INDEX (reference_id, reference_type),
+    FOREIGN KEY (accommodation_id) REFERENCES accommodations(accommodation_id) ON DELETE CASCADE,
+    FOREIGN KEY (room_id) REFERENCES rooms(room_id) ON DELETE CASCADE
 );
 
--- Reservations Table
+-- 트리거 대신 외래 키 제약 조건을 사용하여 이미지 삭제 처리
+
+-- 예약 테이블
 CREATE TABLE reservations (
     reservation_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     user_id BIGINT UNSIGNED NOT NULL,
@@ -77,24 +93,9 @@ CREATE TABLE reservations (
     INDEX (check_in_date, check_out_date)
 );
 
--- Reviews Table
-CREATE TABLE reviews (
-    review_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-    reservation_id BIGINT UNSIGNED NOT NULL,
-    user_id BIGINT UNSIGNED NOT NULL,
-    accommodation_id BIGINT UNSIGNED NOT NULL,
-    rating DECIMAL(2,1) NOT NULL,
-    comment TEXT NULL,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    PRIMARY KEY (review_id),
-    FOREIGN KEY (reservation_id) REFERENCES reservations(reservation_id) ON DELETE CASCADE,
-    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
-    FOREIGN KEY (accommodation_id) REFERENCES accommodations(accommodation_id) ON DELETE CASCADE,
-    UNIQUE (reservation_id)
-);
+-- 리뷰 테이블은 reviews.sql에 정의되어 있습니다
 
--- Room Availability Table
+-- 객실 가용성 테이블
 CREATE TABLE room_availability (
     availability_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     room_id BIGINT UNSIGNED NOT NULL,
