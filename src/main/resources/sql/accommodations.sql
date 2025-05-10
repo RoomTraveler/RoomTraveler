@@ -1,4 +1,4 @@
--- Accommodations Table
+-- 숙소 테이블
 CREATE TABLE accommodations (
     accommodation_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     host_id BIGINT UNSIGNED NOT NULL,
@@ -32,8 +32,7 @@ VALUES
 (2, 5, '부산 비치 리조트', '해변가에 위치한 아름다운 리조트입니다.', '부산광역시 해운대구 해운대해변로 456', 2, 2, '16:00:00', '10:00:00', 'ACTIVE'),
 (3, 4, '제주 오션 뷰 펜션', '제주 바다가 보이는 아늑한 펜션입니다.', '제주특별자치도 서귀포시 중문관광로 789', 3, 3, '14:00:00', '12:00:00', 'ACTIVE');
 
--- Rooms Table
--- rooms 테이블 생성
+-- 객실 테이블
 CREATE TABLE IF NOT EXISTS rooms (
   room_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   accommodation_id BIGINT UNSIGNED NOT NULL,
@@ -55,20 +54,26 @@ CREATE TABLE IF NOT EXISTS rooms (
 );
 
 
--- Images Table
+-- 이미지 테이블
 CREATE TABLE images (
     image_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     reference_id BIGINT UNSIGNED NOT NULL,
     reference_type ENUM('ACCOMMODATION', 'ROOM') NOT NULL,
+    accommodation_id BIGINT UNSIGNED NULL,
+    room_id BIGINT UNSIGNED NULL,
     image_url VARCHAR(255) NOT NULL,
     caption VARCHAR(255) NULL,
     is_main BOOLEAN NOT NULL DEFAULT FALSE,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (image_id),
-    INDEX (reference_id, reference_type)
+    INDEX (reference_id, reference_type),
+    FOREIGN KEY (accommodation_id) REFERENCES accommodations(accommodation_id) ON DELETE CASCADE,
+    FOREIGN KEY (room_id) REFERENCES rooms(room_id) ON DELETE CASCADE
 );
 
--- Reservations Table
+-- 트리거 대신 외래 키 제약 조건을 사용하여 이미지 삭제 처리
+
+-- 예약 테이블
 CREATE TABLE reservations (
     reservation_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     user_id BIGINT UNSIGNED NOT NULL,
@@ -88,9 +93,9 @@ CREATE TABLE reservations (
     INDEX (check_in_date, check_out_date)
 );
 
--- Reviews Table is now defined in reviews.sql
+-- 리뷰 테이블은 reviews.sql에 정의되어 있습니다
 
--- Room Availability Table
+-- 객실 가용성 테이블
 CREATE TABLE room_availability (
     availability_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     room_id BIGINT UNSIGNED NOT NULL,

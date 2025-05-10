@@ -1,7 +1,7 @@
 -- 알림 테이블 생성
 CREATE TABLE IF NOT EXISTS notifications (
     notification_id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    user_id BIGINT NOT NULL,
+    user_id BIGINT UNSIGNED NOT NULL,
     title VARCHAR(255) NOT NULL,
     content TEXT NOT NULL,
     notification_type VARCHAR(50) NOT NULL,

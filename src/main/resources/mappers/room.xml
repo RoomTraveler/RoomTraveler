@@ -5,6 +5,25 @@
 
 <mapper namespace="com.ssafy.trip.accommodation.dao.RoomDao">
 
+    <!-- Room 결과 매핑 -->
+    <resultMap id="roomResultMap" type="com.ssafy.trip.accommodation.model.Room">
+        <id property="roomId" column="room_id" />
+        <result property="accommodationId" column="accommodation_id" />
+        <result property="name" column="name" />
+        <result property="description" column="description" />
+        <result property="capacity" column="capacity" />
+        <result property="price" column="price_per_night" />
+        <result property="roomCount" column="room_count" />
+        <result property="roomSize" column="room_size" />
+        <result property="roomType" column="room_type" />
+        <result property="bedType" column="bed_type" />
+        <result property="bathroomCount" column="bathroom_count" />
+        <result property="amenities" column="amenities" />
+        <result property="status" column="status" />
+        <result property="createdAt" column="created_at" />
+        <result property="updatedAt" column="updated_at" />
+    </resultMap>
+
     <!-- 새 객실을 등록합니다. -->
     <insert id="insert" useGeneratedKeys="true" keyProperty="roomId">
         INSERT INTO rooms (
@@ -18,17 +37,17 @@
     </insert>
 
     <!-- 객실 ID로 객실을 조회합니다. -->
-    <select id="getRoomById" resultType="com.ssafy.trip.accommodation.model.Room">
+    <select id="getRoomById" resultMap="roomResultMap">
         SELECT * FROM rooms WHERE room_id = #{roomId}
     </select>
 
     <!-- 숙소 ID로 객실 목록을 조회합니다. -->
-    <select id="getRoomsByAccommodationId" resultType="com.ssafy.trip.accommodation.model.Room">
+    <select id="getRoomsByAccommodationId" resultMap="roomResultMap">
         SELECT * FROM rooms WHERE accommodation_id = #{accommodationId}
     </select>
 
     <!-- 숙소 ID와 날짜로 가용한 객실 목록을 조회합니다. -->
-    <select id="getAvailableRooms" resultType="com.ssafy.trip.accommodation.model.Room">
+    <select id="getAvailableRooms" resultMap="roomResultMap">
         SELECT r.* FROM rooms r
         WHERE r.accommodation_id = #{accommodationId}
         AND r.status = 'ACTIVE'
@@ -68,7 +87,7 @@
     </delete>
 
     <!-- 필터링된 객실 목록을 조회합니다. -->
-    <select id="getFilteredRooms" resultType="com.ssafy.trip.accommodation.model.Room">
+    <select id="getFilteredRooms" resultMap="roomResultMap">
         SELECT * FROM rooms
         <where>
             <if test="accommodationId != null">
@@ -90,7 +109,7 @@
     </select>
 
     <!-- 외부 API에서 가져온 객실 정보를 저장합니다. -->
-    <insert id="insertFromApi" useGeneratedKeys="true" keyProperty="roomId">
+    <insert id="insertFromApi" parameterType="com.ssafy.trip.accommodation.model.Room" useGeneratedKeys="true" keyProperty="roomId">
         INSERT INTO rooms (
             accommodation_id, name, description, capacity, price_per_night, 
             room_type, bed_type, bathroom_count, amenities, status, created_at, updated_at
@@ -102,7 +121,7 @@
     </insert>
 
     <!-- 호스트 ID로 객실 목록을 조회합니다. -->
-    <select id="getRoomsByHostId" resultType="com.ssafy.trip.accommodation.model.Room">
+    <select id="getRoomsByHostId" resultMap="roomResultMap">
         SELECT r.* FROM rooms r
         JOIN accommodations a ON r.accommodation_id = a.accommodation_id
         WHERE a.host_id = #{hostId}

@@ -72,6 +72,7 @@ public interface AccommodationDao {
      */
     int deleteAccommodation(Long accommodationId) throws SQLException;
 
+
     /**
      * 모든 숙소를 조회합니다.
      * @return 모든 숙소 목록
@@ -99,4 +100,10 @@ public interface AccommodationDao {
      * @return 유사한 숙소 목록
      */
     List<Accommodation> getSimilarAccommodations(Long accommodationId, int limit) throws SQLException;
+
+    /**
+     * 모든 숙소를 삭제합니다.
+     * @return 삭제된 행 수
+     */
+    int deleteAllAccommodations() throws SQLException;
 }

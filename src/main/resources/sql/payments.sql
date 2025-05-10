@@ -1,8 +1,8 @@
 -- 결제 테이블 생성
 CREATE TABLE IF NOT EXISTS payments (
     payment_id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    reservation_id BIGINT NOT NULL,
-    user_id BIGINT NOT NULL,
+    reservation_id BIGINT UNSIGNED NOT NULL,
+    user_id BIGINT UNSIGNED NOT NULL,
     payment_method VARCHAR(50) NOT NULL,
     payment_key VARCHAR(255),
     amount DECIMAL(10, 2) NOT NULL,

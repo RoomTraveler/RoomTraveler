@@ -5,33 +5,56 @@
 
 <mapper namespace="com.ssafy.trip.accommodation.dao.ImageDao">
 
+    <!-- Image 결과 매핑 -->
+    <resultMap id="imageResultMap" type="com.ssafy.trip.accommodation.model.Image">
+        <id property="imageId" column="image_id" />
+        <result property="referenceId" column="reference_id" />
+        <result property="referenceType" column="reference_type" />
+        <result property="accommodationId" column="accommodation_id" />
+        <result property="roomId" column="room_id" />
+        <result property="imageUrl" column="image_url" />
+        <result property="caption" column="caption" />
+        <result property="isMain" column="is_main" />
+        <result property="createdAt" column="created_at" />
+    </resultMap>
+
     <!-- 새 이미지를 등록합니다. -->
     <insert id="insert" useGeneratedKeys="true" keyProperty="imageId">
         INSERT INTO images (
-            reference_id, reference_type, image_url, is_main, caption, created_at
+            reference_id, reference_type, accommodation_id, room_id, image_url, is_main, caption, created_at
         )
         VALUES (
-            #{referenceId}, #{referenceType}, #{imageUrl}, #{isMain}, #{caption}, NOW()
+            #{referenceId}, #{referenceType}, 
+            <choose>
+                <when test="accommodationId != null">#{accommodationId}</when>
+                <otherwise>NULL</otherwise>
+            </choose>,
+            <choose>
+                <when test="roomId != null">#{roomId}</when>
+                <when test="referenceType == 'ROOM'">#{referenceId}</when>
+                <otherwise>NULL</otherwise>
+            </choose>,
+            #{imageUrl}, #{isMain}, #{caption}, NOW()
         )
     </insert>
 
     <!-- 이미지 ID로 이미지를 조회합니다. -->
-    <select id="getImageById" resultType="com.ssafy.trip.accommodation.model.Image">
+    <select id="getImageById" resultMap="imageResultMap">
         SELECT * FROM images WHERE image_id = #{imageId}
     </select>
 
     <!-- 참조 ID와 참조 타입으로 이미지 목록을 조회합니다. -->
-    <select id="getImagesByReference" resultType="com.ssafy.trip.accommodation.model.Image">
-        SELECT * FROM images 
-        WHERE reference_id = #{referenceId} AND reference_type = #{referenceType}
+    <select id="getImagesByReference" resultMap="imageResultMap">
+        SELECT i.* FROM images i
+        WHERE i.reference_id = #{referenceId} AND i.reference_type = #{referenceType}
     </select>
 
     <!-- 참조 ID와 참조 타입으로 대표 이미지를 조회합니다. -->
-    <select id="getMainImageByReference" resultType="com.ssafy.trip.accommodation.model.Image">
-        SELECT * FROM images 
-        WHERE reference_id = #{referenceId} 
-        AND reference_type = #{referenceType} 
-        AND is_main = true
+    <select id="getMainImageByReference" resultMap="imageResultMap">
+        SELECT i.* FROM images i
+        WHERE i.reference_id = #{referenceId} 
+        AND i.reference_type = #{referenceType} 
+        AND i.is_main = true
         LIMIT 1
     </select>
 
@@ -60,19 +83,29 @@
         UPDATE images
         SET is_main = false
         WHERE reference_id = #{referenceId} AND reference_type = #{referenceType};
-        
+
         UPDATE images
         SET is_main = true
         WHERE image_id = #{imageId}
     </update>
 
     <!-- 외부 API에서 가져온 이미지 정보를 저장합니다. -->
-    <insert id="insertFromApi" useGeneratedKeys="true" keyProperty="imageId">
+    <insert id="insertFromApi" parameterType="com.ssafy.trip.accommodation.model.Image" useGeneratedKeys="true" keyProperty="imageId">
         INSERT INTO images (
-            reference_id, reference_type, image_url, is_main, caption, created_at
+            reference_id, reference_type, accommodation_id, room_id, image_url, is_main, caption, created_at
         )
         VALUES (
-            #{referenceId}, #{referenceType}, #{imageUrl}, #{isMain}, #{caption}, NOW()
+            #{referenceId}, #{referenceType}, 
+            <choose>
+                <when test="accommodationId != null">#{accommodationId}</when>
+                <otherwise>NULL</otherwise>
+            </choose>,
+            <choose>
+                <when test="roomId != null">#{roomId}</when>
+                <when test="referenceType == 'ROOM'">#{referenceId}</when>
+                <otherwise>NULL</otherwise>
+            </choose>,
+            #{imageUrl}, #{isMain}, #{caption}, NOW()
         )
     </insert>
 </mapper>

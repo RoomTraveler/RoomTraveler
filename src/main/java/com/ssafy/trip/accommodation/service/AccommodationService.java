@@ -111,6 +111,7 @@ public interface AccommodationService {
      */
     int deleteAccommodation(Long accommodationId) throws SQLException;
 
+
     /**
      * 객실을 삭제합니다.
      * @param roomId 삭제할 객실 ID
@@ -154,4 +155,10 @@ public interface AccommodationService {
      * @return 유사한 숙소 목록
      */
     List<Accommodation> getSimilarAccommodations(Long accommodationId, int limit) throws SQLException;
+
+    /**
+     * 모든 숙소를 삭제합니다.
+     * @return 삭제된 행 수
+     */
+    int deleteAllAccommodations() throws SQLException;
 }

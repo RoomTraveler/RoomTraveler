@@ -149,6 +149,18 @@ public class AdminController {
     public String manageAccommodations(Model model) {
         try {
             List<Accommodation> accommodations = accommodationService.getAllAccommodations();
+
+            // 숙소 ID가 null인 숙소 개수 확인
+            int nullIdCount = 0;
+            for (Accommodation acc : accommodations) {
+                if (acc.getAccommodationId() == null) {
+                    nullIdCount++;
+                    logger.warn("숙소 ID가 null입니다. 제목: {}", acc.getTitle());
+                }
+            }
+
+            logger.info("총 숙소 수: {}, null ID 숙소 수: {}", accommodations.size(), nullIdCount);
+
             model.addAttribute("accommodations", accommodations);
 
             // 시도 목록을 가져와서 모델에 추가
@@ -233,48 +245,20 @@ public class AdminController {
     @ResponseBody
     public ResponseEntity<Map<String, Object>> deleteAllAccommodations() {
         try {
-            // 모든 숙소 조회
-            List<Accommodation> accommodations = accommodationService.getAllAccommodations();
-            int totalCount = accommodations.size();
+            logger.info("모든 숙소 삭제 시도");
 
-            if (totalCount == 0) {
-                Map<String, Object> response = new HashMap<>();
-                response.put("success", true);
-                response.put("message", "삭제할 숙소가 없습니다.");
-                return ResponseEntity.ok(response);
-            }
+            // 모든 숙소 삭제 실행
+            int deletedCount = accommodationService.deleteAllAccommodations();
 
-            // 트랜잭션 내에서 모든 숙소 삭제 시도
-            int successCount = 0;
-
-            // 각 숙소에 대해 삭제 시도
-            for (Accommodation acc : accommodations) {
-                try {
-                    // 숙소 삭제 전에 관련 데이터 확인
-                    Long accommodationId = acc.getAccommodationId();
-                    logger.info("숙소 삭제 시도: ID={}, 제목={}", accommodationId, acc.getTitle());
-
-                    // 숙소 삭제 실행
-                    int result = accommodationService.deleteAccommodation(accommodationId);
-
-                    if (result > 0) {
-                        successCount++;
-                        logger.info("숙소 삭제 성공: ID={}", accommodationId);
-                    } else {
-                        logger.warn("숙소 삭제 실패: ID={}, 영향받은 행 수: {}", accommodationId, result);
-                    }
-                } catch (Exception e) {
-                    logger.error("개별 숙소 삭제 중 오류 발생: ID=" + acc.getAccommodationId(), e);
-                }
-            }
+            logger.info("모든 숙소 삭제 완료: {} 개의 숙소가 삭제되었습니다.", deletedCount);
 
             Map<String, Object> response = new HashMap<>();
-            if (successCount == totalCount) {
+            if (deletedCount > 0) {
                 response.put("success", true);
-                response.put("message", "모든 숙소가 성공적으로 삭제되었습니다. (총 " + successCount + "개)");
+                response.put("message", "모든 숙소가 성공적으로 삭제되었습니다. (총 " + deletedCount + "개)");
             } else {
                 response.put("success", true);
-                response.put("message", "일부 숙소만 삭제되었습니다. (" + successCount + "/" + totalCount + ")");
+                response.put("message", "삭제할 숙소가 없습니다.");
             }
 
             return ResponseEntity.ok(response);
@@ -695,6 +679,8 @@ public class AdminController {
 
     /**
      * 객실 정보를 가져옵니다.
+     * @param contentId 숙소 컨텐츠 ID (TourAPI)
+     * @return 객실 목록
      */
     private List<Room> fetchRoomInfo(String contentId) throws Exception {
         String serviceKey = tourApiProperties.getServiceKey();
@@ -759,6 +745,9 @@ public class AdminController {
                 // 임시 ID 설정 (실제 저장 시 자동 생성됨)
                 room.setRoomId(Long.parseLong(contentId));
 
+                // 숙소 ID 설정 (contentId를 숙소 ID로 사용)
+                room.setAccommodationId(Long.parseLong(contentId));
+
                 rooms.add(room);
             }
         }
@@ -778,6 +767,9 @@ public class AdminController {
             defaultRoom.setAmenities("TV, 에어컨, 냉장고, 욕실용품");
             defaultRoom.setStatus("AVAILABLE");
             defaultRoom.setRoomId(Long.parseLong(contentId));
+
+            // 숙소 ID 설정 (contentId를 숙소 ID로 사용)
+            defaultRoom.setAccommodationId(Long.parseLong(contentId));
 
             rooms.add(defaultRoom);
         }
@@ -833,10 +825,13 @@ public class AdminController {
                 if (!hasMainImage) {
                     image.setIsMain(true);
                     image.setReferenceType("ACCOMMODATION");
+                    // accommodationId는 importFromApi에서 설정됨
                     hasMainImage = true;
                 } else {
                     image.setIsMain(false);
                     image.setReferenceType("ROOM");
+                    // roomId는 importFromApi에서 설정됨
+                    // accommodationId는 importFromApi에서 설정됨
                 }
 
                 // 임시 ID 설정 (실제 저장 시 자동 생성됨)
