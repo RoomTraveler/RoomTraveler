@@ -26,6 +26,7 @@
         <result property="status" column="status" />
         <result property="createdAt" column="created_at" />
         <result property="updatedAt" column="updated_at" />
+        <result property="hostName" column="host_name" />
     </resultMap>
 
     <!-- 새 숙소를 등록합니다. -->
@@ -44,29 +45,39 @@
 
     <!-- 숙소 ID로 숙소를 조회합니다. -->
     <select id="getAccommodationById" resultMap="accommodationResultMap">
-        SELECT * FROM accommodations WHERE accommodation_id = #{accommodationId}
+        SELECT a.*, u.username as host_name
+        FROM accommodations a
+        LEFT JOIN users u ON a.host_id = u.user_id
+        WHERE a.accommodation_id = #{accommodationId}
     </select>
 
     <!-- 호스트 ID로 숙소 목록을 조회합니다. -->
     <select id="getAccommodationsByHostId" resultMap="accommodationResultMap">
-        SELECT * FROM accommodations WHERE host_id = #{hostId}
+        SELECT a.*, u.username as host_name
+        FROM accommodations a
+        LEFT JOIN users u ON a.host_id = u.user_id
+        WHERE a.host_id = #{hostId}
     </select>
 
     <!-- 지역 코드로 숙소 목록을 조회합니다. -->
     <select id="getAccommodationsByRegion" resultMap="accommodationResultMap">
-        SELECT * FROM accommodations 
-        WHERE sido_code = #{sidoCode}
+        SELECT a.*, u.username as host_name
+        FROM accommodations a
+        LEFT JOIN users u ON a.host_id = u.user_id
+        WHERE a.sido_code = #{sidoCode}
         <if test="gugunCode != null">
-            AND gugun_code = #{gugunCode}
+            AND a.gugun_code = #{gugunCode}
         </if>
     </select>
 
     <!-- 키워드로 숙소를 검색합니다. -->
     <select id="searchAccommodations" resultMap="accommodationResultMap">
-        SELECT * FROM accommodations 
-        WHERE title LIKE CONCAT('%', #{keyword}, '%')
-        OR description LIKE CONCAT('%', #{keyword}, '%')
-        OR address LIKE CONCAT('%', #{keyword}, '%')
+        SELECT a.*, u.username as host_name
+        FROM accommodations a
+        LEFT JOIN users u ON a.host_id = u.user_id
+        WHERE a.title LIKE CONCAT('%', #{keyword}, '%')
+        OR a.description LIKE CONCAT('%', #{keyword}, '%')
+        OR a.address LIKE CONCAT('%', #{keyword}, '%')
     </select>
 
     <!-- 숙소 정보를 업데이트합니다. -->
@@ -106,24 +117,28 @@
 
     <!-- 모든 숙소를 조회합니다. -->
     <select id="getAllAccommodations" resultMap="accommodationResultMap">
-        SELECT * FROM accommodations
-        WHERE accommodation_id IS NOT NULL
+        SELECT a.*, u.username as host_name
+        FROM accommodations a
+        LEFT JOIN users u ON a.host_id = u.user_id
+        WHERE a.accommodation_id IS NOT NULL
     </select>
 
 
     <!-- 필터링된 숙소 목록을 조회합니다. -->
     <select id="getFilteredAccommodations" resultMap="accommodationResultMap">
-        SELECT * FROM accommodations
+        SELECT a.*, u.username as host_name
+        FROM accommodations a
+        LEFT JOIN users u ON a.host_id = u.user_id
         <where>
-            accommodation_id IS NOT NULL
+            a.accommodation_id IS NOT NULL
             <if test="sidoCode != null">
-                AND sido_code = #{sidoCode}
+                AND a.sido_code = #{sidoCode}
             </if>
             <if test="gugunCode != null">
-                AND gugun_code = #{gugunCode}
+                AND a.gugun_code = #{gugunCode}
             </if>
             <if test="status != null">
-                AND status = #{status}
+                AND a.status = #{status}
             </if>
         </where>
     </select>
@@ -144,8 +159,10 @@
 
     <!-- 유사한 숙소 목록을 조회합니다. -->
     <select id="getSimilarAccommodations" resultMap="accommodationResultMap">
-        SELECT a.* FROM accommodations a
+        SELECT a.*, u.username as host_name
+        FROM accommodations a
         JOIN accommodations base ON a.sido_code = base.sido_code AND a.gugun_code = base.gugun_code
+        LEFT JOIN users u ON a.host_id = u.user_id
         WHERE base.accommodation_id = #{accommodationId}
         AND a.accommodation_id IS NOT NULL
         AND a.accommodation_id != #{accommodationId}

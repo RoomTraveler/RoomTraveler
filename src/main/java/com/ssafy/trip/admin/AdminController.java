@@ -525,7 +525,7 @@ public class AdminController {
                         }
 
                         // 이미지 정보 가져오기
-                        List<Image> images = fetchImageInfo(contentId);
+                        List<Image> images = fetchImageInfo(contentId, rooms);
 
                         // 이미지가 없으면 건너뛰기
                         if (images.isEmpty()) {
@@ -728,8 +728,10 @@ public class AdminController {
         JsonNode items = root.path("response").path("body").path("items").path("item");
 
         List<Room> rooms = new ArrayList<>();
+        long roomIdBase = Long.parseLong(contentId) * 10000; // 고유한 room_id를 생성하기 위한 베이스 값
 
         if (items.isArray()) {
+            int roomIndex = 0;
             for (JsonNode item : items) {
                 Room room = new Room();
 
@@ -761,8 +763,9 @@ public class AdminController {
                 room.setAmenities("TV, 에어컨, 냉장고, 욕실용품");  // 기본값
                 room.setStatus("AVAILABLE");
 
-                // 임시 ID 설정 (실제 저장 시 자동 생성됨)
-                room.setRoomId(Long.parseLong(contentId));
+                // 고유한 임시 ID 설정 (실제 저장 시 자동 생성됨)
+                room.setRoomId(roomIdBase + roomIndex);
+                roomIndex++;
 
                 // 숙소 ID 설정 (contentId를 숙소 ID로 사용)
                 room.setAccommodationId(Long.parseLong(contentId));
@@ -785,7 +788,7 @@ public class AdminController {
             defaultRoom.setBathroomCount(1);
             defaultRoom.setAmenities("TV, 에어컨, 냉장고, 욕실용품");
             defaultRoom.setStatus("AVAILABLE");
-            defaultRoom.setRoomId(Long.parseLong(contentId));
+            defaultRoom.setRoomId(roomIdBase); // 고유한 임시 ID 설정
 
             // 숙소 ID 설정 (contentId를 숙소 ID로 사용)
             defaultRoom.setAccommodationId(Long.parseLong(contentId));
@@ -798,8 +801,11 @@ public class AdminController {
 
     /**
      * 이미지 정보를 가져옵니다.
+     * @param contentId 숙소 컨텐츠 ID (TourAPI)
+     * @param rooms 객실 목록 (이미지를 객실에 분배하기 위해 필요)
+     * @return 이미지 목록
      */
-    private List<Image> fetchImageInfo(String contentId) throws Exception {
+    private List<Image> fetchImageInfo(String contentId, List<Room> rooms) throws Exception {
         String serviceKey = tourApiProperties.getServiceKey();
         String baseUrl = tourApiProperties.getBaseUrl();
 
@@ -824,6 +830,8 @@ public class AdminController {
 
         if (items.isArray()) {
             boolean hasMainImage = false;
+            int roomIndex = 0;
+            int roomCount = rooms.size();
 
             for (JsonNode item : items) {
                 Image image = new Image();
@@ -844,17 +852,24 @@ public class AdminController {
                 if (!hasMainImage) {
                     image.setIsMain(true);
                     image.setReferenceType("ACCOMMODATION");
+                    image.setReferenceId(Long.parseLong(contentId)); // 숙소 ID 설정
                     // accommodationId는 importFromApi에서 설정됨
                     hasMainImage = true;
                 } else {
                     image.setIsMain(false);
                     image.setReferenceType("ROOM");
-                    // roomId는 importFromApi에서 설정됨
-                    // accommodationId는 importFromApi에서 설정됨
-                }
 
-                // 임시 ID 설정 (실제 저장 시 자동 생성됨)
-                image.setReferenceId(Long.parseLong(contentId));
+                    // 객실 이미지를 각 객실에 분배
+                    if (roomCount > 0) {
+                        Room room = rooms.get(roomIndex % roomCount);
+                        image.setReferenceId(room.getRoomId()); // 객실 ID 설정
+                        roomIndex++; // 다음 객실로 이동
+                    } else {
+                        // 객실이 없는 경우 (이 경우는 발생하지 않아야 함)
+                        image.setReferenceId(Long.parseLong(contentId));
+                    }
+                    // roomId와 accommodationId는 importFromApi에서 설정됨
+                }
 
                 images.add(image);
             }

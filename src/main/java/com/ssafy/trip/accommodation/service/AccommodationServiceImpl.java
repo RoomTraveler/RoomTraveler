@@ -79,7 +79,39 @@ public class AccommodationServiceImpl implements AccommodationService {
      */
     @Override
     public Accommodation getAccommodationById(Long accommodationId) throws SQLException {
-        return accommodationDao.getAccommodationById(accommodationId);
+        Accommodation accommodation = accommodationDao.getAccommodationById(accommodationId);
+        if (accommodation != null) {
+            // 대표 이미지 URL 설정
+            List<Image> images = imageDao.getImagesByReference(accommodationId, "ACCOMMODATION");
+            if (!images.isEmpty()) {
+                // 대표 이미지 찾기
+                Image mainImage = null;
+                for (Image image : images) {
+                    if (image.getIsMain() != null && image.getIsMain()) {
+                        mainImage = image;
+                        break;
+                    }
+                }
+
+                // 대표 이미지가 없으면 첫 번째 이미지 사용
+                if (mainImage == null && !images.isEmpty()) {
+                    mainImage = images.get(0);
+                }
+
+                if (mainImage != null) {
+                    String imageUrl = mainImage.getImageUrl();
+                    // 이미지 URL이 비어있거나 유효하지 않은 경우 플레이스홀더 이미지 사용
+                    if (imageUrl == null || imageUrl.isEmpty()) {
+                        imageUrl = "https://via.placeholder.com/800x600?text=No+Image+Available";
+                    } else if (!imageUrl.startsWith("http")) {
+                        // URL이 http로 시작하지 않으면 http://를 추가
+                        imageUrl = "http://" + imageUrl;
+                    }
+                    accommodation.setMainImageUrl(imageUrl);
+                }
+            }
+        }
+        return accommodation;
     }
 
     /**
@@ -92,6 +124,9 @@ public class AccommodationServiceImpl implements AccommodationService {
             // 객실 이미지 URL 목록 조회
             List<Image> images = imageDao.getImagesByReference(roomId, "ROOM");
             List<String> imageUrls = new ArrayList<>();
+            Image mainImage = null;
+
+            // 대표 이미지 찾기
             for (Image image : images) {
                 String imageUrl = image.getImageUrl();
                 // 이미지 URL이 비어있거나 유효하지 않은 경우 플레이스홀더 이미지 사용
@@ -102,7 +137,30 @@ public class AccommodationServiceImpl implements AccommodationService {
                     imageUrl = "http://" + imageUrl;
                 }
                 imageUrls.add(imageUrl);
+
+                // 대표 이미지로 설정된 이미지 찾기
+                if (image.getIsMain() != null && image.getIsMain()) {
+                    mainImage = image;
+                }
             }
+
+            // 대표 이미지 설정
+            if (mainImage == null && !images.isEmpty()) {
+                mainImage = images.get(0);
+            }
+
+            if (mainImage != null) {
+                String imageUrl = mainImage.getImageUrl();
+                // 이미지 URL이 비어있거나 유효하지 않은 경우 플레이스홀더 이미지 사용
+                if (imageUrl == null || imageUrl.isEmpty()) {
+                    imageUrl = "https://via.placeholder.com/800x600?text=No+Image+Available";
+                } else if (!imageUrl.startsWith("http")) {
+                    // URL이 http로 시작하지 않으면 http://를 추가
+                    imageUrl = "http://" + imageUrl;
+                }
+                room.setMainImageUrl(imageUrl);
+            }
+
             room.setImageUrls(imageUrls);
         }
         return room;
@@ -129,6 +187,9 @@ public class AccommodationServiceImpl implements AccommodationService {
         for (Room room : rooms) {
             List<Image> images = imageDao.getImagesByReference(room.getRoomId(), "ROOM");
             List<String> imageUrls = new ArrayList<>();
+            Image mainImage = null;
+
+            // 대표 이미지 찾기
             for (Image image : images) {
                 String imageUrl = image.getImageUrl();
                 // 이미지 URL이 비어있거나 유효하지 않은 경우 플레이스홀더 이미지 사용
@@ -139,7 +200,30 @@ public class AccommodationServiceImpl implements AccommodationService {
                     imageUrl = "http://" + imageUrl;
                 }
                 imageUrls.add(imageUrl);
+
+                // 대표 이미지로 설정된 이미지 찾기
+                if (image.getIsMain() != null && image.getIsMain()) {
+                    mainImage = image;
+                }
             }
+
+            // 대표 이미지 설정
+            if (mainImage == null && !images.isEmpty()) {
+                mainImage = images.get(0);
+            }
+
+            if (mainImage != null) {
+                String imageUrl = mainImage.getImageUrl();
+                // 이미지 URL이 비어있거나 유효하지 않은 경우 플레이스홀더 이미지 사용
+                if (imageUrl == null || imageUrl.isEmpty()) {
+                    imageUrl = "https://via.placeholder.com/800x600?text=No+Image+Available";
+                } else if (!imageUrl.startsWith("http")) {
+                    // URL이 http로 시작하지 않으면 http://를 추가
+                    imageUrl = "http://" + imageUrl;
+                }
+                room.setMainImageUrl(imageUrl);
+            }
+
             room.setImageUrls(imageUrls);
         }
 
