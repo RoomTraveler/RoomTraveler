@@ -1,78 +1,214 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/fmt" prefix="fmt" %>
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8" />
-    <title>숙박 지역 선택</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>숙박 지역 선택 - 야놀자 스타일</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <style>
+        :root {
+            --yanolja-red: #f0213b;
+            --yanolja-pink: #ff3478;
+            --yanolja-light-gray: #f5f5f5;
+            --yanolja-dark-gray: #666;
+        }
+
         body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-            line-height: 1.6;
+            font-family: 'Noto Sans KR', sans-serif;
+            color: #333;
+            background-color: #f9f9f9;
         }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
+
+        .navbar-yanolja {
+            background-color: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
-        .search-container {
-            background-color: #f5f5f5;
-            padding: 15px;
-            border-radius: 5px;
+
+        .navbar-brand {
+            font-weight: bold;
+            color: var(--yanolja-red) !important;
+            font-size: 1.5rem;
+        }
+
+        .search-bar {
+            background-color: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
             margin-bottom: 20px;
         }
-        .search-container label {
-            margin-right: 10px;
-        }
-        .search-container select {
-            padding: 5px;
-            margin-right: 15px;
-        }
-        .search-container button {
-            padding: 5px 15px;
-            background-color: #4CAF50;
+
+        .btn-yanolja {
+            background-color: var(--yanolja-red);
             color: white;
             border: none;
-            border-radius: 4px;
-            cursor: pointer;
         }
-        .search-container button:hover {
-            background-color: #45a049;
+
+        .btn-yanolja:hover {
+            background-color: #d01c33;
+            color: white;
         }
-        .accommodation-list {
+
+        .category-icon {
+            width: 60px;
+            height: 60px;
+            background-color: white;
+            border-radius: 50%;
             display: flex;
-            flex-wrap: wrap;
-            gap: 20px;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            font-size: 1.5rem;
+            color: var(--yanolja-red);
         }
+
+        .category-item {
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .category-name {
+            font-size: 0.9rem;
+            color: #333;
+        }
+
+        .section-title {
+            font-weight: bold;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .section-title a {
+            font-size: 0.9rem;
+            color: var(--yanolja-dark-gray);
+            text-decoration: none;
+        }
+
         .accommodation-card {
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            padding: 15px;
-            width: calc(33.333% - 20px);
-            box-sizing: border-box;
-            cursor: pointer;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            background-color: white;
             transition: transform 0.3s;
         }
+
         .accommodation-card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
         }
-        .accommodation-card img {
-            width: 100%;
-            height: 200px;
+
+        .card-img-top {
+            height: 180px;
             object-fit: cover;
+        }
+
+        .card-body {
+            padding: 15px;
+        }
+
+        .accommodation-type {
+            font-size: 0.8rem;
+            color: var(--yanolja-dark-gray);
+            margin-bottom: 5px;
+        }
+
+        .accommodation-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+            font-size: 1.1rem;
+        }
+
+        .accommodation-location {
+            font-size: 0.9rem;
+            color: var(--yanolja-dark-gray);
+            margin-bottom: 10px;
+        }
+
+        .accommodation-price {
+            font-weight: bold;
+            color: var(--yanolja-red);
+            font-size: 1.2rem;
+        }
+
+        .price-unit {
+            font-size: 0.8rem;
+            font-weight: normal;
+            color: var(--yanolja-dark-gray);
+        }
+
+        .promotion-badge {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background-color: var(--yanolja-red);
+            color: white;
+            padding: 3px 8px;
             border-radius: 5px;
-            margin-bottom: 10px;
+            font-size: 0.8rem;
+            font-weight: bold;
         }
-        .accommodation-card h3 {
-            margin-top: 0;
-            margin-bottom: 10px;
+
+        .rating {
+            color: #ffb700;
+            font-weight: bold;
+            margin-right: 5px;
         }
-        .accommodation-card p {
-            margin: 5px 0;
-            color: #666;
+
+        .review-count {
+            font-size: 0.8rem;
+            color: var(--yanolja-dark-gray);
         }
+
+        .banner {
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        .banner img {
+            width: 100%;
+            height: auto;
+        }
+
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: white;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+            padding: 10px 0;
+            z-index: 1000;
+        }
+
+        .bottom-nav-item {
+            text-align: center;
+            font-size: 0.8rem;
+        }
+
+        .bottom-nav-icon {
+            font-size: 1.5rem;
+            margin-bottom: 5px;
+            color: var(--yanolja-dark-gray);
+        }
+
+        .bottom-nav-item.active .bottom-nav-icon,
+        .bottom-nav-item.active .bottom-nav-text {
+            color: var(--yanolja-red);
+        }
+
+        .main-content {
+            margin-bottom: 70px; /* Space for bottom nav */
+        }
+
         .modal {
             display: none;
             position: fixed;
@@ -84,6 +220,7 @@
             overflow: auto;
             background-color: rgba(0,0,0,0.4);
         }
+
         .modal-content {
             background-color: #fefefe;
             margin: 5% auto;
@@ -93,60 +230,72 @@
             max-width: 1000px;
             border-radius: 5px;
         }
+
         .close {
             color: #aaa;
             float: right;
             font-size: 28px;
             font-weight: bold;
         }
+
         .close:hover,
         .close:focus {
             color: black;
             text-decoration: none;
             cursor: pointer;
         }
+
         .room-list {
             margin-top: 20px;
         }
+
         .room-card {
             border: 1px solid #ddd;
             border-radius: 5px;
             padding: 15px;
             margin-bottom: 15px;
         }
+
         .room-card h4 {
             margin-top: 0;
             margin-bottom: 10px;
         }
+
         .room-card img {
             max-width: 300px;
             max-height: 200px;
             margin-right: 15px;
             float: left;
         }
+
         .room-details {
             overflow: hidden;
         }
+
         .room-details p {
             margin: 5px 0;
         }
+
         .room-facilities {
             margin-top: 10px;
             display: flex;
             flex-wrap: wrap;
             gap: 10px;
         }
+
         .facility {
             background-color: #f0f0f0;
             padding: 3px 8px;
             border-radius: 3px;
             font-size: 0.9em;
         }
+
         .pagination {
             display: flex;
             justify-content: center;
             margin-top: 20px;
         }
+
         .pagination button {
             margin: 0 5px;
             padding: 5px 10px;
@@ -154,24 +303,30 @@
             border: 1px solid #ddd;
             cursor: pointer;
         }
+
         .pagination button.active {
-            background-color: #4CAF50;
+            background-color: var(--yanolja-red);
             color: white;
-            border-color: #4CAF50;
+            border-color: var(--yanolja-red);
         }
+
         .loading {
             text-align: center;
             padding: 20px;
             display: none;
         }
+
         .tab-container {
             margin-top: 20px;
         }
+
         .tab {
             overflow: hidden;
             border: 1px solid #ccc;
             background-color: #f1f1f1;
+            border-radius: 10px 10px 0 0;
         }
+
         .tab button {
             background-color: inherit;
             float: left;
@@ -181,478 +336,341 @@
             padding: 10px 16px;
             transition: 0.3s;
         }
+
         .tab button:hover {
             background-color: #ddd;
         }
+
         .tab button.active {
-            background-color: #ccc;
+            background-color: var(--yanolja-red);
+            color: white;
         }
+
         .tabcontent {
             display: none;
             padding: 20px;
             border: 1px solid #ccc;
             border-top: none;
+            border-radius: 0 0 10px 10px;
         }
+
         .image-gallery {
             display: flex;
             flex-wrap: wrap;
             gap: 10px;
         }
+
         .image-gallery img {
             width: 200px;
             height: 150px;
             object-fit: cover;
             cursor: pointer;
+            border-radius: 5px;
         }
     </style>
 </head>
 <body>
-<div class="container">
-    <h2>숙박 지역 선택</h2>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-light navbar-yanolja">
+        <div class="container">
+            <a class="navbar-brand" href="#">야놀자</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <c:if test="${empty username}">
+                        <li class="nav-item">
+                            <a class="nav-link" href="/user/login-form">로그인</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/user/regist-user-form">회원가입</a>
+                        </li>
+                    </c:if>
+                    <c:if test="${not empty username}">
+                        <li class="nav-item">
+                            <a class="nav-link" href="/user/user-detail">${username}님</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/user/logout">로그아웃</a>
+                        </li>
+                    </c:if>
+                </ul>
+            </div>
+        </div>
+    </nav>
 
-    <div class="search-container">
-        <label>시도:</label>
-        <select id="areaSelect"><option value="">전체</option></select>
+    <div class="container main-content mt-4">
+        <!-- Search Bar -->
+        <div class="search-bar">
+            <form action="${pageContext.request.contextPath}/accommodation" method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label for="sidoCode" class="form-label">지역</label>
+                    <select class="form-select" id="sidoCode" name="sidoCode">
+                        <option value="">전체</option>
+                        <!-- 시도 목록은 JavaScript로 동적 로드 -->
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="gugunCode" class="form-label">시군구</label>
+                    <select class="form-select" id="gugunCode" name="gugunCode">
+                        <option value="">전체</option>
+                        <!-- 구군 목록은 시도 선택 시 JavaScript로 동적 로드 -->
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="keyword" class="form-label">검색어</label>
+                    <input type="text" class="form-control" id="keyword" name="keyword" placeholder="숙소명, 주소 등" value="${keyword}">
+                </div>
+                <div class="col-md-3">
+                    <label for="sortBy" class="form-label">정렬</label>
+                    <select class="form-select" id="sortBy" name="sortBy">
+                        <option value="createdAt">최신순</option>
+                        <option value="price">가격순</option>
+                        <option value="rating">평점순</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="minPrice" class="form-label">최소 가격</label>
+                    <input type="number" class="form-control" id="minPrice" name="minPrice" placeholder="최소 가격">
+                </div>
+                <div class="col-md-3">
+                    <label for="maxPrice" class="form-label">최대 가격</label>
+                    <input type="number" class="form-control" id="maxPrice" name="maxPrice" placeholder="최대 가격">
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button type="submit" class="btn btn-yanolja w-100">검색</button>
+                </div>
+            </form>
+        </div>
 
-        <label>시군구:</label>
-        <select id="sigunguSelect"><option value="">전체</option></select>
-
-        <button id="searchBtn">검색</button>
-    </div>
-
-    <div class="loading" id="loading">
-        <p>로딩 중...</p>
-    </div>
-
-    <div class="accommodation-list" id="accommodationList"></div>
-
-    <div class="pagination" id="pagination"></div>
-
-    <div id="accommodationModal" class="modal">
-        <div class="modal-content">
-            <span class="close">&times;</span>
-            <div id="modalContent">
-                <h2 id="modalTitle"></h2>
-                <div id="modalBasicInfo"></div>
-
-                <div class="tab-container">
-                    <div class="tab">
-                        <button class="tablinks active" onclick="openTab(event, 'roomInfo')">객실 정보</button>
-                        <button class="tablinks" onclick="openTab(event, 'facilityInfo')">시설 정보</button>
-                        <button class="tablinks" onclick="openTab(event, 'imageInfo')">이미지</button>
+        <!-- Categories -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <h5 class="section-title">카테고리</h5>
+            </div>
+            <div class="col-3">
+                <div class="category-item">
+                    <div class="category-icon">
+                        <i class="bi bi-building"></i>
                     </div>
-
-                    <div id="roomInfo" class="tabcontent" style="display: block;">
-                        <div class="room-list" id="roomList"></div>
+                    <div class="category-name">호텔</div>
+                </div>
+            </div>
+            <div class="col-3">
+                <div class="category-item">
+                    <div class="category-icon">
+                        <i class="bi bi-house"></i>
                     </div>
-
-                    <div id="facilityInfo" class="tabcontent">
-                        <div id="facilityDetails"></div>
+                    <div class="category-name">펜션</div>
+                </div>
+            </div>
+            <div class="col-3">
+                <div class="category-item">
+                    <div class="category-icon">
+                        <i class="bi bi-water"></i>
                     </div>
+                    <div class="category-name">풀빌라</div>
+                </div>
+            </div>
+            <div class="col-3">
+                <div class="category-item">
+                    <div class="category-icon">
+                        <i class="bi bi-shop"></i>
+                    </div>
+                    <div class="category-name">모텔</div>
+                </div>
+            </div>
+        </div>
 
-                    <div id="imageInfo" class="tabcontent">
-                        <div class="image-gallery" id="imageGallery"></div>
+        <!-- Banner -->
+        <div class="banner">
+            <img src="https://via.placeholder.com/800x200/f0213b/ffffff?text=특가+프로모션" alt="프로모션 배너">
+        </div>
+
+        <!-- 숙소 목록 -->
+        <div class="row">
+            <c:if test="${empty accommodations}">
+                <div class="col-12 text-center py-5">
+                    <p class="lead">검색 결과가 없습니다.</p>
+                </div>
+            </c:if>
+
+            <c:forEach var="accommodation" items="${accommodations}">
+                <div class="col-md-4 mb-4">
+                    <div class="card accommodation-card">
+                        <c:choose>
+                            <c:when test="${not empty accommodation.mainImageUrl}">
+                                <img src="${accommodation.mainImageUrl}" class="card-img-top" alt="${accommodation.title}">
+                            </c:when>
+                            <c:otherwise>
+                                <img src="${pageContext.request.contextPath}/resources/images/no-image.jpg" class="card-img-top" alt="이미지 없음">
+                            </c:otherwise>
+                        </c:choose>
+                        <div class="card-body">
+                            <h5 class="card-title">${accommodation.title}</h5>
+                            <p class="card-text text-muted">${accommodation.sidoName} ${accommodation.gugunName}</p>
+                            <p class="card-text">${accommodation.address}</p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <a href="${pageContext.request.contextPath}/accommodation/detail/${accommodation.accommodationId}" class="btn btn-outline-primary">상세 보기</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </c:forEach>
+        </div>
+
+        <div id="accommodationModal" class="modal">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <div id="modalContent">
+                    <h2 id="modalTitle"></h2>
+                    <div id="modalBasicInfo"></div>
+
+                    <div class="tab-container">
+                        <div class="tab">
+                            <button class="tablinks active" onclick="openTab(event, 'roomInfo')">객실 정보</button>
+                            <button class="tablinks" onclick="openTab(event, 'facilityInfo')">시설 정보</button>
+                            <button class="tablinks" onclick="openTab(event, 'imageInfo')">이미지</button>
+                        </div>
+
+                        <div id="roomInfo" class="tabcontent" style="display: block;">
+                            <div class="room-list" id="roomList"></div>
+                        </div>
+
+                        <div id="facilityInfo" class="tabcontent">
+                            <div id="facilityDetails"></div>
+                        </div>
+
+                        <div id="imageInfo" class="tabcontent">
+                            <div class="image-gallery" id="imageGallery"></div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
+
+    <!-- Bottom Navigation -->
+    <div class="bottom-nav">
+        <div class="container">
+            <div class="row">
+                <div class="col-3">
+                    <div class="bottom-nav-item active">
+                        <div class="bottom-nav-icon"><i class="bi bi-house"></i></div>
+                        <div class="bottom-nav-text">홈</div>
+                    </div>
+                </div>
+                <div class="col-3">
+                    <div class="bottom-nav-item">
+                        <div class="bottom-nav-icon"><i class="bi bi-search"></i></div>
+                        <div class="bottom-nav-text">검색</div>
+                    </div>
+                </div>
+                <div class="col-3">
+                    <div class="bottom-nav-item">
+                        <div class="bottom-nav-icon"><i class="bi bi-heart"></i></div>
+                        <div class="bottom-nav-text">찜</div>
+                    </div>
+                </div>
+                <div class="col-3">
+                    <div class="bottom-nav-item">
+                        <div class="bottom-nav-icon"><i class="bi bi-person"></i></div>
+                        <div class="bottom-nav-text">마이</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
 <script>
-    $(function(){
-        const apiBase = '${pageContext.request.contextPath}/accommodation/api';
-        let currentPage = 1;
-        let totalPages = 1;
-        let itemsPerPage = 10;
-        let totalItems = 0;
-        let currentAreaCode = '';
-        let currentSigunguCode = '';
-
-        // 시도 목록 로드
-        $.ajax({ url: apiBase + '/sidos', dataType: 'json' })
-            .done(data => data.forEach(sido =>
-                $('#areaSelect').append(
-                    $('<option>').val(sido.code).text(sido.name)
-                )
-            ))
-            .fail(xhr => console.error('시도 로드 실패:', xhr.responseJSON || xhr.responseText));
-
-        // 시도 선택 시 구군 로드
-        $('#areaSelect').change(function(){
-            const code = $(this).val();
-            $('#sigunguSelect').empty().append('<option value="">전체</option>');
-            if (!code) return;
-
-            $.ajax({ url: apiBase + '/guguns', data: { sido: code }, dataType: 'json' })
-                .done(data => data.forEach(gugun =>
-                    $('#sigunguSelect').append(
-                        $('<option>').val(gugun.code).text(gugun.name)
-                    )
-                ))
-                .fail(xhr => console.error('구군 로드 실패:', xhr.responseJSON || xhr.responseText));
-        });
-
-        // 검색 버튼 클릭 시 숙박 정보 로드
-        $('#searchBtn').click(function() {
-            currentPage = 1;
-            loadAccommodations();
-        });
-
-        // 숙박 정보 로드 함수
-        function loadAccommodations() {
-            $('#loading').show();
-            $('#accommodationList').empty();
-            $('#pagination').empty();
-
-            currentAreaCode = $('#areaSelect').val();
-            currentSigunguCode = $('#sigunguSelect').val();
-
-            const params = {
-                pageNo: currentPage,
-                numOfRows: itemsPerPage
-            };
-
-            if (currentAreaCode) {
-                params.areaCode = currentAreaCode;
-            }
-
-            if (currentSigunguCode) {
-                params.sigunguCode = currentSigunguCode;
-            }
-
-            $.ajax({
-                url: apiBase + '/accommodations',
-                data: params,
-                dataType: 'json'
-            })
-            .done(function(data) {
-                $('#loading').hide();
-
-                if (!data.items || data.items.length === 0) {
-                    $('#accommodationList').html('<p>검색 결과가 없습니다.</p>');
-                    return;
-                }
-
-                totalItems = data.totalCount;
-                totalPages = Math.ceil(totalItems / itemsPerPage);
-
-                // 숙박 정보 표시
-                data.items.forEach(item => {
-                    const card = $('<div>').addClass('accommodation-card').attr('data-id', item.contentid);
-
-                    // 이미지 추가 (백엔드에서 이미지가 있는 것만 필터링했지만 안전하게 체크)
-                    if (item.firstimage) {
-                        card.append($('<img>').attr('src', item.firstimage).attr('alt', item.title));
+    // 시도 목록 로드
+    function loadSidos() {
+        fetch('${pageContext.request.contextPath}/accommodation/api/sidos')
+            .then(response => response.json())
+            .then(data => {
+                const sidoSelect = document.getElementById('sidoCode');
+                data.forEach(sido => {
+                    const option = document.createElement('option');
+                    option.value = sido.code;
+                    option.textContent = sido.name;
+                    if (sido.code == '${sidoCode}') {
+                        option.selected = true;
                     }
-
-                    // 정보 추가
-                    card.append($('<h3>').text(item.title));
-                    if (item.addr1) {
-                        card.append($('<p>').text('주소: ' + item.addr1 + (item.addr2 ? ' ' + item.addr2 : '')));
-                    }
-                    if (item.tel) {
-                        card.append($('<p>').text('전화: ' + item.tel));
-                    }
-
-                    // 클릭 이벤트 추가
-                    card.click(function() {
-                        const contentId = $(this).attr('data-id');
-                        loadRoomInfo(contentId);
-                    });
-
-                    $('#accommodationList').append(card);
+                    sidoSelect.appendChild(option);
                 });
 
-                // 페이지네이션 생성
-                createPagination();
-            })
-            .fail(function(xhr) {
-                $('#loading').hide();
-                console.error('숙박 정보 로드 실패:', xhr.responseJSON || xhr.responseText);
-                $('#accommodationList').html('<p>숙박 정보를 불러오는 중 오류가 발생했습니다.</p>');
-            });
-        }
-
-        // 페이지네이션 생성 함수
-        function createPagination() {
-            const pagination = $('#pagination');
-            pagination.empty();
-
-            // 처음 페이지로 이동
-            if (currentPage > 1) {
-                pagination.append($('<button>').text('처음').click(() => {
-                    currentPage = 1;
-                    loadAccommodations();
-                }));
-            }
-
-            // 이전 페이지로 이동
-            if (currentPage > 1) {
-                pagination.append($('<button>').text('이전').click(() => {
-                    currentPage--;
-                    loadAccommodations();
-                }));
-            }
-
-            // 페이지 번호
-            const startPage = Math.max(1, currentPage - 2);
-            const endPage = Math.min(totalPages, currentPage + 2);
-
-            for (let i = startPage; i <= endPage; i++) {
-                const pageBtn = $('<button>').text(i);
-                if (i === currentPage) {
-                    pageBtn.addClass('active');
+                // 시도가 선택되어 있으면 구군 목록 로드
+                if ('${sidoCode}') {
+                    loadGuguns('${sidoCode}');
                 }
-                pageBtn.click(() => {
-                    currentPage = i;
-                    loadAccommodations();
+            })
+            .catch(error => console.error('Error loading sidos:', error));
+    }
+
+    // 구군 목록 로드
+    function loadGuguns(sidoCode) {
+        fetch(`${pageContext.request.contextPath}/accommodation/api/guguns?sido=${sidoCode}`)
+            .then(response => response.json())
+            .then(data => {
+                const gugunSelect = document.getElementById('gugunCode');
+                gugunSelect.innerHTML = '<option value="">전체</option>';
+
+                data.forEach(gugun => {
+                    const option = document.createElement('option');
+                    option.value = gugun.code;
+                    option.textContent = gugun.name;
+                    if (gugun.code == '${gugunCode}') {
+                        option.selected = true;
+                    }
+                    gugunSelect.appendChild(option);
                 });
-                pagination.append(pageBtn);
-            }
+            })
+            .catch(error => console.error('Error loading guguns:', error));
+    }
 
-            // 다음 페이지로 이동
-            if (currentPage < totalPages) {
-                pagination.append($('<button>').text('다음').click(() => {
-                    currentPage++;
-                    loadAccommodations();
-                }));
-            }
+    // 시도 선택 시 구군 목록 로드
+    document.getElementById('sidoCode').addEventListener('change', function() {
+        const sidoCode = this.value;
+        if (sidoCode) {
+            loadGuguns(sidoCode);
+        } else {
+            document.getElementById('gugunCode').innerHTML = '<option value="">전체</option>';
+        }
+    });
 
-            // 마지막 페이지로 이동
-            if (currentPage < totalPages) {
-                pagination.append($('<button>').text('마지막').click(() => {
-                    currentPage = totalPages;
-                    loadAccommodations();
-                }));
-            }
+    // 페이지 로드 시 시도 목록 로드
+    document.addEventListener('DOMContentLoaded', function() {
+        loadSidos();
+
+        // 정렬 옵션 설정
+        const sortBy = '${param.sortBy}';
+        if (sortBy) {
+            document.getElementById('sortBy').value = sortBy;
         }
 
-        // 객실 정보 로드 함수
-        function loadRoomInfo(contentId) {
-            $('#loading').show();
-            $('#modalTitle').empty();
-            $('#modalBasicInfo').empty();
-            $('#roomList').empty();
-            $('#facilityDetails').empty();
-            $('#imageGallery').empty();
-
-            $.ajax({
-                url: apiBase + '/rooms',
-                data: { contentId: contentId },
-                dataType: 'json'
-            })
-            .done(function(data) {
-                $('#loading').hide();
-
-                // 기본 정보 표시
-                const basicInfo = data.basicInfo;
-                $('#modalTitle').text(basicInfo.title);
-
-                const basicInfoHtml = $('<div>');
-                if (basicInfo.firstimage) {
-                    basicInfoHtml.append($('<img>').attr('src', basicInfo.firstimage).attr('alt', basicInfo.title).css({
-                        'max-width': '300px',
-                        'max-height': '200px',
-                        'margin-right': '15px',
-                        'float': 'left'
-                    }));
-                }
-
-                const infoDetails = $('<div>').css('overflow', 'hidden');
-                if (basicInfo.addr1) {
-                    infoDetails.append($('<p>').text('주소: ' + basicInfo.addr1 + (basicInfo.addr2 ? ' ' + basicInfo.addr2 : '')));
-                }
-                if (basicInfo.tel) {
-                    infoDetails.append($('<p>').text('전화: ' + basicInfo.tel));
-                }
-                if (basicInfo.homepage) {
-                    // HTML 태그 제거
-                    const homepage = basicInfo.homepage.replace(/<[^>]*>/g, '');
-                    infoDetails.append($('<p>').text('홈페이지: ' + homepage));
-                }
-                if (basicInfo.overview) {
-                    infoDetails.append($('<p>').text('개요: ' + basicInfo.overview.substring(0, 200) + '...'));
-                }
-
-                basicInfoHtml.append(infoDetails);
-                $('#modalBasicInfo').append(basicInfoHtml);
-
-                // 객실 정보 표시
-                if (data.roomInfo && data.roomInfo.length > 0) {
-                    data.roomInfo.forEach(room => {
-                        const roomCard = $('<div>').addClass('room-card');
-
-                        // 객실 이미지
-                        if (room.roomimg1) {
-                            roomCard.append($('<img>').attr('src', room.roomimg1).attr('alt', room.roomtitle || '객실 이미지'));
-                        }
-
-                        const roomDetails = $('<div>').addClass('room-details');
-                        roomDetails.append($('<h4>').text(room.roomtitle || '객실 정보'));
-
-                        // 객실 기본 정보
-                        if (room.roomsize1 || room.roomsize2) {
-                            roomDetails.append($('<p>').text('객실 크기: ' + 
-                                (room.roomsize1 ? room.roomsize1 + '평' : '') + 
-                                (room.roomsize2 ? ' (' + room.roomsize2 + '㎡)' : '')));
-                        }
-                        if (room.roomcount) {
-                            roomDetails.append($('<p>').text('객실 수: ' + room.roomcount));
-                        }
-                        if (room.roombasecount || room.roommaxcount) {
-                            roomDetails.append($('<p>').text('수용 인원: ' + 
-                                (room.roombasecount ? '기준 ' + room.roombasecount + '인' : '') + 
-                                (room.roommaxcount ? ', 최대 ' + room.roommaxcount + '인' : '')));
-                        }
-                        if (room.roomintro) {
-                            roomDetails.append($('<p>').text('객실 소개: ' + room.roomintro));
-                        }
-
-                        // 요금 정보
-                        const feeInfo = [];
-                        if (room.roomoffseasonminfee1 && room.roomoffseasonminfee1 !== '0') {
-                            feeInfo.push('비수기 주중: ' + room.roomoffseasonminfee1 + '원');
-                        }
-                        if (room.roomoffseasonminfee2 && room.roomoffseasonminfee2 !== '0') {
-                            feeInfo.push('비수기 주말: ' + room.roomoffseasonminfee2 + '원');
-                        }
-                        if (room.roompeakseasonminfee1 && room.roompeakseasonminfee1 !== '0') {
-                            feeInfo.push('성수기 주중: ' + room.roompeakseasonminfee1 + '원');
-                        }
-                        if (room.roompeakseasonminfee2 && room.roompeakseasonminfee2 !== '0') {
-                            feeInfo.push('성수기 주말: ' + room.roompeakseasonminfee2 + '원');
-                        }
-
-                        if (feeInfo.length > 0) {
-                            roomDetails.append($('<p>').text('요금 정보: ' + feeInfo.join(', ')));
-                        }
-
-                        // 객실 시설 정보
-                        const facilities = [];
-                        if (room.roomaircondition === 'Y') facilities.push('에어컨');
-                        if (room.roombath === 'Y') facilities.push('욕조');
-                        if (room.roombathfacility === 'Y') facilities.push('욕실시설');
-                        if (room.roomcable === 'Y') facilities.push('케이블TV');
-                        if (room.roomcook === 'Y') facilities.push('취사시설');
-                        if (room.roomhairdryer === 'Y') facilities.push('드라이기');
-                        if (room.roomhometheater === 'Y') facilities.push('홈시어터');
-                        if (room.roominternet === 'Y') facilities.push('인터넷');
-                        if (room.roompc === 'Y') facilities.push('PC');
-                        if (room.roomrefrigerator === 'Y') facilities.push('냉장고');
-                        if (room.roomsofa === 'Y') facilities.push('소파');
-                        if (room.roomtable === 'Y') facilities.push('테이블');
-                        if (room.roomtoiletries === 'Y') facilities.push('세면도구');
-                        if (room.roomtv === 'Y') facilities.push('TV');
-
-                        if (facilities.length > 0) {
-                            const facilityDiv = $('<div>').addClass('room-facilities');
-                            facilities.forEach(facility => {
-                                facilityDiv.append($('<span>').addClass('facility').text(facility));
-                            });
-                            roomDetails.append($('<p>').text('객실 시설:'));
-                            roomDetails.append(facilityDiv);
-                        }
-
-                        roomCard.append(roomDetails);
-                        $('#roomList').append(roomCard);
-                    });
-                } else {
-                    $('#roomList').html('<p>객실 정보가 없습니다.</p>');
-                }
-
-                // 시설 정보 표시
-                const introInfo = data.introInfo;
-                if (Object.keys(introInfo).length > 0) {
-                    const facilityHtml = $('<div>');
-
-                    if (introInfo.checkintime || introInfo.checkouttime) {
-                        facilityHtml.append($('<p>').html('<strong>체크인/체크아웃:</strong> ' + 
-                            (introInfo.checkintime || '') + ' / ' + (introInfo.checkouttime || '')));
-                    }
-
-                    if (introInfo.parkinglodging) {
-                        facilityHtml.append($('<p>').html('<strong>주차 시설:</strong> ' + introInfo.parkinglodging));
-                    }
-
-                    if (introInfo.reservationlodging) {
-                        facilityHtml.append($('<p>').html('<strong>예약 안내:</strong> ' + introInfo.reservationlodging));
-                    }
-
-                    if (introInfo.scalelodging) {
-                        facilityHtml.append($('<p>').html('<strong>규모:</strong> ' + introInfo.scalelodging));
-                    }
-
-                    if (introInfo.subfacility) {
-                        facilityHtml.append($('<p>').html('<strong>부대 시설:</strong> ' + introInfo.subfacility));
-                    }
-
-                    // 기타 시설 정보
-                    const otherFacilities = [];
-                    if (introInfo.barbecue === 'Y') otherFacilities.push('바비큐');
-                    if (introInfo.beauty === 'Y') otherFacilities.push('뷰티시설');
-                    if (introInfo.beverage === 'Y') otherFacilities.push('식음료장');
-                    if (introInfo.bicycle === 'Y') otherFacilities.push('자전거대여');
-                    if (introInfo.campfire === 'Y') otherFacilities.push('캠프파이어');
-                    if (introInfo.fitness === 'Y') otherFacilities.push('피트니스');
-                    if (introInfo.karaoke === 'Y') otherFacilities.push('노래방');
-                    if (introInfo.publicbath === 'Y') otherFacilities.push('공용샤워실');
-                    if (introInfo.publicpc === 'Y') otherFacilities.push('공용PC실');
-                    if (introInfo.sauna === 'Y') otherFacilities.push('사우나');
-                    if (introInfo.seminar === 'Y') otherFacilities.push('세미나실');
-                    if (introInfo.sports === 'Y') otherFacilities.push('스포츠시설');
-
-                    if (otherFacilities.length > 0) {
-                        facilityHtml.append($('<p>').html('<strong>기타 시설:</strong> ' + otherFacilities.join(', ')));
-                    }
-
-                    if (introInfo.refundregulation) {
-                        facilityHtml.append($('<p>').html('<strong>환불 규정:</strong> ' + introInfo.refundregulation));
-                    }
-
-                    $('#facilityDetails').append(facilityHtml);
-                } else {
-                    $('#facilityDetails').html('<p>시설 정보가 없습니다.</p>');
-                }
-
-                // 이미지 정보 표시
-                if (data.imageInfo && data.imageInfo.length > 0) {
-                    data.imageInfo.forEach(image => {
-                        if (image.originimgurl) {
-                            const img = $('<img>')
-                                .attr('src', image.originimgurl)
-                                .attr('alt', image.imgname || '숙소 이미지')
-                                .click(function() {
-                                    window.open(image.originimgurl, '_blank');
-                                });
-                            $('#imageGallery').append(img);
-                        }
-                    });
-                } else {
-                    $('#imageGallery').html('<p>이미지가 없습니다.</p>');
-                }
-
-                // 모달 표시
-                $('#accommodationModal').css('display', 'block');
-            })
-            .fail(function(xhr) {
-                $('#loading').hide();
-                console.error('객실 정보 로드 실패:', xhr.responseJSON || xhr.responseText);
-                alert('객실 정보를 불러오는 중 오류가 발생했습니다.');
-            });
+        // 가격 범위 설정
+        const minPrice = '${param.minPrice}';
+        const maxPrice = '${param.maxPrice}';
+        if (minPrice) {
+            document.getElementById('minPrice').value = minPrice;
         }
+        if (maxPrice) {
+            document.getElementById('maxPrice').value = maxPrice;
+        }
+    });
 
-        // 모달 닫기
-        $('.close').click(function() {
+    // 모달 관련 코드
+    // 모달 닫기
+    $('.close').click(function() {
+        $('#accommodationModal').css('display', 'none');
+    });
+
+    // 모달 외부 클릭 시 닫기
+    $(window).click(function(event) {
+        if (event.target === document.getElementById('accommodationModal')) {
             $('#accommodationModal').css('display', 'none');
-        });
-
-        // 모달 외부 클릭 시 닫기
-        $(window).click(function(event) {
-            if (event.target === document.getElementById('accommodationModal')) {
-                $('#accommodationModal').css('display', 'none');
-            }
-        });
+        }
     });
 
     // 탭 전환 함수

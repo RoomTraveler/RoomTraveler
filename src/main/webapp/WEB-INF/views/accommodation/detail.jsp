@@ -10,32 +10,333 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <style>
+        :root {
+            --yanolja-red: #f0213b;
+            --yanolja-pink: #ff3478;
+            --yanolja-light-gray: #f5f5f5;
+            --yanolja-dark-gray: #666;
+        }
+
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            color: #333;
+            background-color: #f9f9f9;
+        }
+
+        .navbar-yanolja {
+            background-color: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .navbar-brand {
+            font-weight: bold;
+            color: var(--yanolja-red) !important;
+            font-size: 1.5rem;
+        }
+
+        .btn-yanolja {
+            background-color: var(--yanolja-red);
+            color: white;
+            border: none;
+        }
+
+        .btn-yanolja:hover {
+            background-color: #d01c33;
+            color: white;
+        }
+
         .carousel-item img {
-            height: 400px;
+            height: 300px;
             object-fit: cover;
         }
-        .room-card {
-            transition: transform 0.3s;
+
+        .accommodation-info {
+            background-color: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
             margin-bottom: 20px;
+        }
+
+        .accommodation-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .accommodation-type {
+            font-size: 0.9rem;
+            color: var(--yanolja-dark-gray);
+            margin-bottom: 10px;
+        }
+
+        .accommodation-location {
+            font-size: 0.9rem;
+            color: var(--yanolja-dark-gray);
+            margin-bottom: 15px;
+        }
+
+        .rating-box {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .rating {
+            color: #ffb700;
+            font-weight: bold;
+            font-size: 1.2rem;
+            margin-right: 5px;
+        }
+
+        .review-count {
+            font-size: 0.9rem;
+            color: var(--yanolja-dark-gray);
+        }
+
+        .section-title {
+            font-weight: bold;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+        }
+
+        .info-item {
+            margin-bottom: 10px;
+            display: flex;
+            align-items: flex-start;
+        }
+
+        .info-icon {
+            color: var(--yanolja-dark-gray);
+            margin-right: 10px;
+            font-size: 1.1rem;
+            width: 20px;
+            text-align: center;
+        }
+
+        .info-text {
+            flex: 1;
+        }
+
+        .room-card {
+            background-color: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            transition: transform 0.3s;
             height: 100%;
         }
+
         .room-card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
         }
+
+        .room-img {
+            height: 180px;
+            object-fit: cover;
+            width: 100%;
+        }
+
+        .room-body {
+            padding: 15px;
+        }
+
+        .room-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+            font-size: 1.1rem;
+        }
+
+        .room-info {
+            font-size: 0.9rem;
+            color: var(--yanolja-dark-gray);
+            margin-bottom: 10px;
+        }
+
+        .room-price {
+            font-weight: bold;
+            color: var(--yanolja-red);
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+        }
+
+        .price-unit {
+            font-size: 0.8rem;
+            font-weight: normal;
+            color: var(--yanolja-dark-gray);
+        }
+
+        .promotion-badge {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background-color: var(--yanolja-red);
+            color: white;
+            padding: 3px 8px;
+            border-radius: 5px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        .tab-bar {
+            display: flex;
+            background-color: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .tab-item {
+            flex: 1;
+            text-align: center;
+            padding: 15px 0;
+            font-weight: bold;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+        }
+
+        .tab-item.active {
+            color: var(--yanolja-red);
+            border-bottom-color: var(--yanolja-red);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .review-item {
+            background-color: white;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 15px;
+        }
+
+        .review-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .reviewer-name {
+            font-weight: bold;
+        }
+
+        .review-date {
+            font-size: 0.8rem;
+            color: var(--yanolja-dark-gray);
+        }
+
+        .review-rating {
+            color: #ffb700;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .review-text {
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        .map-container {
+            height: 300px;
+            background-color: #eee;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: white;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+            padding: 10px 0;
+            z-index: 1000;
+        }
+
+        .bottom-nav-item {
+            text-align: center;
+            font-size: 0.8rem;
+        }
+
+        .bottom-nav-icon {
+            font-size: 1.5rem;
+            margin-bottom: 5px;
+            color: var(--yanolja-dark-gray);
+        }
+
+        .bottom-nav-item.active .bottom-nav-icon,
+        .bottom-nav-item.active .bottom-nav-text {
+            color: var(--yanolja-red);
+        }
+
+        .main-content {
+            margin-bottom: 70px; /* Space for bottom nav */
+        }
+
+        .booking-bar {
+            position: fixed;
+            bottom: 70px;
+            left: 0;
+            right: 0;
+            background-color: white;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+            padding: 15px;
+            z-index: 999;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .booking-price {
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        .booking-price-unit {
+            font-size: 0.8rem;
+            font-weight: normal;
+            color: var(--yanolja-dark-gray);
+        }
+
+        .amenities-list {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .amenity-item {
+            display: flex;
+            align-items: center;
+        }
+
+        .amenity-icon {
+            color: var(--yanolja-dark-gray);
+            margin-right: 10px;
+            font-size: 1.1rem;
+        }
+
         .card-img-top {
             height: 200px;
             object-fit: cover;
         }
-        .amenities-list {
-            columns: 2;
-        }
+
         .review-card {
             margin-bottom: 15px;
         }
+
         .star-rating {
-            color: #ffc107;
+            color: #ffb700;
         }
+
         .booking-card {
             position: sticky;
             top: 20px;
@@ -43,7 +344,35 @@
     </style>
 </head>
 <body>
-    <jsp:include page="../fragments/header.jsp" />
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-light navbar-yanolja">
+        <div class="container">
+            <a class="navbar-brand" href="${pageContext.request.contextPath}/accommodation">방구석 여행자</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <c:if test="${empty username}">
+                        <li class="nav-item">
+                            <a class="nav-link" href="/user/login-form">로그인</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/user/regist-user-form">회원가입</a>
+                        </li>
+                    </c:if>
+                    <c:if test="${not empty username}">
+                        <li class="nav-item">
+                            <a class="nav-link" href="/user/user-detail">${username}님</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/user/logout">로그아웃</a>
+                        </li>
+                    </c:if>
+                </ul>
+            </div>
+        </div>
+    </nav>
 
     <div class="container mt-5">
         <c:if test="${not empty message}">

@@ -10,46 +10,313 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <style>
+        :root {
+            --yanolja-red: #f0213b;
+            --yanolja-pink: #ff3478;
+            --yanolja-light-gray: #f5f5f5;
+            --yanolja-dark-gray: #666;
+        }
+
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            color: #333;
+            background-color: #f9f9f9;
+        }
+
+        .navbar-yanolja {
+            background-color: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .navbar-brand {
+            font-weight: bold;
+            color: var(--yanolja-red) !important;
+            font-size: 1.5rem;
+        }
+
+        .btn-yanolja {
+            background-color: var(--yanolja-red);
+            color: white;
+            border: none;
+        }
+
+        .btn-yanolja:hover {
+            background-color: #d01c33;
+            color: white;
+        }
+
         .carousel-item img {
-            height: 400px;
+            height: 300px;
             object-fit: cover;
         }
+
+        .room-info {
+            background-color: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .room-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .room-type {
+            font-size: 0.9rem;
+            color: var(--yanolja-dark-gray);
+            margin-bottom: 10px;
+        }
+
+        .section-title {
+            font-weight: bold;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+        }
+
+        .info-item {
+            margin-bottom: 10px;
+            display: flex;
+            align-items: flex-start;
+        }
+
+        .info-icon {
+            color: var(--yanolja-dark-gray);
+            margin-right: 10px;
+            font-size: 1.1rem;
+            width: 20px;
+            text-align: center;
+        }
+
+        .info-text {
+            flex: 1;
+        }
+
+        .tab-bar {
+            display: flex;
+            background-color: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .tab-item {
+            flex: 1;
+            text-align: center;
+            padding: 15px 0;
+            font-weight: bold;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+        }
+
+        .tab-item.active {
+            color: var(--yanolja-red);
+            border-bottom-color: var(--yanolja-red);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: white;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+            padding: 10px 0;
+            z-index: 1000;
+        }
+
+        .bottom-nav-item {
+            text-align: center;
+            font-size: 0.8rem;
+        }
+
+        .bottom-nav-icon {
+            font-size: 1.5rem;
+            margin-bottom: 5px;
+            color: var(--yanolja-dark-gray);
+        }
+
+        .bottom-nav-item.active .bottom-nav-icon,
+        .bottom-nav-item.active .bottom-nav-text {
+            color: var(--yanolja-red);
+        }
+
+        .main-content {
+            margin-bottom: 70px; /* Space for bottom nav */
+        }
+
+        .booking-bar {
+            position: fixed;
+            bottom: 70px;
+            left: 0;
+            right: 0;
+            background-color: white;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+            padding: 15px;
+            z-index: 999;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .booking-price {
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        .booking-price-unit {
+            font-size: 0.8rem;
+            font-weight: normal;
+            color: var(--yanolja-dark-gray);
+        }
+
         .amenities-list {
-            columns: 2;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
         }
-        .booking-card {
-            position: sticky;
-            top: 20px;
+
+        .amenity-item {
+            display: flex;
+            align-items: center;
         }
+
+        .amenity-icon {
+            color: var(--yanolja-dark-gray);
+            margin-right: 10px;
+            font-size: 1.1rem;
+        }
+
         .calendar {
             width: 100%;
             border-collapse: collapse;
+            margin-bottom: 20px;
         }
+
         .calendar th, .calendar td {
             border: 1px solid #dee2e6;
-            padding: 8px;
+            padding: 10px;
             text-align: center;
         }
+
         .calendar th {
-            background-color: #f8f9fa;
+            background-color: var(--yanolja-light-gray);
+            font-weight: bold;
         }
+
         .calendar .available {
             background-color: #d4edda;
+            cursor: pointer;
         }
+
         .calendar .unavailable {
             background-color: #f8d7da;
             color: #721c24;
+            text-decoration: line-through;
         }
+
+        .calendar .selected {
+            background-color: var(--yanolja-red);
+            color: white;
+            font-weight: bold;
+        }
+
         .calendar .today {
             font-weight: bold;
             border: 2px solid #0d6efd;
         }
+
+        .reservation-form {
+            background-color: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .price-breakdown {
+            background-color: var(--yanolja-light-gray);
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+
+        .price-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .price-total {
+            display: flex;
+            justify-content: space-between;
+            font-weight: bold;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #dee2e6;
+        }
+
+        .promotion-badge {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background-color: var(--yanolja-red);
+            color: white;
+            padding: 3px 8px;
+            border-radius: 5px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        .booking-card {
+            position: sticky;
+            top: 20px;
+        }
     </style>
 </head>
 <body>
-    <jsp:include page="../fragments/header.jsp" />
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-light navbar-yanolja">
+        <div class="container">
+            <a class="navbar-brand" href="${pageContext.request.contextPath}/accommodation">방구석 여행자</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <c:if test="${empty username}">
+                        <li class="nav-item">
+                            <a class="nav-link" href="/user/login-form">로그인</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/user/regist-user-form">회원가입</a>
+                        </li>
+                    </c:if>
+                    <c:if test="${not empty username}">
+                        <li class="nav-item">
+                            <a class="nav-link" href="/user/user-detail">${username}님</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/user/logout">로그아웃</a>
+                        </li>
+                    </c:if>
+                </ul>
+            </div>
+        </div>
+    </nav>
 
-    <div class="container mt-5">
+    <div class="container main-content mt-4">
         <c:if test="${not empty message}">
             <div class="alert alert-success alert-dismissible fade show" role="alert">
                 ${message}
@@ -57,164 +324,290 @@
             </div>
         </c:if>
 
-        <!-- 객실 정보 -->
-        <div class="row mb-5">
-            <!-- 이미지 캐러셀 -->
-            <div class="col-md-8">
-                <div id="roomCarousel" class="carousel slide" data-bs-ride="carousel">
-                    <div class="carousel-inner">
-                        <c:choose>
-                            <c:when test="${not empty room.mainImageUrl}">
-                                <div class="carousel-item active">
-                                    <img src="${room.mainImageUrl}" class="d-block w-100" alt="${room.name}">
+        <!-- Image Carousel -->
+        <div id="roomCarousel" class="carousel slide mb-4" data-bs-ride="carousel">
+            <div class="carousel-inner">
+                <c:choose>
+                    <c:when test="${not empty room.mainImageUrl}">
+                        <div class="carousel-item active">
+                            <img src="${room.mainImageUrl}" class="d-block w-100" alt="${room.name}">
+                        </div>
+                        <c:forEach var="imageUrl" items="${room.imageUrls}" varStatus="status">
+                            <c:if test="${status.index > 0}">
+                                <div class="carousel-item">
+                                    <img src="${imageUrl}" class="d-block w-100" alt="${room.name}">
                                 </div>
-                                <c:forEach var="imageUrl" items="${room.imageUrls}" varStatus="status">
-                                    <c:if test="${status.index > 0}">
-                                        <div class="carousel-item">
-                                            <img src="${imageUrl}" class="d-block w-100" alt="${room.name}">
-                                        </div>
-                                    </c:if>
-                                </c:forEach>
-                            </c:when>
-                            <c:otherwise>
-                                <div class="carousel-item active">
-                                    <img src="${pageContext.request.contextPath}/resources/images/no-image.jpg" class="d-block w-100" alt="이미지 없음">
-                                </div>
-                            </c:otherwise>
-                        </c:choose>
-                    </div>
-                    <button class="carousel-control-prev" type="button" data-bs-target="#roomCarousel" data-bs-slide="prev">
-                        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-                        <span class="visually-hidden">Previous</span>
-                    </button>
-                    <button class="carousel-control-next" type="button" data-bs-target="#roomCarousel" data-bs-slide="next">
-                        <span class="carousel-control-next-icon" aria-hidden="true"></span>
-                        <span class="visually-hidden">Next</span>
-                    </button>
+                            </c:if>
+                        </c:forEach>
+                    </c:when>
+                    <c:otherwise>
+                        <div class="carousel-item active">
+                            <img src="${pageContext.request.contextPath}/resources/images/no-image.jpg" class="d-block w-100" alt="이미지 없음">
+                        </div>
+                    </c:otherwise>
+                </c:choose>
+            </div>
+            <button class="carousel-control-prev" type="button" data-bs-target="#roomCarousel" data-bs-slide="prev">
+                <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                <span class="visually-hidden">Previous</span>
+            </button>
+            <button class="carousel-control-next" type="button" data-bs-target="#roomCarousel" data-bs-slide="next">
+                <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                <span class="visually-hidden">Next</span>
+            </button>
+        </div>
+
+        <!-- Room Info -->
+        <div class="room-info">
+            <div class="room-type">
+                <c:choose>
+                    <c:when test="${not empty room.roomType}">
+                        ${room.roomType}
+                    </c:when>
+                    <c:otherwise>
+                        스탠다드 룸
+                    </c:otherwise>
+                </c:choose>
+            </div>
+            <h1 class="room-title">${room.name}</h1>
+            <p class="text-muted">${accommodation.title}</p>
+
+            <hr>
+
+            <h3 class="section-title">객실 정보</h3>
+            <div class="info-item">
+                <div class="info-icon"><i class="bi bi-people"></i></div>
+                <div class="info-text">
+                    최대 ${room.capacity}인
+                </div>
+            </div>
+            <div class="info-item">
+                <div class="info-icon"><i class="bi bi-rulers"></i></div>
+                <div class="info-text">
+                    객실 크기: ${room.roomSize}㎡
+                </div>
+            </div>
+            <div class="info-item">
+                <div class="info-icon"><i class="bi bi-door-closed"></i></div>
+                <div class="info-text">
+                    객실 수: ${room.roomCount}개
+                </div>
+            </div>
+            <div class="info-item">
+                <div class="info-icon"><i class="bi bi-currency-dollar"></i></div>
+                <div class="info-text">
+                    가격: <fmt:formatNumber value="${room.price}" type="currency" currencySymbol="₩" maxFractionDigits="0"/>/박
                 </div>
             </div>
 
-            <!-- 객실 기본 정보 및 예약 카드 -->
-            <div class="col-md-4">
-                <div class="card booking-card">
-                    <div class="card-body">
-                        <h2 class="card-title">${room.name}</h2>
-                        <p class="text-muted">${accommodation.title}</p>
-
-                        <div class="mb-3">
-                            <h5>객실 정보</h5>
-                            <p><i class="bi bi-people"></i> 최대 ${room.capacity}인</p>
-                            <p><i class="bi bi-rulers"></i> 객실 크기: ${room.roomSize}㎡</p>
-                            <p><i class="bi bi-door-closed"></i> 객실 수: ${room.roomCount}개</p>
-                            <p><i class="bi bi-currency-dollar"></i> 가격: <fmt:formatNumber value="${room.price}" type="currency" currencySymbol="₩" maxFractionDigits="0"/>/박</p>
-                        </div>
-
-                        <!-- 예약 폼 -->
-                        <form action="${pageContext.request.contextPath}/reservation/form/${room.roomId}" method="get">
-                            <input type="hidden" name="roomId" value="${room.roomId}">
-                            <div class="mb-3">
-                                <label for="checkInDate" class="form-label">체크인 날짜</label>
-                                <input type="date" class="form-control" id="checkInDate" name="checkInDate" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="checkOutDate" class="form-label">체크아웃 날짜</label>
-                                <input type="date" class="form-control" id="checkOutDate" name="checkOutDate" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="guestCount" class="form-label">인원 수</label>
-                                <input type="number" class="form-control" id="guestCount" name="guestCount" min="1" max="${room.capacity}" value="1" required>
-                            </div>
-                            <div class="d-grid gap-2">
-                                <button type="submit" class="btn btn-primary">예약하기</button>
-                            </div>
-                        </form>
-
-                        <!-- 장바구니 추가 폼 -->
-                        <form action="${pageContext.request.contextPath}/cart/add" method="post" class="mt-2">
-                            <input type="hidden" name="roomId" value="${room.roomId}">
-                            <input type="hidden" id="cartCheckInDate" name="checkInDate">
-                            <input type="hidden" id="cartCheckOutDate" name="checkOutDate">
-                            <input type="hidden" id="cartGuestCount" name="guestCount">
-                            <input type="hidden" id="cartPrice" name="price">
-                            <div class="d-grid">
-                                <button type="submit" class="btn btn-outline-primary">장바구니에 담기</button>
-                            </div>
-                        </form>
-
-                        <!-- 호스트인 경우 수정/삭제 버튼 표시 -->
-                        <c:if test="${sessionScope.userId == accommodation.hostId}">
-                            <div class="mt-4">
-                                <a href="${pageContext.request.contextPath}/accommodation/update-room-form/${room.roomId}" class="btn btn-outline-primary me-2">수정</a>
-                                <a href="${pageContext.request.contextPath}/accommodation/delete-room/${room.roomId}" class="btn btn-outline-danger" onclick="return confirm('정말 삭제하시겠습니까?')">삭제</a>
-                            </div>
-                        </c:if>
-                    </div>
+            <!-- 호스트인 경우 수정/삭제 버튼 표시 -->
+            <c:if test="${sessionScope.userId == accommodation.hostId}">
+                <div class="mt-4">
+                    <a href="${pageContext.request.contextPath}/accommodation/update-room-form/${room.roomId}" class="btn btn-outline-primary me-2">수정</a>
+                    <a href="${pageContext.request.contextPath}/accommodation/delete-room/${room.roomId}" class="btn btn-outline-danger" onclick="return confirm('정말 삭제하시겠습니까?')">삭제</a>
                 </div>
+            </c:if>
+        </div>
+
+        <!-- Tab Bar -->
+        <div class="tab-bar">
+            <div class="tab-item active" onclick="openTab('reservation')">예약하기</div>
+            <div class="tab-item" onclick="openTab('details')">상세 정보</div>
+            <div class="tab-item" onclick="openTab('amenities')">편의시설</div>
+        </div>
+
+        <!-- Tab Contents -->
+        <div id="reservation" class="tab-content active">
+            <div class="reservation-form">
+                <h3 class="section-title">날짜 선택</h3>
+
+                <div class="d-flex justify-content-between mb-3">
+                    <button class="btn btn-outline-secondary" id="prevMonth"><i class="bi bi-chevron-left"></i> 이전 달</button>
+                    <h5 id="currentMonth" class="mb-0 align-self-center"></h5>
+                    <button class="btn btn-outline-secondary" id="nextMonth">다음 달 <i class="bi bi-chevron-right"></i></button>
+                </div>
+
+                <div id="calendar"></div>
+
+                <form action="${pageContext.request.contextPath}/reservation/form/${room.roomId}" method="get" class="mt-4">
+                    <input type="hidden" name="roomId" value="${room.roomId}">
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="checkInDate" class="form-label">체크인 날짜</label>
+                            <input type="date" class="form-control" id="checkInDate" name="checkInDate" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="checkOutDate" class="form-label">체크아웃 날짜</label>
+                            <input type="date" class="form-control" id="checkOutDate" name="checkOutDate" required>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="guestCount" class="form-label">인원 수</label>
+                        <select class="form-select" id="guestCount" name="guestCount">
+                            <c:forEach begin="1" end="${room.capacity}" var="i">
+                                <option value="${i}">${i}명</option>
+                            </c:forEach>
+                        </select>
+                    </div>
+
+                    <div class="price-breakdown">
+                        <div class="price-item">
+                            <div>객실 요금</div>
+                            <div id="roomPrice">0원</div>
+                        </div>
+                        <div class="price-item">
+                            <div>세금 및 봉사료</div>
+                            <div id="taxFee">0원</div>
+                        </div>
+                        <div class="price-total">
+                            <div>총 결제 금액</div>
+                            <div id="totalPrice">0원</div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-yanolja w-100 mt-3">예약하기</button>
+                </form>
+
+                <!-- 장바구니 추가 폼 -->
+                <form action="${pageContext.request.contextPath}/cart/add" method="post" class="mt-2">
+                    <input type="hidden" name="roomId" value="${room.roomId}">
+                    <input type="hidden" id="cartCheckInDate" name="checkInDate">
+                    <input type="hidden" id="cartCheckOutDate" name="checkOutDate">
+                    <input type="hidden" id="cartGuestCount" name="guestCount">
+                    <input type="hidden" id="cartPrice" name="price">
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-outline-primary">장바구니에 담기</button>
+                    </div>
+                </form>
             </div>
         </div>
 
-        <!-- 객실 상세 설명 -->
-        <div class="row mb-5">
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-body">
-                        <h4 class="card-title">객실 설명</h4>
-                        <p class="card-text">${room.description}</p>
+        <div id="details" class="tab-content">
+            <div class="room-info">
+                <h3 class="section-title">객실 설명</h3>
+                <p>${room.description}</p>
 
-                        <h5 class="mt-4">침대 유형</h5>
-                        <p>${room.bedType}</p>
+                <hr>
 
-                        <h5 class="mt-4">편의시설</h5>
-                        <c:if test="${not empty room.amenities}">
-                            <ul class="amenities-list">
-                                <c:forEach var="amenity" items="${room.amenities.split(',')}">
-                                    <li><i class="bi bi-check-circle-fill text-success"></i> ${amenity.trim()}</li>
-                                </c:forEach>
-                            </ul>
-                        </c:if>
+                <h3 class="section-title">침대 유형</h3>
+                <p>${room.bedType}</p>
+
+                <hr>
+
+                <h3 class="section-title">체크인/체크아웃 정보</h3>
+                <div class="info-item">
+                    <div class="info-icon"><i class="bi bi-clock"></i></div>
+                    <div class="info-text">
+                        체크인: ${accommodation.checkInTime} / 체크아웃: ${accommodation.checkOutTime}
                     </div>
                 </div>
+
+                <hr>
+
+                <h3 class="section-title">숙소 정보</h3>
+                <div class="info-item">
+                    <div class="info-icon"><i class="bi bi-geo-alt"></i></div>
+                    <div class="info-text">
+                        ${accommodation.address}
+                    </div>
+                </div>
+                <div class="info-item">
+                    <div class="info-icon"><i class="bi bi-telephone"></i></div>
+                    <div class="info-text">
+                        ${accommodation.phone}
+                    </div>
+                </div>
+
+                <a href="${pageContext.request.contextPath}/accommodation/detail/${accommodation.accommodationId}" class="btn btn-outline-primary mt-3">숙소 상세 정보 보기</a>
             </div>
         </div>
 
-        <!-- 가용성 캘린더 -->
-        <div class="row mb-5">
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-body">
-                        <h4 class="card-title">가용성 캘린더</h4>
-                        <div class="d-flex justify-content-between mb-3">
-                            <button class="btn btn-outline-secondary" id="prevMonth"><i class="bi bi-chevron-left"></i> 이전 달</button>
-                            <h5 id="currentMonth" class="mb-0 align-self-center"></h5>
-                            <button class="btn btn-outline-secondary" id="nextMonth">다음 달 <i class="bi bi-chevron-right"></i></button>
+        <div id="amenities" class="tab-content">
+            <div class="room-info">
+                <h3 class="section-title">객실 내 시설</h3>
+                <div class="amenities-list">
+                    <c:if test="${not empty room.amenities}">
+                        <c:forEach var="amenity" items="${room.amenities.split(',')}">
+                            <div class="amenity-item">
+                                <div class="amenity-icon"><i class="bi bi-check-circle"></i></div>
+                                <div>${amenity.trim()}</div>
+                            </div>
+                        </c:forEach>
+                    </c:if>
+                    <c:if test="${empty room.amenities}">
+                        <!-- 샘플 편의시설 -->
+                        <div class="amenity-item">
+                            <div class="amenity-icon"><i class="bi bi-check-circle"></i></div>
+                            <div>무료 Wi-Fi</div>
                         </div>
-                        <div id="calendar"></div>
-                        <div class="mt-3">
-                            <span class="badge bg-success">가용</span>
-                            <span class="badge bg-danger ms-2">불가</span>
+                        <div class="amenity-item">
+                            <div class="amenity-icon"><i class="bi bi-check-circle"></i></div>
+                            <div>에어컨</div>
                         </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 숙소 정보 링크 -->
-        <div class="row mb-5">
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-body">
-                        <h4 class="card-title">숙소 정보</h4>
-                        <p><i class="bi bi-geo-alt"></i> ${accommodation.address}</p>
-                        <p><i class="bi bi-telephone"></i> ${accommodation.phone}</p>
-                        <p><i class="bi bi-clock"></i> 체크인: ${accommodation.checkInTime} / 체크아웃: ${accommodation.checkOutTime}</p>
-                        <a href="${pageContext.request.contextPath}/accommodation/detail/${accommodation.accommodationId}" class="btn btn-outline-primary">숙소 상세 정보 보기</a>
-                    </div>
+                        <div class="amenity-item">
+                            <div class="amenity-icon"><i class="bi bi-check-circle"></i></div>
+                            <div>TV</div>
+                        </div>
+                        <div class="amenity-item">
+                            <div class="amenity-icon"><i class="bi bi-check-circle"></i></div>
+                            <div>미니바</div>
+                        </div>
+                        <div class="amenity-item">
+                            <div class="amenity-icon"><i class="bi bi-check-circle"></i></div>
+                            <div>욕실용품</div>
+                        </div>
+                        <div class="amenity-item">
+                            <div class="amenity-icon"><i class="bi bi-check-circle"></i></div>
+                            <div>헤어드라이어</div>
+                        </div>
+                    </c:if>
                 </div>
             </div>
         </div>
     </div>
 
-    <jsp:include page="../fragments/footer.jsp" />
+    <!-- Booking Bar -->
+    <div class="booking-bar">
+        <div class="booking-price">
+            <fmt:formatNumber value="${room.price}" pattern="#,###" />원
+            <span class="booking-price-unit">/ 1박</span>
+        </div>
+        <a href="#reservation" class="btn btn-yanolja">예약하기</a>
+    </div>
+
+    <!-- Bottom Navigation -->
+    <div class="bottom-nav">
+        <div class="container">
+            <div class="row">
+                <div class="col-3">
+                    <div class="bottom-nav-item">
+                        <div class="bottom-nav-icon"><i class="bi bi-house"></i></div>
+                        <div class="bottom-nav-text">홈</div>
+                    </div>
+                </div>
+                <div class="col-3">
+                    <div class="bottom-nav-item active">
+                        <div class="bottom-nav-icon"><i class="bi bi-search"></i></div>
+                        <div class="bottom-nav-text">검색</div>
+                    </div>
+                </div>
+                <div class="col-3">
+                    <div class="bottom-nav-item">
+                        <div class="bottom-nav-icon"><i class="bi bi-heart"></i></div>
+                        <div class="bottom-nav-text">찜</div>
+                    </div>
+                </div>
+                <div class="col-3">
+                    <div class="bottom-nav-item">
+                        <div class="bottom-nav-icon"><i class="bi bi-person"></i></div>
+                        <div class="bottom-nav-text">마이</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script>
@@ -254,25 +647,76 @@
             document.getElementById('checkInDate').addEventListener('change', function() {
                 validateDates();
                 updateCartFormFields();
+                updatePriceBreakdown();
             });
 
             document.getElementById('checkOutDate').addEventListener('change', function() {
                 validateDates();
                 updateCartFormFields();
+                updatePriceBreakdown();
             });
 
             document.getElementById('guestCount').addEventListener('change', function() {
                 updateCartFormFields();
+                updatePriceBreakdown();
             });
 
             // 초기 카트 폼 필드 업데이트
             updateCartFormFields();
+
+            // 초기 가격 계산
+            updatePriceBreakdown();
+
+            // 바텀 네비게이션 아이템 클릭 이벤트
+            document.querySelectorAll('.bottom-nav-item').forEach(item => {
+                item.addEventListener('click', function() {
+                    document.querySelectorAll('.bottom-nav-item').forEach(i => {
+                        i.classList.remove('active');
+                    });
+                    this.classList.add('active');
+                });
+            });
+
+            // 예약하기 버튼 클릭 시 예약 탭으로 이동
+            document.querySelector('.booking-bar a').addEventListener('click', function(e) {
+                e.preventDefault();
+                openTab('reservation');
+                window.scrollTo({
+                    top: document.querySelector('.tab-bar').offsetTop - 20,
+                    behavior: 'smooth'
+                });
+            });
         });
+
+        // 탭 전환 함수
+        function openTab(tabName) {
+            // 모든 탭 콘텐츠 숨기기
+            const tabContents = document.getElementsByClassName('tab-content');
+            for (let i = 0; i < tabContents.length; i++) {
+                tabContents[i].classList.remove('active');
+            }
+
+            // 모든 탭 아이템 비활성화
+            const tabItems = document.getElementsByClassName('tab-item');
+            for (let i = 0; i < tabItems.length; i++) {
+                tabItems[i].classList.remove('active');
+            }
+
+            // 선택한 탭 콘텐츠 표시
+            document.getElementById(tabName).classList.add('active');
+
+            // 선택한 탭 아이템 활성화
+            const activeTab = document.querySelector(`.tab-item[onclick="openTab('${tabName}')"]`);
+            activeTab.classList.add('active');
+        }
 
         // 체크인/체크아웃 날짜 초기화
         function initDatePickers() {
             const tomorrow = new Date(today);
             tomorrow.setDate(tomorrow.getDate() + 1);
+
+            const dayAfterTomorrow = new Date(today);
+            dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2);
 
             const formatDate = (date) => {
                 const year = date.getFullYear();
@@ -281,9 +725,9 @@
                 return `${year}-${month}-${day}`;
             };
 
-            document.getElementById('checkInDate').value = formatDate(today);
+            document.getElementById('checkInDate').value = formatDate(tomorrow);
             document.getElementById('checkInDate').min = formatDate(today);
-            document.getElementById('checkOutDate').value = formatDate(tomorrow);
+            document.getElementById('checkOutDate').value = formatDate(dayAfterTomorrow);
             document.getElementById('checkOutDate').min = formatDate(tomorrow);
         }
 
@@ -343,10 +787,14 @@
 
                         let cellClass = '';
                         if (isToday) cellClass += ' today';
-                        if (isPast || !isAvailable) cellClass += ' unavailable';
-                        else cellClass += ' available';
+                        if (isPast || !isAvailable) {
+                            cellClass += ' unavailable';
+                            calendarHTML += `<td class="${cellClass}">${date}</td>`;
+                        } else {
+                            cellClass += ' available';
+                            calendarHTML += `<td class="${cellClass}" onclick="selectDate(${year}, ${month}, ${date})">${date}</td>`;
+                        }
 
-                        calendarHTML += `<td class="${cellClass}">${date}</td>`;
                         date++;
                     }
                 }
@@ -360,6 +808,32 @@
 
             // 실제 구현에서는 여기서 API를 호출하여 가용성 정보를 가져와 캘린더에 표시
             loadAvailability(year, month);
+        }
+
+        // 날짜 선택 함수
+        function selectDate(year, month, day) {
+            const selectedDate = new Date(year, month, day);
+            const formatDate = (date) => {
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            };
+
+            // 체크인 날짜 설정
+            document.getElementById('checkInDate').value = formatDate(selectedDate);
+
+            // 체크아웃 날짜 설정 (체크인 다음날)
+            const checkOutDate = new Date(selectedDate);
+            checkOutDate.setDate(checkOutDate.getDate() + 1);
+            document.getElementById('checkOutDate').value = formatDate(checkOutDate);
+
+            // 가격 업데이트
+            updatePriceBreakdown();
+            updateCartFormFields();
+
+            // 선택된 날짜 표시
+            renderCalendar(currentMonth, currentYear);
         }
 
         // 가용성 정보 로드 (실제 구현에서는 API 호출)
@@ -396,6 +870,32 @@
                     }
                 }
             });
+        }
+
+        // 가격 계산 함수
+        function updatePriceBreakdown() {
+            const checkInDate = new Date(document.getElementById('checkInDate').value);
+            const checkOutDate = new Date(document.getElementById('checkOutDate').value);
+
+            // 숙박 일수 계산
+            const nights = Math.round((checkOutDate - checkInDate) / (1000 * 60 * 60 * 24));
+
+            // 객실 가격 (실제 구현에서는 API에서 가져온 가격 사용)
+            const pricePerNight = ${room.price};
+
+            // 객실 요금 계산
+            const roomPrice = nights * pricePerNight;
+
+            // 세금 및 봉사료 계산 (10%)
+            const taxFee = Math.round(roomPrice * 0.1);
+
+            // 총 금액
+            const totalPrice = roomPrice + taxFee;
+
+            // 화면에 표시
+            document.getElementById('roomPrice').textContent = roomPrice.toLocaleString() + '원';
+            document.getElementById('taxFee').textContent = taxFee.toLocaleString() + '원';
+            document.getElementById('totalPrice').textContent = totalPrice.toLocaleString() + '원';
         }
 
         // 장바구니 폼 필드 업데이트

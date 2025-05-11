@@ -121,6 +121,13 @@
 			<artifactId>commons-logging</artifactId>
 			<version>1.3.5</version>
 		</dependency>
+
+		<!-- Bean Validation Provider -->
+		<dependency>
+			<groupId>org.hibernate.validator</groupId>
+			<artifactId>hibernate-validator</artifactId>
+			<version>8.0.1.Final</version>
+		</dependency>
 	</dependencies>
 
 	<build>
