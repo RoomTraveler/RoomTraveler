@@ -690,8 +690,59 @@ public class AdminController {
         accommodation.setAmenities("");  // API에서 제공하지 않음
         accommodation.setStatus("ACTIVE");
 
-        // 임시 호스트 ID 사용 (999L)
-        accommodation.setHostId(999L);
+        // 세션에서 현재 사용자 ID 가져오기
+        logger.info("세션 ID: " + session.getId());
+        // 세션 속성들을 로깅
+        StringBuilder sessionAttrs = new StringBuilder("세션 속성들: ");
+        java.util.Enumeration<String> attributeNames = session.getAttributeNames();
+        while (attributeNames.hasMoreElements()) {
+            String name = attributeNames.nextElement();
+            sessionAttrs.append(name).append("=").append(session.getAttribute(name)).append(", ");
+        }
+        logger.info(sessionAttrs.toString());
+
+        // 세션에서 userId 속성 가져오기
+        Long userId = null;
+        try {
+            Object userIdObj = session.getAttribute("userId");
+            logger.info("세션에서 가져온 userId 객체: " + userIdObj + ", 클래스: " + (userIdObj != null ? userIdObj.getClass().getName() : "null"));
+
+            if (userIdObj instanceof Long) {
+                userId = (Long) userIdObj;
+            } else if (userIdObj instanceof Integer) {
+                userId = ((Integer) userIdObj).longValue();
+            } else if (userIdObj instanceof String) {
+                try {
+                    userId = Long.parseLong((String) userIdObj);
+                } catch (NumberFormatException e) {
+                    logger.error("userId 문자열을 Long으로 변환할 수 없습니다: " + userIdObj);
+                }
+            }
+
+            logger.info("변환된 userId: " + userId);
+        } catch (Exception e) {
+            logger.error("세션에서 userId를 가져오는 중 오류 발생: " + e.getMessage(), e);
+        }
+
+        if (userId != null) {
+            // 현재 로그인한 사용자의 ID를 호스트 ID로 사용
+            accommodation.setHostId(userId);
+            logger.info("현재 로그인한 사용자 ID를 호스트 ID로 사용합니다: " + userId);
+        } else {
+            // 세션에서 이메일 가져오기
+            String email = (String) session.getAttribute("email");
+            if (email != null && email.equals("admin.lee@example.com")) {
+                // admin.lee@example.com인 경우 ID 6 사용
+                Long adminId = 6L;
+                accommodation.setHostId(adminId);
+                logger.info("admin.lee@example.com 사용자를 위해 ID 6을 사용합니다.");
+            } else {
+                // 기본 관리자 ID 사용
+                Long adminId = 6L; // admin.lee@example.com의 ID
+                accommodation.setHostId(adminId);
+                logger.warn("세션에 사용자 ID가 없습니다. 기본 관리자 ID를 사용합니다: " + adminId);
+            }
+        }
 
         return accommodation;
     }

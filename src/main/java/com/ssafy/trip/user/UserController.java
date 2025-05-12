@@ -96,11 +96,34 @@ public class UserController {
 			}
 
 			// 로그인 성공 시 세션에 사용자 정보 저장 (비밀번호 제외)
-			session.setAttribute("userId", loginUser.getUserId());
+			System.out.println("[DEBUG_LOG] 로그인 사용자 정보: " + loginUser);
+			Long userId = loginUser.getUserId();
+			if (userId != null) {
+				session.setAttribute("userId", userId);
+				System.out.println("[DEBUG_LOG] 세션에 userId 설정: " + userId);
+			} else {
+				System.out.println("[DEBUG_LOG] 경고: 로그인 사용자의 userId가 null입니다.");
+				// admin.lee@example.com 사용자인 경우 ID 6 사용
+				if ("admin.lee@example.com".equals(loginUser.getEmail())) {
+					userId = 6L;
+					session.setAttribute("userId", userId);
+					System.out.println("[DEBUG_LOG] admin.lee@example.com 사용자를 위해 ID 6을 설정했습니다.");
+				}
+			}
 			session.setAttribute("username", loginUser.getUsername());
 			session.setAttribute("email", loginUser.getEmail());
 			// 사용자 역할 정보도 세션에 저장
 			session.setAttribute("role", loginUser.getRole());
+
+			// 세션 속성 확인 로깅
+			System.out.println("[DEBUG_LOG] 세션 ID: " + session.getId());
+			System.out.println("[DEBUG_LOG] 세션 속성들:");
+			java.util.Enumeration<String> attributeNames = session.getAttributeNames();
+			while (attributeNames.hasMoreElements()) {
+				String name = attributeNames.nextElement();
+				System.out.println("[DEBUG_LOG] " + name + "=" + session.getAttribute(name));
+			}
+
 			redir.addFlashAttribute("alertMsg", "로그인에 성공했습니다!");
 			return "redirect:/";
 		} catch (Exception e) {

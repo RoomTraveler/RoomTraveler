@@ -373,7 +373,7 @@
     <!-- Navbar -->
     <nav class="navbar navbar-expand-lg navbar-light navbar-yanolja">
         <div class="container">
-            <a class="navbar-brand" href="#">야놀자</a>
+            <a class="navbar-brand" href="#">방구석 여행자</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
