@@ -129,5 +129,8 @@ replay_pid*
 
 # End of https://www.toptal.com/developers/gitignore/api/java,eclipse
 
-# 키를 공개 안하기 위해
+#노드 모듈
+node_modules/
+
+#키 공개 x
 *.properties
