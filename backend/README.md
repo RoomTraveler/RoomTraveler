@@ -142,6 +142,9 @@ mvn clean package
 `application.properties` 파일에서 다음 설정을 구성할 수 있습니다:
 
 ```properties
+# 서버 포트 설정
+server.port=8080
+
 # 데이터베이스 설정
 spring.datasource.url=jdbc:mysql://localhost:3306/ssafytrip
 spring.datasource.username=root
@@ -160,3 +163,7 @@ jwt.expiration=86400000
 tourapi.base-url=https://apis.data.go.kr/B551011/KorService1
 tourapi.service-key=your_service_key
 ```
+
+## 프론트엔드 연동
+
+Vue.js 프론트엔드와 Spring Boot 백엔드 간의 통신 설정에 대한 자세한 내용은 [Vue.js와 Spring Boot 백엔드 통신 가이드](docs/vue-spring-communication.md)를 참조하세요.
