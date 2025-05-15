@@ -11,7 +11,9 @@ import com.ssafy.trip.user.User;
 import com.ssafy.trip.user.UserService;
 
 
-
+import java.time.format.DateTimeParseException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -26,10 +28,14 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
 import jakarta.servlet.http.HttpSession;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -473,15 +479,20 @@ public class AdminController {
             // 모든 페이지 처리
             do {
                 UriComponentsBuilder builder = UriComponentsBuilder
-                        .fromHttpUrl(baseUrl + "/searchStay")
-                        .queryParam("serviceKey", serviceKey)
+                        .fromHttpUrl(baseUrl + "/areaBasedList2")              // 올바른 엔드포인트
+                        .queryParam("ServiceKey", serviceKey)
                         .queryParam("MobileOS", mobileOs)
                         .queryParam("MobileApp", mobileApp)
                         .queryParam("_type", "json")
-                        .queryParam("listYN", "Y")
+                        .queryParam("numOfRows", 12)
+                        .queryParam("pageNo", pageNo)
                         .queryParam("arrange", "A")
-                        .queryParam("numOfRows", numOfRows)
-                        .queryParam("pageNo", pageNo);
+                        .queryParam("contentTypeId", 32)
+                        .queryParam("areaCode", sidoCode != null ? sidoCode : "")
+                        .queryParam("sigunguCode", gugunCode != null ? gugunCode : "")
+                        .queryParam("cat1", "B02")                            // 숙박 대분류
+                        .queryParam("cat2", "")
+                        .queryParam("cat3", "");
 
                 // 선택적 파라미터 추가
                 if (sidoCode != null) {
@@ -535,7 +546,7 @@ public class AdminController {
                         logger.info("처리 중인 contentId: " + contentId);
 
                         // 숙소 상세 정보 가져오기
-
+                        // 여기!!!
                         Accommodation accommodation = fetchAccommodationDetail(contentId, session);
                         if (accommodation == null) {
                             logger.info("contentId: " + contentId + " - 숙소 상세 정보를 가져오지 못했습니다. 건너뜁니다.");
@@ -607,176 +618,128 @@ public class AdminController {
 
     /**
      * 숙소 상세 정보를 가져옵니다.
+     * 공통정보임 ㅇㅇ
      */
     private Accommodation fetchAccommodationDetail(String contentId, HttpSession session) throws Exception {
+        // 1) 공통정보(detailCommon1)에 numOfRows/pageNo 추가
+        String commonUrl = UriComponentsBuilder
+                .fromHttpUrl(baseUrl + "/detailCommon2")
+                .queryParam("serviceKey",   serviceKey)
+                .queryParam("MobileOS",     mobileOs)
+                .queryParam("MobileApp",    mobileApp)
+                .queryParam("_type",        "json")
+                .queryParam("numOfRows",    1)
+                .queryParam("pageNo",       1)
+                .queryParam("contentId",    contentId)
+//                .queryParam("contentTypeId",32)
+//                .queryParam("defaultYN",    "Y")
+//                .queryParam("firstImageYN", "Y")
+//                .queryParam("areacodeYN",   "Y")
+//                .queryParam("catcodeYN",    "Y")
+//                .queryParam("addrinfoYN",   "Y")
+//                .queryParam("mapinfoYN",    "Y")
+//                .queryParam("overviewYN",   "Y")
+                .build(false)
+                .toUriString();
 
-        UriComponentsBuilder builder = UriComponentsBuilder
-                .fromHttpUrl(baseUrl + "/detailCommon")
-                .queryParam("serviceKey", serviceKey)
-                .queryParam("MobileOS", mobileOs)
-                .queryParam("MobileApp", mobileApp)
-                .queryParam("_type", "json")
-                .queryParam("contentId", contentId)
-                .queryParam("contentTypeId", "32")
-                .queryParam("defaultYN", "Y")
-                .queryParam("firstImageYN", "Y")
-                .queryParam("areacodeYN", "Y")
-                .queryParam("catcodeYN", "Y")
-                .queryParam("addrinfoYN", "Y")
-                .queryParam("mapinfoYN", "Y")
-                .queryParam("overviewYN", "Y");
-
-        URI uri = new URI(builder.build(false).toUriString());
-        String response = restTemplate.getForObject(uri, String.class);
-
-        // JSON 파싱
-        String tourApiUrl = builder.build(false).toUriString();
-        logger.info("TourAPI 최종 호출 URL: " + tourApiUrl);
-
-        JsonNode root = objectMapper.readTree(response);
-        JsonNode item = root.path("response").path("body").path("items").path("item");
-
-        if (item.isArray() && item.size() > 0) {
-            item = item.get(0);
-        }
-
-        if (item.isMissingNode()) {
+        logger.info("▶▶ detailCommon1 URL: {}", commonUrl);
+        String commonResp = restTemplate.getForObject(URI.create(commonUrl), String.class);
+        if (commonResp == null || commonResp.trim().startsWith("<")) {
+            logger.error("detailCommon1 응답이 없거나 XML입니다.");
             return null;
         }
 
-        // 숙소 정보 매핑
-        Accommodation accommodation = new Accommodation();
-        accommodation.setTitle(item.path("title").asText(""));
-        accommodation.setDescription(item.path("overview").asText(""));
-        accommodation.setAddress(item.path("addr1").asText("") + " " + item.path("addr2").asText(""));
+        JsonNode item = objectMapper.readTree(commonResp)
+                .path("response").path("body").path("items").path("item");
+        if (item.isArray()) item = item.get(0);
+        if (item.isMissingNode()) return null;
 
-        // 숙소 유형을 기본값 "프리미엄"으로 설정
-        accommodation.setAccommodationType("프리미엄");
+        Accommodation acc = new Accommodation();
+        acc.setTitle(item.path("title").asText(""));
+        acc.setDescription(item.path("overview").asText(""));
+        acc.setAddress(item.path("addr1").asText("") + " " + item.path("addr2").asText(""));
+        acc.setPhone(item.path("tel").asText(""));
 
-        // API에서 가져온 시도 코드
-        int apiSidoCode = item.path("areacode").asInt(0);
+        // 홈페이지 href만 추출
+        String hp = item.path("homepage").asText("");
+        acc.setWebsite(hp.replaceAll("(?s).*href=\"([^\"]+)\".*", "$1"));
 
-        try {
-            // 데이터베이스에서 모든 시도 목록 가져오기
-            List<Sido> validSidos = adminService.getAllSidos();
+        acc.setLongitude(item.path("mapx").asDouble(0));
+        acc.setLatitude(item.path("mapy").asDouble(0));
 
-            // 유효한 시도 코드 목록 생성
-            List<Integer> validSidoCodes = new ArrayList<>();
-            for (Sido sido : validSidos) {
-                validSidoCodes.add(sido.getCode());
+        // 시도/구군 검증
+        int sc = item.path("areacode").asInt(0);
+        if (!adminService.getAllSidos().stream().map(Sido::getCode).toList().contains(sc)) return null;
+        acc.setSidoCode(sc);
+
+        int gc = item.path("sigungucode").asInt(0);
+        if (!adminService.getGugunsBySido(sc).stream().map(Gugun::getCode).toList().contains(gc)) return null;
+        acc.setGugunCode(gc);
+
+
+        // 2) 소개정보(detailIntro1)에 numOfRows/pageNo 추가
+        String introUrl = UriComponentsBuilder
+                .fromHttpUrl(baseUrl + "/detailIntro2")
+                .queryParam("serviceKey",   serviceKey)
+                .queryParam("MobileOS",     mobileOs)
+                .queryParam("MobileApp",    mobileApp)
+                .queryParam("_type",        "json")
+                .queryParam("numOfRows",    1)
+                .queryParam("pageNo",       1)
+                .queryParam("contentId",    contentId)
+                .queryParam("contentTypeId",32)
+                .build(false)
+                .toUriString();
+
+        logger.info("▶▶ detailIntro1 URL: {}", introUrl);
+        String introResp = restTemplate.getForObject(URI.create(introUrl), String.class);
+        if (introResp != null && !introResp.trim().startsWith("<")) {
+            JsonNode intro = objectMapper.readTree(introResp)
+                    .path("response").path("body").path("items").path("item");
+            if (intro.isArray()) intro = intro.get(0);
+            if (!intro.isMissingNode()) {
+                // 체크인/체크아웃
+                acc.setCheckInTime(parseTime(intro.path("checkintime").asText(), LocalTime.of(15,0)));
+                acc.setCheckOutTime(parseTime(intro.path("checkouttime").asText(), LocalTime.of(11,0)));
+
+                // 숙소 타입, 편의시설
+                String rt = intro.path("roomtype").asText("");
+                if (!rt.isBlank()) acc.setAccommodationType(rt);
+                String sf = intro.path("subfacility").asText("");
+                String fp = intro.path("foodplace").asText("");
+                acc.setAmenities(
+                        Stream.of(sf, fp)
+                                .filter(s -> !s.isBlank())
+                                .collect(Collectors.joining(", "))
+                );
             }
-
-            // API에서 가져온 시도 코드가 유효한지 확인
-            if (validSidoCodes.contains(apiSidoCode)) {
-                // 유효한 시도 코드면 그대로 사용
-                accommodation.setSidoCode(apiSidoCode);
-
-                // API에서 가져온 구군 코드
-                int apiGugunCode = item.path("sigungucode").asInt(0);
-
-                // 선택된 시도에 해당하는 구군 목록 가져오기
-                List<Gugun> validGuguns = adminService.getGugunsBySido(apiSidoCode);
-
-                // 유효한 구군 코드 목록 생성
-                List<Integer> validGugunCodes = new ArrayList<>();
-                for (Gugun gugun : validGuguns) {
-                    validGugunCodes.add(gugun.getCode());
-                }
-
-                // API에서 가져온 구군 코드가 유효한지 확인
-                if (validGugunCodes.contains(apiGugunCode)) {
-                    // 유효한 구군 코드면 그대로 사용
-                    accommodation.setGugunCode(apiGugunCode);
-                } else {
-                    // 유효하지 않은 구군 코드면 건너뛰기
-                    logger.warn("유효하지 않은 구군 코드: " + apiGugunCode + ", 이 숙소는 건너뜁니다.");
-                    return null; // 유효하지 않은 구군 코드가 있는 숙소는 건너뛰기
-                }
-            } else {
-                // 유효하지 않은 시도 코드면 건너뛰기
-                logger.warn("유효하지 않은 시도 코드: " + apiSidoCode + ", 이 숙소는 건너뜁니다.");
-                return null; // 유효하지 않은 시도 코드가 있는 숙소는 건너뛰기
-            }
-        } catch (Exception e) {
-            // 시도/구군 목록 조회 중 오류 발생 시 건너뛰기
-            logger.error("시도/구군 목록 조회 중 오류 발생, 이 숙소는 건너뜁니다: " + e.getMessage());
-            return null; // 오류가 발생한 숙소는 건너뛰기
         }
 
-        // 위도, 경도가 있는 경우에만 설정
-        if (!item.path("mapx").isMissingNode() && !item.path("mapy").isMissingNode()) {
-            accommodation.setLongitude(item.path("mapx").asDouble(0));
-            accommodation.setLatitude(item.path("mapy").asDouble(0));
-        }
-
-        accommodation.setPhone(item.path("tel").asText(""));
-        accommodation.setEmail("");  // API에서 제공하지 않음
-        accommodation.setWebsite(item.path("homepage").asText(""));
-
-        // 기본 체크인/아웃 시간 설정
-        accommodation.setCheckInTime(java.time.LocalTime.of(15, 0));
-        accommodation.setCheckOutTime(java.time.LocalTime.of(11, 0));
-
-        accommodation.setAmenities("");  // API에서 제공하지 않음
-        accommodation.setStatus("ACTIVE");
-
-        // 세션에서 현재 사용자 ID 가져오기
-        logger.info("세션 ID: " + session.getId());
-        // 세션 속성들을 로깅
-        StringBuilder sessionAttrs = new StringBuilder("세션 속성들: ");
-        java.util.Enumeration<String> attributeNames = session.getAttributeNames();
-        while (attributeNames.hasMoreElements()) {
-            String name = attributeNames.nextElement();
-            sessionAttrs.append(name).append("=").append(session.getAttribute(name)).append(", ");
-        }
-        logger.info(sessionAttrs.toString());
-
-        // 세션에서 userId 속성 가져오기
+        // 3) 세션에서 hostId 가져와 세팅
         Long userId = null;
-        try {
-            Object userIdObj = session.getAttribute("userId");
-            logger.info("세션에서 가져온 userId 객체: " + userIdObj + ", 클래스: " + (userIdObj != null ? userIdObj.getClass().getName() : "null"));
-
-            if (userIdObj instanceof Long) {
-                userId = (Long) userIdObj;
-            } else if (userIdObj instanceof Integer) {
-                userId = ((Integer) userIdObj).longValue();
-            } else if (userIdObj instanceof String) {
-                try {
-                    userId = Long.parseLong((String) userIdObj);
-                } catch (NumberFormatException e) {
-                    logger.error("userId 문자열을 Long으로 변환할 수 없습니다: " + userIdObj);
-                }
-            }
-
-            logger.info("변환된 userId: " + userId);
-        } catch (Exception e) {
-            logger.error("세션에서 userId를 가져오는 중 오류 발생: " + e.getMessage(), e);
+        Object userIdObj = session.getAttribute("userId");
+        if (userIdObj instanceof Long) {
+            userId = (Long) userIdObj;
+        } else if (userIdObj instanceof Integer) {
+            userId = ((Integer) userIdObj).longValue();
+        } else if (userIdObj instanceof String) {
+            try { userId = Long.parseLong((String)userIdObj); }
+            catch (NumberFormatException ignored) {}
         }
-
         if (userId != null) {
-            // 현재 로그인한 사용자의 ID를 호스트 ID로 사용
-            accommodation.setHostId(userId);
-            logger.info("현재 로그인한 사용자 ID를 호스트 ID로 사용합니다: " + userId);
+            acc.setHostId(userId);
         } else {
-            // 세션에서 이메일 가져오기
-            String email = (String) session.getAttribute("email");
-            if (email != null && email.equals("admin.lee@example.com")) {
-                // admin.lee@example.com인 경우 ID 6 사용
-                Long adminId = 6L;
-                accommodation.setHostId(adminId);
-                logger.info("admin.lee@example.com 사용자를 위해 ID 6을 사용합니다.");
-            } else {
-                // 기본 관리자 ID 사용
-                Long adminId = 6L; // admin.lee@example.com의 ID
-                accommodation.setHostId(adminId);
-                logger.warn("세션에 사용자 ID가 없습니다. 기본 관리자 ID를 사용합니다: " + adminId);
+            String email = (String)session.getAttribute("email");
+            // 기본 관리자 ID = 6
+            acc.setHostId(6L);
+            if ("admin.lee@example.com".equals(email)) {
+                acc.setHostId(6L);
             }
         }
 
-        return accommodation;
+        acc.setStatus("ACTIVE");
+        return acc;
     }
-
     /**
      * 객실 정보를 가져옵니다.
      * @param contentId 숙소 컨텐츠 ID (TourAPI)
@@ -785,13 +748,14 @@ public class AdminController {
     private List<Room> fetchRoomInfo(String contentId) throws Exception {
 
         UriComponentsBuilder builder = UriComponentsBuilder
-                .fromHttpUrl(baseUrl + "/detailInfo")
-                .queryParam("serviceKey", serviceKey)
-                .queryParam("MobileOS", mobileOs)
-                .queryParam("MobileApp", mobileApp)
+                .fromHttpUrl(baseUrl + "/detailInfo2")
+                .queryParam("ServiceKey", serviceKey)
                 .queryParam("_type", "json")
+                .queryParam("contentTypeId", "32")
                 .queryParam("contentId", contentId)
-                .queryParam("contentTypeId", "32");  // 숙박 타입 ID
+                .queryParam("MobileOS", mobileOs)
+                .queryParam("MobileApp", mobileApp);
+
 
         URI uri = new URI(builder.build(false).toUriString());
         String response = restTemplate.getForObject(uri, String.class);
@@ -885,80 +849,97 @@ public class AdminController {
      * @return 이미지 목록
      */
     private List<Image> fetchImageInfo(String contentId, List<Room> rooms) throws Exception {
+        // 1) detailImage2 호출 URL 구성
+        String url = UriComponentsBuilder
+                .fromHttpUrl(baseUrl + "/detailImage2")
+                .queryParam("serviceKey",   serviceKey)
+                .queryParam("MobileOS",     mobileOs)
+                .queryParam("MobileApp",    mobileApp)
+                .queryParam("_type",        "json")
+                .queryParam("contentId",    contentId)
+                .queryParam("imageYN",      "Y")
+                .queryParam("numOfRows",    10)
+                .queryParam("pageNo",       1)
+                .build(false)
+                .toUriString();
 
+        logger.info("▶▶ detailImage2 URL: {}", url);
+        String response = restTemplate.getForObject(new URI(url), String.class);
 
-        UriComponentsBuilder builder = UriComponentsBuilder
-                .fromHttpUrl(baseUrl + "/detailImage")
-                .queryParam("serviceKey", serviceKey)
-                .queryParam("MobileOS", mobileOs)
-                .queryParam("MobileApp", mobileApp)
-                .queryParam("_type", "json")
-                .queryParam("contentId", contentId)
-                .queryParam("imageYN", "Y")
-                .queryParam("subImageYN", "Y");
+        // JSON 아닌 응답이면 빈 리스트
+        if (response == null || response.trim().startsWith("<")) {
+            logger.warn("detailImage2 응답이 없거나 XML/오류입니다: {}", response);
+            return List.of();
+        }
 
-        URI uri = new URI(builder.build(false).toUriString());
-        String response = restTemplate.getForObject(uri, String.class);
-
-        // JSON 파싱
-        JsonNode root = objectMapper.readTree(response);
-        JsonNode items = root.path("response").path("body").path("items").path("item");
-
+        // 2) JSON 파싱
+        JsonNode itemsNode = objectMapper.readTree(response)
+                .path("response").path("body").path("items").path("item");
         List<Image> images = new ArrayList<>();
 
-        if (items.isArray()) {
-            boolean hasMainImage = false;
-            int roomIndex = 0;
-            int roomCount = rooms.size();
+        boolean hasMainImage = false;
+        int roomIndex = 0, roomCount = rooms.size();
 
-            for (JsonNode item : items) {
-                Image image = new Image();
-
-                // 이미지 정보 매핑
-                String imageUrl = item.path("originimgurl").asText("");
-                // 이미지 URL이 비어있거나 유효하지 않은 경우 플레이스홀더 이미지 사용
-                if (imageUrl == null || imageUrl.isEmpty()) {
-                    imageUrl = "https://via.placeholder.com/800x600?text=No+Image+Available";
-                } else if (!imageUrl.startsWith("http")) {
-                    // URL이 http로 시작하지 않으면 http://를 추가
-                    imageUrl = "http://" + imageUrl;
+        if (itemsNode.isArray()) {
+            for (JsonNode item : itemsNode) {
+                String originUrl = item.path("originimgurl").asText("");
+                if (originUrl.isBlank()) {
+                    // 빈 URL이면 건너뛰기
+                    continue;
                 }
-                image.setImageUrl(imageUrl);
-                image.setCaption(item.path("imgname").asText(""));
 
-                // 첫 번째 이미지를 대표 이미지로 설정
+                Image img = new Image();
+                // URL 보정
+                if (!originUrl.startsWith("http")) {
+                    originUrl = "http://" + originUrl;
+                }
+                img.setImageUrl(originUrl);
+                img.setCaption(item.path("imgname").asText(""));
+
                 if (!hasMainImage) {
-                    image.setIsMain(true);
-                    image.setReferenceType("ACCOMMODATION");
-                    image.setReferenceId(Long.parseLong(contentId)); // 숙소 ID 설정
-                    // accommodationId는 importFromApi에서 설정됨
+                    // 첫 번째 이미지를 대표 이미지로
+                    img.setIsMain(true);
+                    img.setReferenceType("ACCOMMODATION");
+                    img.setReferenceId(Long.parseLong(contentId));
                     hasMainImage = true;
                 } else {
-                    image.setIsMain(false);
-                    image.setReferenceType("ROOM");
-
-                    // 객실 이미지를 각 객실에 분배
+                    // 나머지는 객실 이미지
+                    img.setIsMain(false);
+                    img.setReferenceType("ROOM");
                     if (roomCount > 0) {
-                        Room room = rooms.get(roomIndex % roomCount);
-                        image.setReferenceId(room.getRoomId()); // 객실 ID 설정
-                        roomIndex++; // 다음 객실로 이동
+                        Room r = rooms.get(roomIndex % roomCount);
+                        img.setReferenceId(r.getRoomId());
+                        roomIndex++;
                     } else {
-                        // 객실이 없는 경우 (이 경우는 발생하지 않아야 함)
-                        image.setReferenceId(Long.parseLong(contentId));
+                        img.setReferenceId(Long.parseLong(contentId));
                     }
-                    // roomId와 accommodationId는 importFromApi에서 설정됨
                 }
-
-                images.add(image);
+                images.add(img);
             }
         }
 
-        // 이미지가 없는 경우 빈 리스트 반환 (기본 이미지를 추가하지 않음)
         if (images.isEmpty()) {
-            logger.info("contentId: " + contentId + " - 이미지가 없습니다.");
-            // 빈 리스트 반환 - 이 숙소는 필터링됩니다
+            logger.info("contentId={} 에 대한 이미지가 없습니다.", contentId);
         }
 
         return images;
     }
+
+
+    /**
+     * raw 문자열에서 "HH:mm" 패턴을 찾아 파싱합니다.
+     * 못 찾거나 예외 발생 시 fallback 리턴.
+     */
+    private LocalTime parseTime(String raw, LocalTime fallback) {
+        if (raw == null) return fallback;
+        // "익일11:00", "11:00", "15:30" 등에서 HH:mm 부분만 캡처
+        Matcher m = Pattern.compile("(\\d{1,2}:\\d{2})").matcher(raw);
+        if (m.find()) {
+            try {
+                return LocalTime.parse(m.group(1));
+            } catch (DateTimeParseException ignored) { }
+        }
+        return fallback;
+    }
+
 }

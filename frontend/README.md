@@ -297,6 +297,6 @@ npm run dev
 3. 프로덕션 빌드:
 ```bash
 npm run build
-```
+```f
 
 > **주의**: `npm run dev` 명령은 반드시 frontend 디렉토리에서 실행해야 합니다. backend 디렉토리에서 실행하면 작동하지 않습니다.

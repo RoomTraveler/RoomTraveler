@@ -53,8 +53,8 @@
             </router-link>
 
             <template v-if="!isLoggedIn">
-              <router-link to="/user/login" class="user-menu-item">로그인</router-link>
-              <router-link to="/user/register" class="user-menu-item">회원가입</router-link>
+              <router-link to="/login" class="user-menu-item">로그인</router-link>
+              <router-link to="/register" class="user-menu-item">회원가입</router-link>
             </template>
             <template v-else>
               <!-- 알림 아이콘 -->

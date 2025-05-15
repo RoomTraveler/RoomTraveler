@@ -1,35 +1,36 @@
 <template>
   <div class="login-container">
     <div class="login-form">
-      <h1>로그인</h1>
-      
+      <!-- 동적 타이틀 -->
+      <h1>{{ isHostMode ? '호스트 회원 로그인' : '로그인' }}</h1>
+
       <div v-if="error" class="error-message">
         {{ error }}
       </div>
-      
+
       <form @submit.prevent="login">
         <div class="form-group">
           <label for="email">이메일</label>
-          <input 
-            type="email" 
-            id="email" 
-            v-model="email" 
-            required 
-            placeholder="이메일 주소를 입력하세요"
+          <input
+              type="email"
+              id="email"
+              v-model="email"
+              required
+              :placeholder="isHostMode ? '호스트 이메일을 입력하세요' : '이메일 주소를 입력하세요'"
           />
         </div>
-        
+
         <div class="form-group">
           <label for="password">비밀번호</label>
-          <input 
-            type="password" 
-            id="password" 
-            v-model="password" 
-            required 
-            placeholder="비밀번호를 입력하세요"
+          <input
+              type="password"
+              id="password"
+              v-model="password"
+              required
+              placeholder="비밀번호를 입력하세요"
           />
         </div>
-        
+
         <div class="form-options">
           <div class="remember-me">
             <input type="checkbox" id="remember" v-model="rememberMe" />
@@ -37,13 +38,14 @@
           </div>
           <a href="#" class="forgot-password">비밀번호 찾기</a>
         </div>
-        
+
         <button type="submit" class="login-button" :disabled="loading">
-          {{ loading ? '로그인 중...' : '로그인' }}
+          {{ loading ? (isHostMode ? '호스트 로그인 중...' : '로그인 중...') : (isHostMode ? '호스트 로그인' : '로그인') }}
         </button>
       </form>
-      
-      <div class="social-login">
+
+      <!-- 기본 모드에서만 소셜 로그인 보여줌 -->
+      <div v-if="!isHostMode" class="social-login">
         <p>또는 소셜 계정으로 로그인</p>
         <div class="social-buttons">
           <button class="social-button google">Google로 로그인</button>
@@ -51,9 +53,20 @@
           <button class="social-button naver">네이버로 로그인</button>
         </div>
       </div>
-      
+
+      <!-- 회원가입 링크 -->
       <div class="register-link">
-        계정이 없으신가요? <router-link to="/register">회원가입</router-link>
+        계정이 없으신가요?
+        <router-link :to="isHostMode ? '/host/register' : '/register'">
+          {{ isHostMode ? '비즈니스 회원가입' : '회원가입' }}
+        </router-link>
+      </div>
+
+      <!-- 모드 토글 버튼 -->
+      <div class="mode-toggle">
+        <button type="button" @click="toggleMode">
+          {{ isHostMode ? '일반 로그인/회원가입' : '호스트 로그인/회원가입' }}
+        </button>
       </div>
     </div>
   </div>
@@ -68,46 +81,45 @@ export default {
       password: '',
       rememberMe: false,
       loading: false,
-      error: null
+      error: null,
+      isHostMode: false
     };
   },
   methods: {
     login() {
       this.loading = true;
       this.error = null;
-      
-      // 실제 API 호출 대신 임시 로직 사용
+
       setTimeout(() => {
-        // 간단한 유효성 검사 (실제로는 서버에서 처리)
-        if (this.email === 'user@example.com' && this.password === 'password') {
-          // 로그인 성공
+        const validEmail = this.isHostMode ? 'host@example.com' : 'user@example.com';
+        if (this.email === validEmail && this.password === 'password') {
+          const key = this.isHostMode ? 'host' : 'user';
           const user = {
             id: 1,
             email: this.email,
-            name: '홍길동',
-            role: 'USER'
+            name: this.isHostMode ? '호스트 홍길동' : '홍길동',
+            role: this.isHostMode ? 'HOST' : 'USER'
           };
-          
-          // 로컬 스토리지에 사용자 정보 저장
-          localStorage.setItem('user', JSON.stringify(user));
-          
-          // 리디렉션 처리
-          const redirectPath = this.$route.query.redirect || '/';
+          localStorage.setItem(key, JSON.stringify(user));
+          const redirectPath = this.$route.query.redirect || (this.isHostMode ? '/host' : '/');
           this.$router.push(redirectPath);
         } else {
-          // 로그인 실패
           this.error = '이메일 또는 비밀번호가 올바르지 않습니다.';
         }
-        
         this.loading = false;
       }, 1000);
+    },
+    toggleMode() {
+      this.isHostMode = !this.isHostMode;
+      this.error = null;
+      this.email = '';
+      this.password = '';
     }
   },
   created() {
-    // 이미 로그인된 사용자는 홈으로 리디렉션
-    const user = localStorage.getItem('user');
-    if (user) {
-      this.$router.push('/');
+    const key = this.isHostMode ? 'host' : 'user';
+    if (localStorage.getItem(key)) {
+      this.$router.push(this.isHostMode ? '/host' : '/');
     }
   }
 };
@@ -222,30 +234,6 @@ input[type="password"]:focus {
   text-align: center;
 }
 
-.social-login p {
-  color: #666;
-  margin-bottom: 1rem;
-  position: relative;
-}
-
-.social-login p::before,
-.social-login p::after {
-  content: "";
-  position: absolute;
-  top: 50%;
-  width: 25%;
-  height: 1px;
-  background-color: #ddd;
-}
-
-.social-login p::before {
-  left: 0;
-}
-
-.social-login p::after {
-  right: 0;
-}
-
 .social-buttons {
   display: flex;
   flex-direction: column;
@@ -281,8 +269,22 @@ input[type="password"]:focus {
   color: white;
 }
 
+.mode-toggle {
+  margin-top: 1.5rem;
+  text-align: center;
+}
+
+.mode-toggle button {
+  background: none;
+  border: none;
+  color: #42b983;
+  cursor: pointer;
+  font-size: 0.95rem;
+  text-decoration: underline;
+}
+
 .register-link {
-  margin-top: 2rem;
+  margin-top: 1rem;
   text-align: center;
   color: #666;
 }
