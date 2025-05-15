@@ -10,6 +10,8 @@ import { createApp } from 'vue';  // Vue 3 앱 생성 함수
 import { createPinia } from 'pinia';  // 상태 관리 라이브러리
 import App from './App.vue';  // 루트 컴포넌트
 import router from './router';  // 라우터 설정
+import './assets/main.css'  //Tailwind 가져오기
+
 
 // Vue 앱 인스턴스 생성
 const app = createApp(App);

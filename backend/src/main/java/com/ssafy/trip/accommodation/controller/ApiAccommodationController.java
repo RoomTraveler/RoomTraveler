@@ -2,147 +2,128 @@ package com.ssafy.trip.accommodation.controller;
 
 import com.ssafy.trip.accommodation.model.Accommodation;
 import com.ssafy.trip.accommodation.model.Room;
-import com.ssafy.trip.accommodation.service.ApiAccommodationService;
-
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
+import com.ssafy.trip.accommodation.service.AccommodationServiceImpl;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import jakarta.servlet.http.HttpSession;
-import lombok.RequiredArgsConstructor;
-
 /**
- * API를 통해 숙소 정보를 가져오는 컨트롤러
+ * API를 통해 숙소 정보를 제공하는 REST 컨트롤러
  */
-@Controller
+@RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/accommodation")
+@RequestMapping("/api/accommodations") // 리소스 명 복수형
 public class ApiAccommodationController {
 
-    private final ApiAccommodationService apiAccommodationService;
+    private final AccommodationServiceImpl apiAccommodationService;
 
     /**
-     * 모든 숙소 목록을 조회합니다.
+     * 전체 숙소 목록 조회
      */
-    @GetMapping("/list")
-    public String listAccommodations(Model model) {
+    @GetMapping
+    public ResponseEntity<?> listAccommodations() {
         try {
             List<Accommodation> accommodations = apiAccommodationService.getAllAccommodations();
-            model.addAttribute("accommodations", accommodations);
-            return "accommodation/list";
+            return ResponseEntity.ok(accommodations);
         } catch (SQLException e) {
-            e.printStackTrace();
-            model.addAttribute("error", e.getMessage());
-            return "error";
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
         }
     }
 
     /**
-     * 지역별 숙소 목록을 조회합니다.
+     * 지역별 숙소 목록 조회
      */
     @GetMapping("/region")
-    public String getAccommodationsByRegion(
+    public ResponseEntity<?> getAccommodationsByRegion(
             @RequestParam(required = false) Integer sidoCode,
-            @RequestParam(required = false) Integer gugunCode,
-            Model model) {
+            @RequestParam(required = false) Integer gugunCode) {
         try {
             List<Accommodation> accommodations = apiAccommodationService.getAccommodationsByRegion(sidoCode, gugunCode);
-            model.addAttribute("accommodations", accommodations);
-            model.addAttribute("sidoCode", sidoCode);
-            model.addAttribute("gugunCode", gugunCode);
-            return "accommodation/list";
+            return ResponseEntity.ok(accommodations);
         } catch (SQLException e) {
-            e.printStackTrace();
-            model.addAttribute("error", e.getMessage());
-            return "error";
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
         }
     }
 
     /**
-     * 키워드로 숙소를 검색합니다.
+     * 키워드로 숙소 검색
      */
     @GetMapping("/search")
-    public String searchAccommodations(
-            @RequestParam String keyword,
-            Model model) {
+    public ResponseEntity<?> searchAccommodations(@RequestParam String keyword) {
         try {
             List<Accommodation> accommodations = apiAccommodationService.searchAccommodations(keyword);
-            model.addAttribute("accommodations", accommodations);
-            model.addAttribute("keyword", keyword);
-            return "accommodation/list";
+            return ResponseEntity.ok(accommodations);
         } catch (SQLException e) {
-            e.printStackTrace();
-            model.addAttribute("error", e.getMessage());
-            return "error";
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
         }
     }
 
     /**
-     * 숙소 상세 정보를 조회합니다.
+     * 숙소 상세 정보 조회
      */
-    @GetMapping("/detail/{accommodationId}")
-    public String getAccommodationDetail(
-            @PathVariable Long accommodationId,
-            Model model) {
+    @GetMapping("/{accommodationId}")
+    public ResponseEntity<?> getAccommodationDetail(@PathVariable Long accommodationId) {
         try {
             Accommodation accommodation = apiAccommodationService.getAccommodationById(accommodationId);
+            if (accommodation == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(Map.of("error", "숙소를 찾을 수 없습니다."));
+            }
             List<Room> rooms = apiAccommodationService.getRoomsByAccommodationId(accommodationId);
-            
-            model.addAttribute("accommodation", accommodation);
-            model.addAttribute("rooms", rooms);
-            return "accommodation/detail";
+            Map<String, Object> response = new HashMap<>();
+            response.put("accommodation", accommodation);
+            response.put("rooms", rooms);
+            return ResponseEntity.ok(response);
         } catch (SQLException e) {
-            e.printStackTrace();
-            model.addAttribute("error", e.getMessage());
-            return "error";
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
         }
     }
 
     /**
-     * 객실 상세 정보를 조회합니다.
+     * 객실 상세 정보 조회
      */
-    @GetMapping("/room-detail/{roomId}")
-    public String getRoomDetail(
-            @PathVariable Long roomId,
-            Model model) {
+    @GetMapping("/room/{roomId}")
+    public ResponseEntity<?> getRoomDetail(@PathVariable Long roomId) {
         try {
             Room room = apiAccommodationService.getRoomById(roomId);
             if (room == null) {
-                model.addAttribute("error", "객실을 찾을 수 없습니다.");
-                return "error";
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(Map.of("error", "객실을 찾을 수 없습니다."));
             }
-            
             Accommodation accommodation = apiAccommodationService.getAccommodationById(room.getAccommodationId());
-            
-            model.addAttribute("room", room);
-            model.addAttribute("accommodation", accommodation);
-            return "accommodation/room-detail";
+            Map<String, Object> response = new HashMap<>();
+            response.put("room", room);
+            response.put("accommodation", accommodation);
+            return ResponseEntity.ok(response);
         } catch (SQLException e) {
-            e.printStackTrace();
-            model.addAttribute("error", e.getMessage());
-            return "error";
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
         }
     }
 
     /**
-     * 필터링된 숙소 목록을 조회합니다.
+     * 조건별 숙소 필터링
      */
     @GetMapping("/filter")
-    public String getFilteredAccommodations(
+    public ResponseEntity<?> getFilteredAccommodations(
             @RequestParam(required = false) Integer sidoCode,
             @RequestParam(required = false) Integer gugunCode,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String accommodationType,
             @RequestParam(required = false) Integer minPrice,
             @RequestParam(required = false) Integer maxPrice,
-            @RequestParam(required = false) String sortBy,
-            Model model) {
+            @RequestParam(required = false) String sortBy
+    ) {
         try {
             Map<String, Object> filters = new HashMap<>();
             if (sidoCode != null) filters.put("sidoCode", sidoCode);
@@ -152,16 +133,12 @@ public class ApiAccommodationController {
             if (minPrice != null) filters.put("minPrice", minPrice);
             if (maxPrice != null) filters.put("maxPrice", maxPrice);
             if (sortBy != null && !sortBy.isEmpty()) filters.put("sortBy", sortBy);
-            
+
             List<Accommodation> accommodations = apiAccommodationService.getFilteredAccommodations(filters);
-            
-            model.addAttribute("accommodations", accommodations);
-            model.addAttribute("filters", filters);
-            return "accommodation/list";
+            return ResponseEntity.ok(accommodations);
         } catch (SQLException e) {
-            e.printStackTrace();
-            model.addAttribute("error", e.getMessage());
-            return "error";
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
         }
     }
 }

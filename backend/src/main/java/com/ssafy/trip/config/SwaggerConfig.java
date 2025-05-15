@@ -15,8 +15,8 @@ public class SwaggerConfig {
     public OpenAPI customOpenAPI() {
         return new OpenAPI()
                 .info(new Info()
-                        .title("RoomTraveler API Documentation")
-                        .description("This documentation provides details about all the REST APIs available in the RoomTraveler application. Use this interface to test and interact with the APIs.")
+                        .title("방구석 여행자")
+                        .description("이 문서에서는 RoomTraveler 애플리케이션에서 사용할 수 있는 모든 REST API에 대한 세부 정보를 제공합니다. 이 인터페이스를 사용하여 API를 테스트하고 상호 작용할 수 있습니다.")
                         .version("1.0.0")
                 );
     }

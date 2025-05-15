@@ -4,19 +4,17 @@ import com.ssafy.trip.accommodation.model.Accommodation;
 import com.ssafy.trip.accommodation.model.Image;
 import com.ssafy.trip.accommodation.model.Room;
 import com.ssafy.trip.accommodation.service.AccommodationService;
-import com.ssafy.trip.host.Host;
 import com.ssafy.trip.host.HostService;
 import com.ssafy.trip.region.model.Sido;
 import com.ssafy.trip.region.model.Gugun;
-import com.ssafy.trip.tourapi.TourApiProperties;
 import com.ssafy.trip.user.User;
 import com.ssafy.trip.user.UserService;
 
-import java.math.BigDecimal;
+
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -26,7 +24,8 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URI;
-import java.sql.SQLException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -43,13 +42,27 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @RequestMapping("/admin")
 public class AdminController {
 
+    @Value("${tourapi.service-key}")
+    private String serviceKey;
+
+    @Value("${tourapi.base-url}")
+    private String baseUrl;
+
+    @Value("${tourapi.mobile-os}")
+    private String mobileOs;
+
+    @Value("${tourapi.mobile-app}")
+    private String mobileApp;
+
+
+
+
     private static final Logger logger = LoggerFactory.getLogger(AdminController.class);
 
     private final AccommodationService accommodationService;
     private final UserService userService;
     private final AdminService adminService;
     private final HostService hostService;
-    private final TourApiProperties tourApiProperties;
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
 
@@ -59,13 +72,12 @@ public class AdminController {
     public AdminController(AccommodationService accommodationService, 
                           UserService userService,
                           AdminService adminService,
-                          HostService hostService,
-                          TourApiProperties tourApiProperties) {
+                          HostService hostService
+                          ) {
         this.accommodationService = accommodationService;
         this.userService = userService;
         this.adminService = adminService;
         this.hostService = hostService;
-        this.tourApiProperties = tourApiProperties;
         this.restTemplate = new RestTemplate();
         this.objectMapper = new ObjectMapper();
     }
@@ -310,20 +322,20 @@ public class AdminController {
     public ResponseEntity<Map<String, Object>> importSidos() {
         try {
             // TourAPI에서 시도 데이터 가져오기
-            String serviceKey = tourApiProperties.getServiceKey();
-            String baseUrl = tourApiProperties.getBaseUrl();
 
             UriComponentsBuilder builder = UriComponentsBuilder
                     .fromHttpUrl(baseUrl + "/areaCode1")
                     .queryParam("serviceKey", serviceKey)
-                    .queryParam("MobileOS", tourApiProperties.getMobileOs())
-                    .queryParam("MobileApp", tourApiProperties.getMobileApp())
+                    .queryParam("MobileOS", mobileOs)
+                    .queryParam("MobileApp", mobileApp)
                     .queryParam("_type", "json")
                     .queryParam("numOfRows", 100)
                     .queryParam("pageNo", 1);
 
             URI uri = new URI(builder.build(false).toUriString());
             String response = restTemplate.getForObject(uri, String.class);
+            // 3) 로그에 찍기
+            logger.info("▶▶ TourAPI 시도 조회 URL: {}", uri );
 
             // JSON 파싱
             JsonNode root = objectMapper.readTree(response);
@@ -374,8 +386,7 @@ public class AdminController {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
             }
 
-            String serviceKey = tourApiProperties.getServiceKey();
-            String baseUrl = tourApiProperties.getBaseUrl();
+
             int totalCount = 0;
 
             // 각 시도별로 구군 데이터 가져오기
@@ -383,8 +394,8 @@ public class AdminController {
                 UriComponentsBuilder builder = UriComponentsBuilder
                         .fromHttpUrl(baseUrl + "/areaCode1")
                         .queryParam("serviceKey", serviceKey)
-                        .queryParam("MobileOS", tourApiProperties.getMobileOs())
-                        .queryParam("MobileApp", tourApiProperties.getMobileApp())
+                        .queryParam("MobileOS", mobileOs)
+                        .queryParam("MobileApp", mobileApp)
                         .queryParam("_type", "json")
                         .queryParam("numOfRows", 100)
                         .queryParam("pageNo", 1)
@@ -392,6 +403,7 @@ public class AdminController {
 
                 URI uri = new URI(builder.build(false).toUriString());
                 String response = restTemplate.getForObject(uri, String.class);
+
 
                 // JSON 파싱
                 JsonNode root = objectMapper.readTree(response);
@@ -450,8 +462,6 @@ public class AdminController {
                 logger.info("기존 숙소 데이터 삭제 완료");
             }
 
-            String serviceKey = tourApiProperties.getServiceKey();
-            String baseUrl = tourApiProperties.getBaseUrl();
             int importedCount = 0;
             int pageNo = 1;
             int totalPages = 1;
@@ -463,10 +473,10 @@ public class AdminController {
             // 모든 페이지 처리
             do {
                 UriComponentsBuilder builder = UriComponentsBuilder
-                        .fromHttpUrl(baseUrl + "/searchStay1")
+                        .fromHttpUrl(baseUrl + "/searchStay")
                         .queryParam("serviceKey", serviceKey)
-                        .queryParam("MobileOS", tourApiProperties.getMobileOs())
-                        .queryParam("MobileApp", tourApiProperties.getMobileApp())
+                        .queryParam("MobileOS", mobileOs)
+                        .queryParam("MobileApp", mobileApp)
                         .queryParam("_type", "json")
                         .queryParam("listYN", "Y")
                         .queryParam("arrange", "A")
@@ -481,11 +491,25 @@ public class AdminController {
                     builder.queryParam("sigunguCode", gugunCode);
                 }
 
-                URI uri = new URI(builder.build(false).toUriString());
-                String response = restTemplate.getForObject(uri, String.class);
+                String tourApiUrl = builder.build(false).toUriString();
+                logger.info("▶▶ TourAPI 호출 URL: {}", tourApiUrl);
 
-                // JSON 파싱
+                String response = restTemplate.getForObject(new URI(tourApiUrl), String.class);
+
+                // **JSON 파싱 전 검사**
+                if (response == null || response.trim().startsWith("<")) {
+                    logger.error("❌ TourAPI가 JSON이 아닌 응답을 반환했습니다. (HTML 또는 null)\n" +
+                                    "   → 응답 일부: {}",
+                            response != null
+                                    ? response.substring(0, Math.min(response.length(), 200))
+                                    : "null");
+                    // 적절히 처리: null 리턴, 예외 던지기, 사용자용 메시지 반환 등
+                    return null;
+                }
+
+                // 정상 JSON 파싱
                 JsonNode root = objectMapper.readTree(response);
+
                 JsonNode body = root.path("response").path("body");
 
                 // 총 페이지 수 계산
@@ -511,6 +535,7 @@ public class AdminController {
                         logger.info("처리 중인 contentId: " + contentId);
 
                         // 숙소 상세 정보 가져오기
+
                         Accommodation accommodation = fetchAccommodationDetail(contentId, session);
                         if (accommodation == null) {
                             logger.info("contentId: " + contentId + " - 숙소 상세 정보를 가져오지 못했습니다. 건너뜁니다.");
@@ -584,16 +609,15 @@ public class AdminController {
      * 숙소 상세 정보를 가져옵니다.
      */
     private Accommodation fetchAccommodationDetail(String contentId, HttpSession session) throws Exception {
-        String serviceKey = tourApiProperties.getServiceKey();
-        String baseUrl = tourApiProperties.getBaseUrl();
 
         UriComponentsBuilder builder = UriComponentsBuilder
-                .fromHttpUrl(baseUrl + "/detailCommon1")
+                .fromHttpUrl(baseUrl + "/detailCommon")
                 .queryParam("serviceKey", serviceKey)
-                .queryParam("MobileOS", tourApiProperties.getMobileOs())
-                .queryParam("MobileApp", tourApiProperties.getMobileApp())
+                .queryParam("MobileOS", mobileOs)
+                .queryParam("MobileApp", mobileApp)
                 .queryParam("_type", "json")
                 .queryParam("contentId", contentId)
+                .queryParam("contentTypeId", "32")
                 .queryParam("defaultYN", "Y")
                 .queryParam("firstImageYN", "Y")
                 .queryParam("areacodeYN", "Y")
@@ -606,6 +630,9 @@ public class AdminController {
         String response = restTemplate.getForObject(uri, String.class);
 
         // JSON 파싱
+        String tourApiUrl = builder.build(false).toUriString();
+        logger.info("TourAPI 최종 호출 URL: " + tourApiUrl);
+
         JsonNode root = objectMapper.readTree(response);
         JsonNode item = root.path("response").path("body").path("items").path("item");
 
@@ -622,6 +649,9 @@ public class AdminController {
         accommodation.setTitle(item.path("title").asText(""));
         accommodation.setDescription(item.path("overview").asText(""));
         accommodation.setAddress(item.path("addr1").asText("") + " " + item.path("addr2").asText(""));
+
+        // 숙소 유형을 기본값 "프리미엄"으로 설정
+        accommodation.setAccommodationType("프리미엄");
 
         // API에서 가져온 시도 코드
         int apiSidoCode = item.path("areacode").asInt(0);
@@ -753,14 +783,12 @@ public class AdminController {
      * @return 객실 목록
      */
     private List<Room> fetchRoomInfo(String contentId) throws Exception {
-        String serviceKey = tourApiProperties.getServiceKey();
-        String baseUrl = tourApiProperties.getBaseUrl();
 
         UriComponentsBuilder builder = UriComponentsBuilder
-                .fromHttpUrl(baseUrl + "/detailInfo1")
+                .fromHttpUrl(baseUrl + "/detailInfo")
                 .queryParam("serviceKey", serviceKey)
-                .queryParam("MobileOS", tourApiProperties.getMobileOs())
-                .queryParam("MobileApp", tourApiProperties.getMobileApp())
+                .queryParam("MobileOS", mobileOs)
+                .queryParam("MobileApp", mobileApp)
                 .queryParam("_type", "json")
                 .queryParam("contentId", contentId)
                 .queryParam("contentTypeId", "32");  // 숙박 타입 ID
@@ -857,14 +885,13 @@ public class AdminController {
      * @return 이미지 목록
      */
     private List<Image> fetchImageInfo(String contentId, List<Room> rooms) throws Exception {
-        String serviceKey = tourApiProperties.getServiceKey();
-        String baseUrl = tourApiProperties.getBaseUrl();
+
 
         UriComponentsBuilder builder = UriComponentsBuilder
-                .fromHttpUrl(baseUrl + "/detailImage1")
+                .fromHttpUrl(baseUrl + "/detailImage")
                 .queryParam("serviceKey", serviceKey)
-                .queryParam("MobileOS", tourApiProperties.getMobileOs())
-                .queryParam("MobileApp", tourApiProperties.getMobileApp())
+                .queryParam("MobileOS", mobileOs)
+                .queryParam("MobileApp", mobileApp)
                 .queryParam("_type", "json")
                 .queryParam("contentId", contentId)
                 .queryParam("imageYN", "Y")
@@ -930,293 +957,6 @@ public class AdminController {
         if (images.isEmpty()) {
             logger.info("contentId: " + contentId + " - 이미지가 없습니다.");
             // 빈 리스트 반환 - 이 숙소는 필터링됩니다
-        }
-
-        return images;
-    }
-
-    /**
-     * 샘플 객실 및 지역 코드 데이터를 생성합니다.
-     */
-    @PostMapping("/create-sample-data")
-    @ResponseBody
-    public ResponseEntity<Map<String, Object>> createSampleData(HttpSession session) {
-        try {
-            // 시도 데이터가 이미 존재하는지 확인
-            List<Sido> existingSidos = adminService.getAllSidos();
-            int sidoCount = 0;
-            int gugunCount = 0;
-
-            // 시도 데이터가 없는 경우에만 샘플 데이터 생성
-            if (existingSidos == null || existingSidos.isEmpty()) {
-                // 샘플 시도 데이터 생성
-                List<Sido> sampleSidos = createSampleSidos();
-                sidoCount = adminService.importSidos(sampleSidos);
-
-                // 샘플 구군 데이터 생성
-                for (Sido sido : sampleSidos) {
-                    List<Gugun> sampleGuguns = createSampleGuguns(sido.getCode());
-                    gugunCount += adminService.importGuguns(sido.getCode(), sampleGuguns);
-                }
-                logger.info("샘플 시도/구군 데이터를 생성했습니다: " + sidoCount + " 시도, " + gugunCount + " 구군");
-            } else {
-                logger.info("시도 데이터가 이미 존재합니다. 샘플 데이터를 생성하지 않습니다.");
-                sidoCount = existingSidos.size();
-
-                // 구군 데이터 개수 확인
-                for (Sido sido : existingSidos) {
-                    List<Gugun> guguns = adminService.getGugunsBySido(sido.getCode());
-                    gugunCount += guguns.size();
-                }
-            }
-
-            // 샘플 호스트 생성
-            Long hostId = createSampleHost();
-            if (hostId == null) {
-                // 세션에서 현재 로그인한 사용자의 ID를 가져와 호스트 ID로 사용
-                Long userId = (Long) session.getAttribute("userId");
-                if (userId != null) {
-                    logger.warn("샘플 호스트 생성에 실패했습니다. 현재 로그인한 사용자 ID " + userId + "를 사용합니다.");
-                    hostId = userId;
-                } else {
-                    logger.warn("샘플 호스트 생성에 실패했습니다. 기본값 1L을 사용합니다.");
-                    hostId = 1L;
-                }
-            }
-
-            // 샘플 숙소 및 객실 데이터 생성
-            int accommodationCount = 0;
-            for (int i = 0; i < 5; i++) {
-                Accommodation accommodation = createSampleAccommodation(i + 1, hostId);
-                List<Room> rooms = createSampleRooms(i + 1);
-                List<Image> images = createSampleImages(i + 1);
-
-                Long accommodationId = accommodationService.importFromApi(accommodation, rooms, images);
-                if (accommodationId != null) {
-                    accommodationCount++;
-                }
-            }
-
-            Map<String, Object> result = new HashMap<>();
-            result.put("success", true);
-            result.put("message", "샘플 데이터가 성공적으로 생성되었습니다. " + 
-                    sidoCount + "개의 시도, " + 
-                    gugunCount + "개의 구군, " + 
-                    accommodationCount + "개의 숙소 데이터가 생성되었습니다.");
-
-            return ResponseEntity.ok(result);
-        } catch (Exception e) {
-            logger.error("샘플 데이터 생성 중 오류 발생", e);
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", false);
-            response.put("message", "샘플 데이터 생성 중 오류가 발생했습니다: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
-        }
-    }
-
-    /**
-     * 샘플 시도 데이터를 생성합니다.
-     */
-    private List<Sido> createSampleSidos() {
-        List<Sido> sidos = new ArrayList<>();
-        sidos.add(new Sido(1, "서울"));
-        sidos.add(new Sido(2, "인천"));
-        sidos.add(new Sido(3, "대전"));
-        sidos.add(new Sido(4, "대구"));
-        sidos.add(new Sido(5, "광주"));
-        sidos.add(new Sido(6, "부산"));
-        sidos.add(new Sido(7, "울산"));
-        sidos.add(new Sido(8, "세종"));
-        sidos.add(new Sido(31, "경기도"));
-        sidos.add(new Sido(32, "강원도"));
-        return sidos;
-    }
-
-    /**
-     * 샘플 구군 데이터를 생성합니다.
-     */
-    private List<Gugun> createSampleGuguns(int sidoCode) {
-        List<Gugun> guguns = new ArrayList<>();
-
-        switch (sidoCode) {
-            case 1: // 서울
-                guguns.add(new Gugun(1, "강남구"));
-                guguns.add(new Gugun(2, "강동구"));
-                guguns.add(new Gugun(3, "강서구"));
-                guguns.add(new Gugun(4, "관악구"));
-                guguns.add(new Gugun(5, "마포구"));
-                break;
-            case 2: // 인천
-                guguns.add(new Gugun(1, "중구"));
-                guguns.add(new Gugun(2, "동구"));
-                guguns.add(new Gugun(3, "미추홀구"));
-                guguns.add(new Gugun(4, "연수구"));
-                guguns.add(new Gugun(5, "남동구"));
-                break;
-            case 31: // 경기도
-                guguns.add(new Gugun(1, "수원시"));
-                guguns.add(new Gugun(2, "성남시"));
-                guguns.add(new Gugun(3, "용인시"));
-                guguns.add(new Gugun(4, "부천시"));
-                guguns.add(new Gugun(5, "안산시"));
-                break;
-            default:
-                // 기본 구군 데이터
-                for (int i = 1; i <= 5; i++) {
-                    guguns.add(new Gugun(i, "샘플구" + i));
-                }
-        }
-
-        return guguns;
-    }
-
-    /**
-     * 샘플 호스트(및 샘플 사용자)를 생성하고, 생성된 hostId를 리턴합니다.
-     * - 임시 호스트를 생성하여 모든 작업에 사용합니다.
-     */
-    private Long createSampleHost() throws SQLException {
-        try {
-            // 고정된 임시 호스트 ID 사용 (999L)
-            Long tempHostId = 999L;
-
-            try {
-                // 이미 존재하는지 확인
-                Host existing = hostService.getHostById(tempHostId);
-                if (existing != null) {
-                    logger.info("기존 임시 호스트 ID " + tempHostId + " 를 사용합니다.");
-                    return existing.getHostId();
-                }
-            } catch (Exception e) {
-                logger.info("임시 호스트가 존재하지 않아 새로 생성합니다.");
-            }
-
-            try {
-                // 임시 사용자 생성 시도
-                User tempUser = new User();
-                tempUser.setUserId(tempHostId); // 명시적으로 ID 설정
-                tempUser.setUsername("temphost");
-                tempUser.setEmail("temp.host@example.com");
-                tempUser.setPassword("1234");
-                tempUser.setPhone("010-1234-5678");
-                tempUser.setRole("HOST");
-                tempUser.setStatus("ACTIVE");
-
-                // 사용자 테이블에 직접 삽입 시도
-                try {
-                    userService.registUser(tempUser);
-                    logger.info("임시 사용자 생성 성공, userId=" + tempHostId);
-                } catch (Exception ex) {
-                    logger.warn("임시 사용자 생성 중 예외 발생, 이미 존재할 수 있음: " + ex.getMessage());
-                }
-
-                // 호스트 레코드 생성
-                Host host = new Host();
-                host.setHostId(tempHostId);
-                host.setBusinessName("임시 호스트 비즈니스");
-                host.setBusinessRegNo("999-88-77777");
-                host.setBankAccount("임시은행 999-888-777777");
-                host.setProfileText("이것은 테스트를 위한 임시 호스트입니다.");
-                host.setHostStatus("APPROVED");
-
-                try {
-                    hostService.registHost(host);
-                    logger.info("임시 호스트 생성 성공, hostId=" + tempHostId);
-                } catch (Exception ex) {
-                    logger.warn("임시 호스트 생성 중 예외 발생, 이미 존재할 수 있음: " + ex.getMessage());
-                }
-
-                // 성공 여부와 관계없이 항상 임시 호스트 ID 반환
-                return tempHostId;
-
-            } catch (Exception e) {
-                logger.warn("임시 호스트/사용자 생성 중 예외 발생, 기본값 사용: " + e.getMessage());
-                // 예외가 발생해도 임시 호스트 ID 반환
-                return tempHostId;
-            }
-        } catch (Exception e) {
-            logger.error("createSampleHost 예외: " + e.getMessage(), e);
-            // 모든 예외 상황에서도 임시 호스트 ID 반환
-            return 999L;
-        }
-    }
-
-    /**
-     * 샘플 숙소 데이터를 생성합니다.
-     */
-    private Accommodation createSampleAccommodation(int index, Long hostId) {
-        Accommodation accommodation = new Accommodation();
-        accommodation.setTitle("샘플 숙소 " + index);
-        accommodation.setDescription("이것은 테스트를 위한 샘플 숙소입니다. 실제 숙소가 아닙니다.");
-        accommodation.setAddress("서울시 강남구 테헤란로 " + (100 + index * 10) + "번길 " + index);
-        accommodation.setSidoCode(1);  // 서울
-        accommodation.setGugunCode(1);  // 강남구
-        accommodation.setLongitude(126.9 + (index * 0.01));
-        accommodation.setLatitude(37.5 + (index * 0.01));
-        accommodation.setPhone("02-1234-" + (5678 + index));
-        accommodation.setEmail("sample" + index + "@example.com");
-        accommodation.setWebsite("https://example.com/hotel" + index);
-        accommodation.setCheckInTime(java.time.LocalTime.of(15, 0));
-        accommodation.setCheckOutTime(java.time.LocalTime.of(11, 0));
-        accommodation.setAmenities("WiFi, 주차장, 수영장, 헬스장, 레스토랑");
-        accommodation.setStatus("ACTIVE");
-        accommodation.setHostId(hostId);
-
-        return accommodation;
-    }
-
-    /**
-     * 샘플 객실 데이터를 생성합니다.
-     */
-    private List<Room> createSampleRooms(int accommodationIndex) {
-        List<Room> rooms = new ArrayList<>();
-
-        // 각 숙소마다 3개의 객실 생성
-        String[] roomTypes = {"스탠다드", "디럭스", "스위트"};
-        String[] bedTypes = {"싱글", "더블", "트윈"};
-
-        for (int i = 0; i < 3; i++) {
-            Room room = new Room();
-            room.setName(roomTypes[i] + " 룸");
-            room.setDescription(roomTypes[i] + " 타입의 객실입니다. 편안한 휴식을 제공합니다.");
-            room.setPrice(new BigDecimal(100000 + (i * 50000)));
-            room.setCapacity(i + 2);
-            room.setRoomCount(5);
-            room.setRoomSize(new BigDecimal(20 + (i * 10)));
-            room.setBedType(bedTypes[i]);
-            room.setAmenities("TV, 에어컨, 냉장고, 욕실용품, WiFi");
-            room.setStatus("AVAILABLE");
-            room.setRoomId((long)(accommodationIndex * 10 + i));
-
-            rooms.add(room);
-        }
-
-        return rooms;
-    }
-
-    /**
-     * 샘플 이미지 데이터를 생성합니다.
-     */
-    private List<Image> createSampleImages(int accommodationIndex) {
-        List<Image> images = new ArrayList<>();
-
-        // 숙소 대표 이미지
-        Image mainImage = new Image();
-        mainImage.setImageUrl("https://via.placeholder.com/800x600?text=Sample+Accommodation+" + accommodationIndex);
-        mainImage.setCaption("샘플 숙소 " + accommodationIndex + " 대표 이미지");
-        mainImage.setIsMain(true);
-        mainImage.setReferenceType("ACCOMMODATION");
-        mainImage.setReferenceId((long)accommodationIndex);
-        images.add(mainImage);
-
-        // 객실 이미지
-        for (int i = 0; i < 3; i++) {
-            Image roomImage = new Image();
-            roomImage.setImageUrl("https://via.placeholder.com/600x400?text=Sample+Room+" + (accommodationIndex * 10 + i));
-            roomImage.setCaption("샘플 객실 " + (i + 1) + " 이미지");
-            roomImage.setIsMain(false);
-            roomImage.setReferenceType("ROOM");
-            roomImage.setReferenceId((long)(accommodationIndex * 10 + i));
-            images.add(roomImage);
         }
 
         return images;

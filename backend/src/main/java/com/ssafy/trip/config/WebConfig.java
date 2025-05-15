@@ -25,8 +25,8 @@ public class WebConfig implements WebMvcConfigurer {
     public void addCorsMappings(CorsRegistry registry) {
         // 모든 API 엔드포인트에 대해 CORS 설정
         registry.addMapping("/api/**")
-                // 허용할 오리진(출처) 설정 - Vue.js 개발 서버의 기본 포트는 5173
-                .allowedOrigins("http://localhost:5173")
+                // 허용할 오리진(출처) 설정 - Vue.js 개발 서버의 기본 포트는 5173, 현재 프론트엔드는 3000 포트 사용
+                .allowedOrigins("http://localhost:5173", "http://localhost:3000")
                 // 허용할 HTTP 메서드 설정
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                 // 인증 정보(쿠키, 인증 헤더 등) 허용

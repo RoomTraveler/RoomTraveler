@@ -22,7 +22,7 @@ frontend/
 ├── .env              # 환경 변수
 ├── package.json      # 의존성 및 스크립트
 ├── package-lock.json # 의존성 잠금 파일
-└── vite.config.js    # Vite 설정
+└── vite.config.mjs    # Vite 설정
 ```
 
 ## 기술 스택
@@ -278,7 +278,14 @@ export default axios
 
 1. 의존성 설치:
 ```bash
+rmdir /s /q node_modules
+del package-lock.json
+npm install vite@5 @vitejs/plugin-vue@5 -D
+npm install tailwindcss@latest @tailwindcss/vite@latest -D
 npm install
+
+
+
 ```
 
 2. 개발 서버 실행:

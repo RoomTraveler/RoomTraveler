@@ -7,25 +7,8 @@
 -->
 <template>
   <div id="app">
-    <!-- 헤더 섹션: 네비게이션 메뉴를 포함합니다 -->
-    <header>
-      <nav>
-        <router-link to="/">홈</router-link> |
-        <router-link to="/accommodation">숙소</router-link> |
-        <router-link to="/user">사용자</router-link>
-      </nav>
-    </header>
-
-    <!-- 메인 콘텐츠 영역: 현재 라우트에 해당하는 컴포넌트가 표시됩니다 -->
-    <main>
-      <!-- 라우터 뷰 - 현재 경로에 맞는 컴포넌트가 렌더링됩니다 -->
-      <router-view />
-    </main>
-
-    <!-- 푸터 섹션: 저작권 정보를 표시합니다 -->
-    <footer>
-      <p>&copy; 2023 Room Traveler - 모든 권리 보유</p>
-    </footer>
+    <!-- 라우터 뷰 - 현재 경로에 맞는 컴포넌트가 렌더링됩니다 -->
+    <router-view />
   </div>
 </template>
 
@@ -42,48 +25,41 @@ export default {
 </script>
 
 <style>
-#app {
+:root {
+  --yanolja-red: #f0213b;
+  --yanolja-pink: #ff3478;
+  --yanolja-light-gray: #f5f5f5;
+  --yanolja-dark-gray: #666;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
   font-family: 'Noto Sans KR', Avenir, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
-  margin: 0;
-  padding: 0;
+  color: #333;
+  background-color: #f9f9f9;
+  line-height: 1.5;
+}
+
+#app {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
 }
 
-header {
-  background-color: #f8f9fa;
-  padding: 1rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
+/* Bootstrap Icons 추가 */
+@import url("https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css");
 
-nav {
-  padding: 1rem 0;
-}
-
-nav a {
-  font-weight: bold;
-  color: #2c3e50;
-  text-decoration: none;
-  margin: 0 0.5rem;
-}
-
-nav a.router-link-exact-active {
-  color: #42b983;
-}
-
-main {
-  flex: 1;
-  padding: 2rem;
-}
-
-footer {
-  background-color: #f8f9fa;
-  padding: 1rem;
-  border-top: 1px solid #e9ecef;
+/* 모바일 최적화 */
+@media (max-width: 768px) {
+  html {
+    font-size: 14px;
+  }
 }
 </style>
