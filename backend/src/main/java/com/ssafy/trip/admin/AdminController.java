@@ -330,7 +330,7 @@ public class AdminController {
             // TourAPI에서 시도 데이터 가져오기
 
             UriComponentsBuilder builder = UriComponentsBuilder
-                    .fromHttpUrl(baseUrl + "/areaCode1")
+                    .fromHttpUrl(baseUrl + "/areaCode2")
                     .queryParam("serviceKey", serviceKey)
                     .queryParam("MobileOS", mobileOs)
                     .queryParam("MobileApp", mobileApp)
@@ -398,7 +398,7 @@ public class AdminController {
             // 각 시도별로 구군 데이터 가져오기
             for (Sido sido : sidos) {
                 UriComponentsBuilder builder = UriComponentsBuilder
-                        .fromHttpUrl(baseUrl + "/areaCode1")
+                        .fromHttpUrl(baseUrl + "/areaCode2")
                         .queryParam("serviceKey", serviceKey)
                         .queryParam("MobileOS", mobileOs)
                         .queryParam("MobileApp", mobileApp)
@@ -643,6 +643,7 @@ public class AdminController {
                 .toUriString();
 
         logger.info("▶▶ detailCommon1 URL: {}", commonUrl);
+
         String commonResp = restTemplate.getForObject(URI.create(commonUrl), String.class);
         if (commonResp == null || commonResp.trim().startsWith("<")) {
             logger.error("detailCommon1 응답이 없거나 XML입니다.");
@@ -651,6 +652,8 @@ public class AdminController {
 
         JsonNode item = objectMapper.readTree(commonResp)
                 .path("response").path("body").path("items").path("item");
+
+
         if (item.isArray()) item = item.get(0);
         if (item.isMissingNode()) return null;
 
@@ -696,6 +699,7 @@ public class AdminController {
         if (introResp != null && !introResp.trim().startsWith("<")) {
             JsonNode intro = objectMapper.readTree(introResp)
                     .path("response").path("body").path("items").path("item");
+
             if (intro.isArray()) intro = intro.get(0);
             if (!intro.isMissingNode()) {
                 // 체크인/체크아웃
