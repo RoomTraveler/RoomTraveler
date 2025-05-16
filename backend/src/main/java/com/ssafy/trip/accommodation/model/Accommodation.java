@@ -36,6 +36,7 @@ public class Accommodation {
     private LocalDateTime createdAt;  // 생성 시간
     private LocalDateTime updatedAt;  // 수정 시간
 
+
     // 추가 필드 - 조인 시 사용
     private String sidoName;          // 시도 이름
     private String gugunName;         // 구군 이름

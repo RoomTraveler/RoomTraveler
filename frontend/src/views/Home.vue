@@ -7,12 +7,10 @@
 
     <!-- 숙소 카테고리 섹션 -->
     <section class="section">
-      <div class="section-title">
-        숙소 유형
-      </div>
+      <div class="section-title">숙소 유형</div>
       <div class="category-grid">
         <!-- 모텔 카테고리 -->
-        <router-link to="/accommodation/motel" class="category-item">
+        <router-link :to="{ name: 'AccommodationList', query: { category: 'MOTEL' } }" class="category-item">
           <div class="category-image-container">
             <img src="/img/accommodationMotel.png" alt="모텔" class="category-image" />
           </div>
@@ -20,7 +18,7 @@
         </router-link>
 
         <!-- 호텔/리조트 카테고리 -->
-        <router-link to="/accommodation/hotel" class="category-item">
+        <router-link :to="{ name: 'AccommodationList', query: { category: 'HOTEL' } }" class="category-item">
           <div class="category-image-container">
             <img src="/img/accommodationHotel.png" alt="호텔/리조트" class="category-image" />
           </div>
@@ -28,7 +26,7 @@
         </router-link>
 
         <!-- 펜션/풀빌라 카테고리 -->
-        <router-link to="/accommodation/pension" class="category-item">
+        <router-link :to="{ name: 'AccommodationList', query: { category: 'PENSION' } }" class="category-item">
           <div class="category-image-container">
             <img src="/img/accommodationPension.png" alt="펜션/풀빌라" class="category-image" />
           </div>
@@ -36,7 +34,7 @@
         </router-link>
 
         <!-- 프리미엄 카테고리 -->
-        <router-link to="/accommodation/premium" class="category-item">
+        <router-link :to="{ name: 'AccommodationList', query: { category: 'PREMIUM' } }" class="category-item">
           <div class="category-image-container">
             <img src="/img/accommodationPremium.png" alt="프리미엄" class="category-image" />
           </div>
@@ -44,7 +42,7 @@
         </router-link>
 
         <!-- 글램핑/캠핑 카테고리 -->
-        <router-link to="/accommodation/camping" class="category-item">
+        <router-link :to="{ name: 'AccommodationList', query: { category: 'CAMPING' } }" class="category-item">
           <div class="category-image-container">
             <img src="/img/accommodationCamping.png" alt="글램핑/캠핑" class="category-image" />
           </div>
@@ -80,13 +78,13 @@
       </div>
     </section>
 
-
-
     <!-- 지역별 인기 숙소 섹션 -->
     <section class="section">
       <div class="section-title">
         지역별 인기 숙소
-        <router-link to="/accommodation/popular-by-region" class="view-all">전체보기 <i class="bi bi-chevron-right"></i></router-link>
+        <router-link :to="{ name: 'AccommodationList', query: { sort: 'POPULAR' } }" class="view-all"
+          >전체보기 <i class="bi bi-chevron-right"></i
+        ></router-link>
       </div>
 
       <!-- 지역 탭 -->
@@ -106,9 +104,7 @@
             <img src="https://via.placeholder.com/200x150?text=Hotel+1" alt="호텔 이미지" />
           </div>
           <div class="hotel-info">
-            <div class="hotel-rating">
-              <i class="bi bi-star-fill"></i> 4.9 <span class="rating-count">(412)</span>
-            </div>
+            <div class="hotel-rating"><i class="bi bi-star-fill"></i> 4.9 <span class="rating-count">(412)</span></div>
             <div class="hotel-price">220,000원</div>
           </div>
         </div>
@@ -119,9 +115,7 @@
             <img src="https://via.placeholder.com/200x150?text=Hotel+2" alt="호텔 이미지" />
           </div>
           <div class="hotel-info">
-            <div class="hotel-rating">
-              <i class="bi bi-star-fill"></i> 4.8 <span class="rating-count">(356)</span>
-            </div>
+            <div class="hotel-rating"><i class="bi bi-star-fill"></i> 4.8 <span class="rating-count">(356)</span></div>
             <div class="hotel-price">180,000원</div>
           </div>
         </div>
@@ -132,9 +126,7 @@
             <img src="https://via.placeholder.com/200x150?text=Hotel+3" alt="호텔 이미지" />
           </div>
           <div class="hotel-info">
-            <div class="hotel-rating">
-              <i class="bi bi-star-fill"></i> 4.7 <span class="rating-count">(289)</span>
-            </div>
+            <div class="hotel-rating"><i class="bi bi-star-fill"></i> 4.7 <span class="rating-count">(289)</span></div>
             <div class="hotel-price">170,000원</div>
           </div>
         </div>
@@ -145,9 +137,7 @@
             <img src="https://via.placeholder.com/200x150?text=Hotel+4" alt="호텔 이미지" />
           </div>
           <div class="hotel-info">
-            <div class="hotel-rating">
-              <i class="bi bi-star-fill"></i> 4.9 <span class="rating-count">(198)</span>
-            </div>
+            <div class="hotel-rating"><i class="bi bi-star-fill"></i> 4.9 <span class="rating-count">(198)</span></div>
             <div class="hotel-price">250,000원</div>
           </div>
         </div>
@@ -158,9 +148,7 @@
             <img src="https://via.placeholder.com/200x150?text=Hotel+5" alt="호텔 이미지" />
           </div>
           <div class="hotel-info">
-            <div class="hotel-rating">
-              <i class="bi bi-star-fill"></i> 4.6 <span class="rating-count">(245)</span>
-            </div>
+            <div class="hotel-rating"><i class="bi bi-star-fill"></i> 4.6 <span class="rating-count">(245)</span></div>
             <div class="hotel-price">195,000원</div>
           </div>
         </div>
@@ -171,7 +159,9 @@
     <section class="section">
       <div class="section-title">
         인기 여행지
-        <router-link to="/tourapi/popular" class="view-all">전체보기 <i class="bi bi-chevron-right"></i></router-link>
+        <router-link :to="{ name: 'AccommodationList', query: { sort: 'POPULAR' } }" class="view-all"
+          >전체보기 <i class="bi bi-chevron-right"></i
+        ></router-link>
       </div>
       <div class="destination-grid">
         <div class="destination-card">
@@ -199,9 +189,7 @@
 
     <!-- 사용자 계정 섹션 (로그인 시에만 표시) -->
     <section v-if="isLoggedIn" class="section">
-      <div class="section-title">
-        내 계정
-      </div>
+      <div class="section-title">내 계정</div>
       <div class="user-menu-grid">
         <router-link to="/user/profile" class="user-menu-item">
           <i class="bi bi-person-circle"></i>
@@ -233,13 +221,13 @@
 </template>
 
 <script>
-import Layout from '@/components/layout/Layout.vue';
-import { useUserStore } from '@/store/userStore';
+import Layout from "@/components/layout/Layout.vue";
+import { useUserStore } from "@/store/userStore";
 
 export default {
-  name: 'HomeView',
+  name: "HomeView",
   components: {
-    Layout
+    Layout,
   },
   setup() {
     const userStore = useUserStore();
@@ -256,12 +244,12 @@ export default {
       return this.userStore.user?.id;
     },
     isAdmin() {
-      return this.userStore.userRole === 'ADMIN';
+      return this.userStore.userRole === "ADMIN";
     },
     isHost() {
-      return this.userStore.userRole === 'HOST';
-    }
-  }
+      return this.userStore.userRole === "HOST";
+    },
+  },
 };
 </script>
 
@@ -384,7 +372,7 @@ export default {
 .event-card {
   border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   transition: transform 0.3s ease;
   cursor: pointer;
 }
@@ -459,7 +447,7 @@ export default {
   width: 200px;
   border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   transition: transform 0.3s ease;
   background-color: white;
 }
@@ -516,7 +504,7 @@ export default {
   position: relative;
   border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   transition: transform 0.3s ease;
   cursor: pointer;
 }
@@ -558,7 +546,7 @@ export default {
   background-color: white;
   border-radius: 8px;
   padding: 20px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
   text-decoration: none;
   color: #333;
@@ -566,7 +554,7 @@ export default {
 
 .user-menu-item:hover {
   transform: translateY(-5px);
-  box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
   color: var(--yanolja-red);
 }
 
@@ -625,7 +613,7 @@ export default {
 }
 
 body {
-  font-family: 'Noto Sans KR', sans-serif;
+  font-family: "Noto Sans KR", sans-serif;
   color: #333;
   background-color: #f9f9f9;
 }
@@ -633,10 +621,12 @@ body {
 .card {
   border-radius: 10px;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   margin-bottom: 20px;
   background-color: white;
-  transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+  transition:
+    transform 0.3s ease-in-out,
+    box-shadow 0.3s ease-in-out;
 }
 
 .card:hover {

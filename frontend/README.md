@@ -283,7 +283,8 @@ del package-lock.json
 npm install vite@5 @vitejs/plugin-vue@5 -D
 npm install tailwindcss@latest @tailwindcss/vite@latest -D
 npm install
-
+npm install @vuepic/vue-datepicker
+npm install @vuepic/vue-datepicker date-fns
 
 
 ```

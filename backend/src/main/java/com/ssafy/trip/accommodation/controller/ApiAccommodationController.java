@@ -2,8 +2,11 @@ package com.ssafy.trip.accommodation.controller;
 
 import com.ssafy.trip.accommodation.model.Accommodation;
 import com.ssafy.trip.accommodation.model.Room;
-import com.ssafy.trip.accommodation.service.AccommodationServiceImpl;
+import com.ssafy.trip.accommodation.service.AccommodationService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,10 +24,11 @@ import java.util.Map;
 @RequestMapping("/api/accommodations") // 리소스 명 복수형
 public class ApiAccommodationController {
 
-    private final AccommodationServiceImpl apiAccommodationService;
+    private final AccommodationService apiAccommodationService;
 
     /**
-     * 전체 숙소 목록 조회
+     * 전체 숙소 목록 조회 - 페이징 추가 고려 (필요시)
+     * 현재는 페이징 없이 전체 목록 반환
      */
     @GetMapping
     public ResponseEntity<?> listAccommodations() {
@@ -33,12 +37,13 @@ public class ApiAccommodationController {
             return ResponseEntity.ok(accommodations);
         } catch (SQLException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", e.getMessage()));
+                    .body(Map.of("error", "숙소 목록 조회 중 오류 발생: " + e.getMessage()));
         }
     }
 
     /**
-     * 지역별 숙소 목록 조회
+     * 지역별 숙소 목록 조회 - 페이징 추가 고려 (필요시)
+     * 현재는 페이징 없이 전체 목록 반환
      */
     @GetMapping("/region")
     public ResponseEntity<?> getAccommodationsByRegion(
@@ -49,12 +54,13 @@ public class ApiAccommodationController {
             return ResponseEntity.ok(accommodations);
         } catch (SQLException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", e.getMessage()));
+                    .body(Map.of("error", "지역별 숙소 목록 조회 중 오류 발생: " + e.getMessage()));
         }
     }
 
     /**
-     * 키워드로 숙소 검색
+     * 키워드로 숙소 검색 - 페이징 추가 고려 (필요시)
+     * 현재는 페이징 없이 전체 목록 반환
      */
     @GetMapping("/search")
     public ResponseEntity<?> searchAccommodations(@RequestParam String keyword) {
@@ -63,7 +69,7 @@ public class ApiAccommodationController {
             return ResponseEntity.ok(accommodations);
         } catch (SQLException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", e.getMessage()));
+                    .body(Map.of("error", "숙소 검색 중 오류 발생: " + e.getMessage()));
         }
     }
 
@@ -76,7 +82,7 @@ public class ApiAccommodationController {
             Accommodation accommodation = apiAccommodationService.getAccommodationById(accommodationId);
             if (accommodation == null) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(Map.of("error", "숙소를 찾을 수 없습니다."));
+                        .body(Map.of("error", "숙소를 찾을 수 없습니다. ID: " + accommodationId));
             }
             List<Room> rooms = apiAccommodationService.getRoomsByAccommodationId(accommodationId);
             Map<String, Object> response = new HashMap<>();
@@ -85,7 +91,7 @@ public class ApiAccommodationController {
             return ResponseEntity.ok(response);
         } catch (SQLException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", e.getMessage()));
+                    .body(Map.of("error", "숙소 상세 정보 조회 중 오류 발생: " + e.getMessage()));
         }
     }
 
@@ -98,7 +104,7 @@ public class ApiAccommodationController {
             Room room = apiAccommodationService.getRoomById(roomId);
             if (room == null) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(Map.of("error", "객실을 찾을 수 없습니다."));
+                        .body(Map.of("error", "객실을 찾을 수 없습니다. ID: " + roomId));
             }
             Accommodation accommodation = apiAccommodationService.getAccommodationById(room.getAccommodationId());
             Map<String, Object> response = new HashMap<>();
@@ -107,12 +113,12 @@ public class ApiAccommodationController {
             return ResponseEntity.ok(response);
         } catch (SQLException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", e.getMessage()));
+                    .body(Map.of("error", "객실 상세 정보 조회 중 오류 발생: " + e.getMessage()));
         }
     }
 
     /**
-     * 조건별 숙소 필터링
+     * 조건별 숙소 필터링 (페이징 적용)
      */
     @GetMapping("/filter")
     public ResponseEntity<?> getFilteredAccommodations(
@@ -120,25 +126,32 @@ public class ApiAccommodationController {
             @RequestParam(required = false) Integer gugunCode,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String accommodationType,
-            @RequestParam(required = false) Integer minPrice,
-            @RequestParam(required = false) Integer maxPrice,
-            @RequestParam(required = false) String sortBy
-    ) {
+            @RequestParam(required = false) Integer guestCount,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size) {
         try {
             Map<String, Object> filters = new HashMap<>();
             if (sidoCode != null) filters.put("sidoCode", sidoCode);
             if (gugunCode != null) filters.put("gugunCode", gugunCode);
-            if (keyword != null && !keyword.isEmpty()) filters.put("keyword", keyword);
-            if (accommodationType != null && !accommodationType.isEmpty()) filters.put("accommodationType", accommodationType);
-            if (minPrice != null) filters.put("minPrice", minPrice);
-            if (maxPrice != null) filters.put("maxPrice", maxPrice);
-            if (sortBy != null && !sortBy.isEmpty()) filters.put("sortBy", sortBy);
+            if (keyword != null && !keyword.trim().isEmpty()) filters.put("keyword", keyword.trim());
+            if (accommodationType != null && !accommodationType.trim().isEmpty() && !accommodationType.equalsIgnoreCase("ALL")) {
+                filters.put("accommodationType", accommodationType.trim());
+            }
+            if (guestCount != null && guestCount > 0) filters.put("guestCount", guestCount);
+            if (sortBy != null && !sortBy.trim().isEmpty()) filters.put("sortBy", sortBy.trim());
 
-            List<Accommodation> accommodations = apiAccommodationService.getFilteredAccommodations(filters);
-            return ResponseEntity.ok(accommodations);
+            PageRequest pageable = PageRequest.of(page - 1, size);
+
+            Map<String, Object> pagedResult = apiAccommodationService.getFilteredAccommodations(filters, pageable);
+
+            return ResponseEntity.ok(pagedResult);
         } catch (SQLException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", e.getMessage()));
+                    .body(Map.of("error", "필터링된 숙소 목록 조회 중 오류 발생: " + e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "예상치 못한 오류 발생: " + e.getMessage()));
         }
     }
 }

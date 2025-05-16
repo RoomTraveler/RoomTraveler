@@ -9,6 +9,7 @@ import com.ssafy.trip.accommodation.model.Image;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.Pageable;
 
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -17,12 +18,14 @@ import java.util.List;
 import java.util.Map;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * 숙소 서비스 구현 클래스
  */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AccommodationServiceImpl implements AccommodationService {
 
     private final AccommodationDao accommodationDao;
@@ -36,18 +39,18 @@ public class AccommodationServiceImpl implements AccommodationService {
     @Transactional
     public Long registerAccommodation(Accommodation accommodation, List<Image> images) throws SQLException {
         // 숙소 등록
-        Long accommodationId = accommodationDao.insert(accommodation);
+        accommodationDao.insert(accommodation);
+        Long accommodationId = accommodation.getAccommodationId();
 
         // 이미지 등록
         if (images != null && !images.isEmpty()) {
             for (Image image : images) {
                 image.setReferenceId(accommodationId);
                 image.setReferenceType("ACCOMMODATION");
-                image.setAccommodationId(accommodationId); // Explicitly set accommodation_id
+                image.setAccommodationId(accommodationId);
                 imageDao.insert(image);
             }
         }
-
         return accommodationId;
     }
 
@@ -58,19 +61,19 @@ public class AccommodationServiceImpl implements AccommodationService {
     @Transactional
     public Long registerRoom(Room room, List<Image> images) throws SQLException {
         // 객실 등록
-        Long roomId = roomDao.insert(room);
+        roomDao.insert(room);
+        Long roomId = room.getRoomId();
 
         // 이미지 등록
         if (images != null && !images.isEmpty()) {
             for (Image image : images) {
                 image.setReferenceId(roomId);
                 image.setReferenceType("ROOM");
-                image.setRoomId(roomId); // Explicitly set room_id
-                image.setAccommodationId(room.getAccommodationId()); // Explicitly set accommodation_id
+                image.setRoomId(roomId);
+                image.setAccommodationId(room.getAccommodationId());
                 imageDao.insert(image);
             }
         }
-
         return roomId;
     }
 
@@ -81,35 +84,7 @@ public class AccommodationServiceImpl implements AccommodationService {
     public Accommodation getAccommodationById(Long accommodationId) throws SQLException {
         Accommodation accommodation = accommodationDao.getAccommodationById(accommodationId);
         if (accommodation != null) {
-            // 대표 이미지 URL 설정
-            List<Image> images = imageDao.getImagesByReference(accommodationId, "ACCOMMODATION");
-            if (!images.isEmpty()) {
-                // 대표 이미지 찾기
-                Image mainImage = null;
-                for (Image image : images) {
-                    if (image.getIsMain() != null && image.getIsMain()) {
-                        mainImage = image;
-                        break;
-                    }
-                }
-
-                // 대표 이미지가 없으면 첫 번째 이미지 사용
-                if (mainImage == null && !images.isEmpty()) {
-                    mainImage = images.get(0);
-                }
-
-                if (mainImage != null) {
-                    String imageUrl = mainImage.getImageUrl();
-                    // 이미지 URL이 비어있거나 유효하지 않은 경우 플레이스홀더 이미지 사용
-                    if (imageUrl == null || imageUrl.isEmpty()) {
-                        imageUrl = "https://via.placeholder.com/800x600?text=No+Image+Available";
-                    } else if (!imageUrl.startsWith("http")) {
-                        // URL이 http로 시작하지 않으면 http://를 추가
-                        imageUrl = "http://" + imageUrl;
-                    }
-                    accommodation.setMainImageUrl(imageUrl);
-                }
-            }
+            setMainImageUrlForSingleAccommodation(accommodation);
         }
         return accommodation;
     }
@@ -121,47 +96,7 @@ public class AccommodationServiceImpl implements AccommodationService {
     public Room getRoomById(Long roomId) throws SQLException {
         Room room = roomDao.getRoomById(roomId);
         if (room != null) {
-            // 객실 이미지 URL 목록 조회
-            List<Image> images = imageDao.getImagesByReference(roomId, "ROOM");
-            List<String> imageUrls = new ArrayList<>();
-            Image mainImage = null;
-
-            // 대표 이미지 찾기
-            for (Image image : images) {
-                String imageUrl = image.getImageUrl();
-                // 이미지 URL이 비어있거나 유효하지 않은 경우 플레이스홀더 이미지 사용
-                if (imageUrl == null || imageUrl.isEmpty()) {
-                    imageUrl = "https://via.placeholder.com/800x600?text=No+Image+Available";
-                } else if (!imageUrl.startsWith("http")) {
-                    // URL이 http로 시작하지 않으면 http://를 추가
-                    imageUrl = "http://" + imageUrl;
-                }
-                imageUrls.add(imageUrl);
-
-                // 대표 이미지로 설정된 이미지 찾기
-                if (image.getIsMain() != null && image.getIsMain()) {
-                    mainImage = image;
-                }
-            }
-
-            // 대표 이미지 설정
-            if (mainImage == null && !images.isEmpty()) {
-                mainImage = images.get(0);
-            }
-
-            if (mainImage != null) {
-                String imageUrl = mainImage.getImageUrl();
-                // 이미지 URL이 비어있거나 유효하지 않은 경우 플레이스홀더 이미지 사용
-                if (imageUrl == null || imageUrl.isEmpty()) {
-                    imageUrl = "https://via.placeholder.com/800x600?text=No+Image+Available";
-                } else if (!imageUrl.startsWith("http")) {
-                    // URL이 http로 시작하지 않으면 http://를 추가
-                    imageUrl = "http://" + imageUrl;
-                }
-                room.setMainImageUrl(imageUrl);
-            }
-
-            room.setImageUrls(imageUrls);
+            setImagesForSingleRoom(room);
         }
         return room;
     }
@@ -182,51 +117,9 @@ public class AccommodationServiceImpl implements AccommodationService {
     @Override
     public List<Room> getRoomsByAccommodationId(Long accommodationId) throws SQLException {
         List<Room> rooms = roomDao.getRoomsByAccommodationId(accommodationId);
-
-        // 각 객실의 이미지 URL 목록 조회
         for (Room room : rooms) {
-            List<Image> images = imageDao.getImagesByReference(room.getRoomId(), "ROOM");
-            List<String> imageUrls = new ArrayList<>();
-            Image mainImage = null;
-
-            // 대표 이미지 찾기
-            for (Image image : images) {
-                String imageUrl = image.getImageUrl();
-                // 이미지 URL이 비어있거나 유효하지 않은 경우 플레이스홀더 이미지 사용
-                if (imageUrl == null || imageUrl.isEmpty()) {
-                    imageUrl = "https://via.placeholder.com/800x600?text=No+Image+Available";
-                } else if (!imageUrl.startsWith("http")) {
-                    // URL이 http로 시작하지 않으면 http://를 추가
-                    imageUrl = "http://" + imageUrl;
-                }
-                imageUrls.add(imageUrl);
-
-                // 대표 이미지로 설정된 이미지 찾기
-                if (image.getIsMain() != null && image.getIsMain()) {
-                    mainImage = image;
-                }
-            }
-
-            // 대표 이미지 설정
-            if (mainImage == null && !images.isEmpty()) {
-                mainImage = images.get(0);
-            }
-
-            if (mainImage != null) {
-                String imageUrl = mainImage.getImageUrl();
-                // 이미지 URL이 비어있거나 유효하지 않은 경우 플레이스홀더 이미지 사용
-                if (imageUrl == null || imageUrl.isEmpty()) {
-                    imageUrl = "https://via.placeholder.com/800x600?text=No+Image+Available";
-                } else if (!imageUrl.startsWith("http")) {
-                    // URL이 http로 시작하지 않으면 http://를 추가
-                    imageUrl = "http://" + imageUrl;
-                }
-                room.setMainImageUrl(imageUrl);
-            }
-
-            room.setImageUrls(imageUrls);
+            setImagesForSingleRoom(room);
         }
-
         return rooms;
     }
 
@@ -249,40 +142,61 @@ public class AccommodationServiceImpl implements AccommodationService {
         setMainImageUrlForAccommodations(accommodations);
         return accommodations;
     }
+    
+    private void setMainImageUrlForSingleAccommodation(Accommodation accommodation) throws SQLException {
+        if (accommodation == null) return;
+        List<Image> images = imageDao.getImagesByReference(accommodation.getAccommodationId(), "ACCOMMODATION");
+        if (!images.isEmpty()) {
+            Image mainImage = images.stream().filter(img -> img.getIsMain() != null && img.getIsMain()).findFirst().orElse(images.get(0));
+            String imageUrl = mainImage.getImageUrl();
+            if (imageUrl == null || imageUrl.isEmpty()) {
+                imageUrl = "https://via.placeholder.com/800x600?text=No+Image+Available";
+            } else if (!imageUrl.startsWith("http://") && !imageUrl.startsWith("https://")) {
+                imageUrl = "http://" + imageUrl;
+            }
+            accommodation.setMainImageUrl(imageUrl);
+        }
+    }
+
+    private void setImagesForSingleRoom(Room room) throws SQLException {
+        if (room == null) return;
+        List<Image> images = imageDao.getImagesByReference(room.getRoomId(), "ROOM");
+        List<String> imageUrls = new ArrayList<>();
+        Image mainImageFromDb = null;
+
+        for (Image image : images) {
+            String imageUrl = image.getImageUrl();
+            if (imageUrl == null || imageUrl.isEmpty()) {
+                imageUrl = "https://via.placeholder.com/800x600?text=No+Image+Available";
+            } else if (!imageUrl.startsWith("http://") && !imageUrl.startsWith("https://")) {
+                imageUrl = "http://" + imageUrl;
+            }
+            imageUrls.add(imageUrl);
+            if (image.getIsMain() != null && image.getIsMain()) {
+                mainImageFromDb = image;
+            }
+        }
+        room.setImageUrls(imageUrls);
+
+        if (mainImageFromDb != null) {
+            String mainUrl = mainImageFromDb.getImageUrl();
+             if (mainUrl == null || mainUrl.isEmpty()) {
+                mainUrl = "https://via.placeholder.com/800x600?text=No+Image+Available";
+            } else if (!mainUrl.startsWith("http://") && !mainUrl.startsWith("https://")) {
+                mainUrl = "http://" + mainUrl;
+            }
+            room.setMainImageUrl(mainUrl);
+        } else if (!imageUrls.isEmpty()) {
+            room.setMainImageUrl(imageUrls.get(0));
+        }
+    }
 
     /**
      * 숙소 목록에 대표 이미지 URL을 설정합니다.
      */
     private void setMainImageUrlForAccommodations(List<Accommodation> accommodations) throws SQLException {
         for (Accommodation accommodation : accommodations) {
-            List<Image> images = imageDao.getImagesByReference(accommodation.getAccommodationId(), "ACCOMMODATION");
-            if (!images.isEmpty()) {
-                // 대표 이미지 찾기
-                Image mainImage = null;
-                for (Image image : images) {
-                    if (image.getIsMain() != null && image.getIsMain()) {
-                        mainImage = image;
-                        break;
-                    }
-                }
-
-                // 대표 이미지가 없으면 첫 번째 이미지 사용
-                if (mainImage == null && !images.isEmpty()) {
-                    mainImage = images.get(0);
-                }
-
-                if (mainImage != null) {
-                    String imageUrl = mainImage.getImageUrl();
-                    // 이미지 URL이 비어있거나 유효하지 않은 경우 플레이스홀더 이미지 사용
-                    if (imageUrl == null || imageUrl.isEmpty()) {
-                        imageUrl = "https://via.placeholder.com/800x600?text=No+Image+Available";
-                    } else if (!imageUrl.startsWith("http")) {
-                        // URL이 http로 시작하지 않으면 http://를 추가
-                        imageUrl = "http://" + imageUrl;
-                    }
-                    accommodation.setMainImageUrl(imageUrl);
-                }
-            }
+            setMainImageUrlForSingleAccommodation(accommodation);
         }
     }
 
@@ -293,21 +207,15 @@ public class AccommodationServiceImpl implements AccommodationService {
     @Transactional
     public int updateAccommodation(Accommodation accommodation, List<Image> images) throws SQLException {
         int result = accommodationDao.updateAccommodation(accommodation);
-
-        // 이미지 업데이트
         if (images != null) {
-            // 기존 이미지 삭제
             imageDao.deleteImagesByReference(accommodation.getAccommodationId(), "ACCOMMODATION");
-
-            // 새 이미지 등록
             for (Image image : images) {
                 image.setReferenceId(accommodation.getAccommodationId());
                 image.setReferenceType("ACCOMMODATION");
-                image.setAccommodationId(accommodation.getAccommodationId()); // Explicitly set accommodation_id
+                image.setAccommodationId(accommodation.getAccommodationId());
                 imageDao.insert(image);
             }
         }
-
         return result;
     }
 
@@ -318,22 +226,16 @@ public class AccommodationServiceImpl implements AccommodationService {
     @Transactional
     public int updateRoom(Room room, List<Image> images) throws SQLException {
         int result = roomDao.updateRoom(room);
-
-        // 이미지 업데이트
         if (images != null) {
-            // 기존 이미지 삭제
             imageDao.deleteImagesByReference(room.getRoomId(), "ROOM");
-
-            // 새 이미지 등록
             for (Image image : images) {
                 image.setReferenceId(room.getRoomId());
                 image.setReferenceType("ROOM");
-                image.setRoomId(room.getRoomId()); // Explicitly set room_id
-                image.setAccommodationId(room.getAccommodationId()); // Explicitly set accommodation_id
+                image.setRoomId(room.getRoomId());
+                image.setAccommodationId(room.getAccommodationId());
                 imageDao.insert(image);
             }
         }
-
         return result;
     }
 
@@ -359,19 +261,12 @@ public class AccommodationServiceImpl implements AccommodationService {
     @Override
     @Transactional
     public int deleteAccommodation(Long accommodationId) throws SQLException {
-        // 숙소에 속한 객실 목록 조회
         List<Room> rooms = roomDao.getRoomsByAccommodationId(accommodationId);
-
-        // 각 객실 및 객실 이미지 삭제
         for (Room room : rooms) {
             imageDao.deleteImagesByReference(room.getRoomId(), "ROOM");
             roomDao.deleteRoom(room.getRoomId());
         }
-
-        // 숙소 이미지 삭제
         imageDao.deleteImagesByReference(accommodationId, "ACCOMMODATION");
-
-        // 숙소 삭제
         return accommodationDao.deleteAccommodation(accommodationId);
     }
 
@@ -382,10 +277,7 @@ public class AccommodationServiceImpl implements AccommodationService {
     @Override
     @Transactional
     public int deleteRoom(Long roomId) throws SQLException {
-        // 객실 이미지 삭제
         imageDao.deleteImagesByReference(roomId, "ROOM");
-
-        // 객실 삭제
         return roomDao.deleteRoom(roomId);
     }
 
@@ -400,14 +292,32 @@ public class AccommodationServiceImpl implements AccommodationService {
     }
 
     /**
-     * 필터링된 숙소 목록을 조회합니다.
+     * 필터링된 숙소 목록을 조회합니다. (페이징 적용)
      */
     @Override
-    public List<Accommodation> getFilteredAccommodations(Map<String, Object> filters) throws SQLException {
-        List<Accommodation> accommodations = accommodationDao.getFilteredAccommodations(filters);
+    public Map<String, Object> getFilteredAccommodations(Map<String, Object> filters, Pageable pageable) throws SQLException {
+        Map<String, Object> params = new HashMap<>(filters);
+        params.put("offset", pageable.getOffset());
+        params.put("limit", pageable.getPageSize());
+
+        log.debug("Service - getFilteredAccommodations - params for DAO: {}", params);
+
+        List<Accommodation> accommodations = accommodationDao.getFilteredAccommodations(params);
         setMainImageUrlForAccommodations(accommodations);
-        return accommodations;
+
+        long totalItems = accommodationDao.countFilteredAccommodations(filters);
+        log.debug("Service - getFilteredAccommodations - totalItems: {}", totalItems);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("content", accommodations);
+        response.put("currentPage", pageable.getPageNumber() + 1);
+        response.put("totalItems", totalItems);
+        response.put("totalPages", (int) Math.ceil((double) totalItems / pageable.getPageSize()));
+        
+        log.debug("Service - getFilteredAccommodations - response: {}", response);
+        return response;
     }
+
 
     /**
      * 필터링된 객실 목록을 조회합니다.
@@ -415,25 +325,9 @@ public class AccommodationServiceImpl implements AccommodationService {
     @Override
     public List<Room> getFilteredRooms(Map<String, Object> filters) throws SQLException {
         List<Room> rooms = roomDao.getFilteredRooms(filters);
-
-        // 각 객실의 이미지 URL 목록 조회
         for (Room room : rooms) {
-            List<Image> images = imageDao.getImagesByReference(room.getRoomId(), "ROOM");
-            List<String> imageUrls = new ArrayList<>();
-            for (Image image : images) {
-                String imageUrl = image.getImageUrl();
-                // 이미지 URL이 비어있거나 유효하지 않은 경우 플레이스홀더 이미지 사용
-                if (imageUrl == null || imageUrl.isEmpty()) {
-                    imageUrl = "https://via.placeholder.com/800x600?text=No+Image+Available";
-                } else if (!imageUrl.startsWith("http")) {
-                    // URL이 http로 시작하지 않으면 http://를 추가
-                    imageUrl = "http://" + imageUrl;
-                }
-                imageUrls.add(imageUrl);
-            }
-            room.setImageUrls(imageUrls);
+            setImagesForSingleRoom(room);
         }
-
         return rooms;
     }
 
@@ -443,64 +337,52 @@ public class AccommodationServiceImpl implements AccommodationService {
     @Override
     @Transactional
     public Long importFromApi(Accommodation accommodation, List<Room> rooms, List<Image> images) throws SQLException {
-        // 1) 숙소 insert: 반환값 없이 accommodation에 ID가 채워집니다.
         accommodationDao.insertFromApi(accommodation);
-        // 2) 진짜 생성된 ID를 여기서 꺼내서 사용
         Long accommodationId = accommodation.getAccommodationId();
-        System.out.println("[DEBUG_LOG] Generated accommodation ID: " + accommodationId);
-        System.out.println("[DEBUG_LOG] Accommodation object after insert: " + accommodation);
+        log.debug("[DEBUG_LOG] Generated accommodation ID: {}", accommodationId);
+        log.debug("[DEBUG_LOG] Accommodation object after insert: {}", accommodation);
 
-        // 숙소 이미지 등록
         List<Image> accommodationImages = new ArrayList<>();
         for (Image image : images) {
             if ("ACCOMMODATION".equals(image.getReferenceType())) {
                 image.setReferenceId(accommodationId);
-                image.setAccommodationId(accommodationId); // Set accommodation_id for proper foreign key relationship
+                image.setAccommodationId(accommodationId);
                 accommodationImages.add(image);
-                System.out.println("[DEBUG_LOG] Inserting accommodation image with accommodation_id: " + image.getAccommodationId());
+                log.debug("[DEBUG_LOG] Inserting accommodation image with accommodation_id: {}", image.getAccommodationId());
                 imageDao.insertFromApi(image);
             }
         }
 
-        // 객실 및 객실 이미지 등록
         Map<Long, Long> oldToNewRoomIds = new HashMap<>();
         for (Room room : rooms) {
-            // 원래 ID 저장
             Long oldRoomId = room.getRoomId();
-
-            // 숙소 ID 설정
             room.setAccommodationId(accommodationId);
-            System.out.println("[DEBUG_LOG] Setting accommodation_id on room: " + room.getAccommodationId());
+            log.debug("[DEBUG_LOG] Setting accommodation_id on room: {}", room.getAccommodationId());
 
-            // 객실 등록 및 새 ID 받기
             roomDao.insertFromApi(room);
             Long newRoomId = room.getRoomId();
-            System.out.println("[DEBUG_LOG] Generated room ID: " + newRoomId);
-            System.out.println("[DEBUG_LOG] Room object after insert: " + room);
-
-            // ID 매핑 저장
+            log.debug("[DEBUG_LOG] Generated room ID: {}", newRoomId);
+            log.debug("[DEBUG_LOG] Room object after insert: {}", room);
             oldToNewRoomIds.put(oldRoomId, newRoomId);
         }
 
-        // 객실 이미지 등록 (별도 루프로 분리)
         for (Image image : images) {
             if ("ROOM".equals(image.getReferenceType())) {
                 Long oldRoomId = image.getReferenceId();
                 Long newRoomId = oldToNewRoomIds.get(oldRoomId);
-                System.out.println("[DEBUG_LOG] Room image - oldRoomId: " + oldRoomId + ", newRoomId: " + newRoomId);
+                log.debug("[DEBUG_LOG] Room image - oldRoomId: {}, newRoomId: {}", oldRoomId, newRoomId);
 
                 if (newRoomId != null) {
                     image.setReferenceId(newRoomId);
-                    image.setRoomId(newRoomId); // Set room_id for proper foreign key relationship
-                    image.setAccommodationId(accommodationId); // Set accommodation_id for proper foreign key relationship
-                    System.out.println("[DEBUG_LOG] Inserting room image with accommodation_id: " + image.getAccommodationId() + ", room_id: " + image.getRoomId());
+                    image.setRoomId(newRoomId);
+                    image.setAccommodationId(accommodationId);
+                    log.debug("[DEBUG_LOG] Inserting room image with accommodation_id: {}, room_id: {}", image.getAccommodationId(), image.getRoomId());
                     imageDao.insertFromApi(image);
                 } else {
-                    System.out.println("[DEBUG_LOG] WARNING: newRoomId is null for oldRoomId: " + oldRoomId);
+                    log.warn("[DEBUG_LOG] WARNING: newRoomId is null for oldRoomId: {}", oldRoomId);
                 }
             }
         }
-
         return accommodationId;
     }
 
@@ -510,39 +392,7 @@ public class AccommodationServiceImpl implements AccommodationService {
     @Override
     public List<Accommodation> getSimilarAccommodations(Long accommodationId, int limit) throws SQLException {
         List<Accommodation> similarAccommodations = accommodationDao.getSimilarAccommodations(accommodationId, limit);
-
-        // 각 숙소의 대표 이미지 URL 설정
-        for (Accommodation accommodation : similarAccommodations) {
-            List<Image> images = imageDao.getImagesByReference(accommodation.getAccommodationId(), "ACCOMMODATION");
-            if (!images.isEmpty()) {
-                // 대표 이미지 찾기
-                Image mainImage = null;
-                for (Image image : images) {
-                    if (image.getIsMain() != null && image.getIsMain()) {
-                        mainImage = image;
-                        break;
-                    }
-                }
-
-                // 대표 이미지가 없으면 첫 번째 이미지 사용
-                if (mainImage == null && !images.isEmpty()) {
-                    mainImage = images.get(0);
-                }
-
-                if (mainImage != null) {
-                    String imageUrl = mainImage.getImageUrl();
-                    // 이미지 URL이 비어있거나 유효하지 않은 경우 플레이스홀더 이미지 사용
-                    if (imageUrl == null || imageUrl.isEmpty()) {
-                        imageUrl = "https://via.placeholder.com/800x600?text=No+Image+Available";
-                    } else if (!imageUrl.startsWith("http")) {
-                        // URL이 http로 시작하지 않으면 http://를 추가
-                        imageUrl = "http://" + imageUrl;
-                    }
-                    accommodation.setMainImageUrl(imageUrl);
-                }
-            }
-        }
-
+        setMainImageUrlForAccommodations(similarAccommodations);
         return similarAccommodations;
     }
 
@@ -553,8 +403,6 @@ public class AccommodationServiceImpl implements AccommodationService {
     @Override
     @Transactional
     public int deleteAllAccommodations() throws SQLException {
-        // 외래 키 제약 조건으로 인해 accommodations 테이블의 레코드를 삭제하면
-        // 관련된 모든 rooms와 images도 자동으로 삭제됩니다 (ON DELETE CASCADE).
         return accommodationDao.deleteAllAccommodations();
     }
 }

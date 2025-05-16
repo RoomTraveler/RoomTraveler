@@ -87,6 +87,13 @@ public interface AccommodationDao {
     List<Accommodation> getFilteredAccommodations(Map<String, Object> filters) throws SQLException;
 
     /**
+     * 필터링된 숙소의 전체 개수를 조회합니다.
+     * @param filters 필터 조건 (getFilteredAccommodations와 동일)
+     * @return 필터링된 숙소의 전체 개수
+     */
+    long countFilteredAccommodations(Map<String, Object> filters) throws SQLException;
+
+    /**
      * 외부 API에서 가져온 숙소 정보를 저장합니다.
      * @param accommodation 저장할 숙소 정보
      * @return 생성된 숙소의 ID

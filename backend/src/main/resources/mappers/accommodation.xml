@@ -27,6 +27,7 @@
         <result property="createdAt" column="created_at" />
         <result property="updatedAt" column="updated_at" />
         <result property="hostName" column="host_name" />
+        <result property="mainImageUrl" column="main_image_url" />
     </resultMap>
 
     <!-- 새 숙소를 등록합니다. -->
@@ -125,12 +126,17 @@
 
 
     <!-- 필터링된 숙소 목록을 조회합니다. -->
-    <select id="getFilteredAccommodations" resultMap="accommodationResultMap">
-        SELECT a.*, u.username as host_name
+    <select id="getFilteredAccommodations" resultMap="accommodationResultMap" parameterType="map">
+        SELECT
+        a.*,
+        u.username AS host_name
         FROM accommodations a
         LEFT JOIN users u ON a.host_id = u.user_id
+
         <where>
             a.accommodation_id IS NOT NULL
+
+            <!-- 시/도, 구/군, 상태 필터 -->
             <if test="sidoCode != null">
                 AND a.sido_code = #{sidoCode}
             </if>
@@ -140,8 +146,53 @@
             <if test="status != null">
                 AND a.status = #{status}
             </if>
+
+            <!-- 숙소 타입(호텔/모텔/펜션/프리미엄 등) 필터 -->
+            <if test="accommodationType != null and accommodationType != ''">
+                AND a.accommodation_type = #{accommodationType}
+            </if>
+
+            <!-- 가격 필터 -->
+            <if test="minPrice != null or maxPrice != null">
+                AND EXISTS (
+                SELECT 1 FROM rooms r
+                WHERE r.accommodation_id = a.accommodation_id
+                <if test="minPrice != null and maxPrice != null">
+                    AND r.price BETWEEN #{minPrice} AND #{maxPrice}
+                </if>
+                <if test="minPrice != null and maxPrice == null">
+                    AND r.price &gt;= #{minPrice}
+                </if>
+                <if test="minPrice == null and maxPrice != null">
+                    AND r.price &lt;= #{maxPrice}
+                </if>
+                )
+            </if>
+
+            <!-- 수용 인원 필터 -->
+            <if test="guestCount != null">
+                AND EXISTS (
+                SELECT 1
+                FROM rooms r
+                WHERE r.accommodation_id = a.accommodation_id
+                AND r.capacity &gt;= #{guestCount}
+                )
+            </if>
         </where>
+
+        <!-- 정렬 처리 -->
+        <if test="sortBy != null and sortBy != ''">
+            ORDER BY
+            <choose>
+                <when test="sortBy == 'priceAsc'">a.min_price ASC</when>
+                <when test="sortBy == 'priceDesc'">a.min_price DESC</when>
+                <when test="sortBy == 'name'">a.name ASC</when>
+                <otherwise>a.created_at DESC</otherwise>
+            </choose>
+        </if>
     </select>
+
+
 
     <!-- 외부 API에서 가져온 숙소 정보를 저장합니다. -->
     <insert id="insertFromApi" parameterType="com.ssafy.trip.accommodation.model.Accommodation" useGeneratedKeys="true" keyProperty="accommodationId">

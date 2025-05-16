@@ -9,17 +9,30 @@
         <form @submit.prevent="submitForm">
           <div class="mb-3">
             <label for="title" class="form-label required-field">숙소 이름</label>
-            <input type="text" class="form-control" id="title" v-model="accommodation.title" required>
+            <input type="text" class="form-control" id="title" v-model="accommodation.title" required />
           </div>
 
           <div class="mb-3">
             <label for="description" class="form-label required-field">숙소 설명</label>
-            <textarea class="form-control" id="description" v-model="accommodation.description" rows="5" required></textarea>
+            <textarea
+              class="form-control"
+              id="description"
+              v-model="accommodation.description"
+              rows="5"
+              required
+            ></textarea>
           </div>
 
           <div class="mb-3">
             <label for="address" class="form-label required-field">주소</label>
-            <input type="text" class="form-control" id="address" v-model="accommodation.address" required @blur="searchAddress">
+            <input
+              type="text"
+              class="form-control"
+              id="address"
+              v-model="accommodation.address"
+              required
+              @blur="searchAddress"
+            />
           </div>
 
           <div class="row mb-3">
@@ -34,7 +47,9 @@
               <label for="gugunCode" class="form-label required-field">구/군</label>
               <select class="form-select" id="gugunCode" v-model="accommodation.gugunCode" required>
                 <option value="">구/군 선택</option>
-                <option v-for="gugun in guguns" :key="gugun.gugunCode" :value="gugun.gugunCode">{{ gugun.gugunName }}</option>
+                <option v-for="gugun in guguns" :key="gugun.gugunCode" :value="gugun.gugunCode">
+                  {{ gugun.gugunName }}
+                </option>
               </select>
             </div>
           </div>
@@ -42,19 +57,19 @@
           <div class="row mb-3">
             <div class="col-md-6">
               <label for="latitude" class="form-label">위도</label>
-              <input type="text" class="form-control" id="latitude" v-model="accommodation.latitude">
+              <input type="text" class="form-control" id="latitude" v-model="accommodation.latitude" />
               <div class="form-text">지도에서 위치를 선택하면 자동으로 입력됩니다.</div>
             </div>
             <div class="col-md-6">
               <label for="longitude" class="form-label">경도</label>
-              <input type="text" class="form-control" id="longitude" v-model="accommodation.longitude">
+              <input type="text" class="form-control" id="longitude" v-model="accommodation.longitude" />
               <div class="form-text">지도에서 위치를 선택하면 자동으로 입력됩니다.</div>
             </div>
           </div>
 
           <div class="mb-3">
             <label for="map" class="form-label">지도에서 위치 선택</label>
-            <div id="map" style="width:100%;height:400px;"></div>
+            <div id="map" style="width: 100%; height: 400px"></div>
           </div>
 
           <div class="mb-3">
@@ -75,45 +90,70 @@
 
           <div class="mb-3">
             <label for="phone" class="form-label">전화번호</label>
-            <input type="tel" class="form-control" id="phone" v-model="accommodation.phone" 
-                   placeholder="예: 02-1234-5678 또는 010-1234-5678">
+            <input
+              type="tel"
+              class="form-control"
+              id="phone"
+              v-model="accommodation.phone"
+              placeholder="예: 02-1234-5678 또는 010-1234-5678"
+            />
           </div>
 
           <div class="mb-3">
             <label for="email" class="form-label">이메일</label>
-            <input type="email" class="form-control" id="email" v-model="accommodation.email">
+            <input type="email" class="form-control" id="email" v-model="accommodation.email" />
           </div>
 
           <div class="mb-3">
             <label for="website" class="form-label">웹사이트</label>
-            <input type="url" class="form-control" id="website" v-model="accommodation.website" 
-                   placeholder="예: https://www.example.com">
+            <input
+              type="url"
+              class="form-control"
+              id="website"
+              v-model="accommodation.website"
+              placeholder="예: https://www.example.com"
+            />
           </div>
 
           <div class="row mb-3">
             <div class="col-md-6">
               <label for="checkInTime" class="form-label">체크인 시간</label>
-              <input type="time" class="form-control" id="checkInTime" v-model="accommodation.checkInTime">
+              <input type="time" class="form-control" id="checkInTime" v-model="accommodation.checkInTime" />
             </div>
             <div class="col-md-6">
               <label for="checkOutTime" class="form-label">체크아웃 시간</label>
-              <input type="time" class="form-control" id="checkOutTime" v-model="accommodation.checkOutTime">
+              <input type="time" class="form-control" id="checkOutTime" v-model="accommodation.checkOutTime" />
             </div>
           </div>
 
           <div class="mb-3">
             <label for="amenities" class="form-label">편의시설</label>
-            <textarea class="form-control" id="amenities" v-model="accommodation.amenities" rows="3" 
-                      placeholder="예: 와이파이, 주차장, 수영장, 조식 등"></textarea>
+            <textarea
+              class="form-control"
+              id="amenities"
+              v-model="accommodation.amenities"
+              rows="3"
+              placeholder="예: 와이파이, 주차장, 수영장, 조식 등"
+            ></textarea>
           </div>
 
           <div class="mb-3">
             <label for="imageFiles" class="form-label required-field">숙소 이미지</label>
-            <input type="file" class="form-control" id="imageFiles" @change="handleImageUpload" multiple accept="image/*" required>
-            <div class="form-text">최소 1개 이상의 이미지를 등록해주세요. 첫 번째 이미지가 대표 이미지로 설정됩니다.</div>
+            <input
+              type="file"
+              class="form-control"
+              id="imageFiles"
+              @change="handleImageUpload"
+              multiple
+              accept="image/*"
+              required
+            />
+            <div class="form-text">
+              최소 1개 이상의 이미지를 등록해주세요. 첫 번째 이미지가 대표 이미지로 설정됩니다.
+            </div>
             <div id="imagePreviewContainer" class="d-flex flex-wrap mt-2">
               <div v-for="(preview, index) in imagePreviews" :key="index" class="image-preview me-2 mb-2">
-                <img :src="preview" alt="이미지 미리보기">
+                <img :src="preview" alt="이미지 미리보기" />
               </div>
             </div>
           </div>
@@ -140,83 +180,84 @@
 <script>
 /**
  * 숙소 등록 폼 컴포넌트
- * 
+ *
  * 이 컴포넌트는 호스트가 새로운 숙소를 등록하기 위한 폼을 제공합니다.
  * 숙소 정보 입력, 위치 선택(카카오맵 API 사용), 이미지 업로드 기능을 포함합니다.
  */
-import { mapState, mapActions } from 'vuex';
-import Layout from '@/components/layout/Layout.vue';
+import { mapState, mapActions } from "vuex";
+import Layout from "@/components/layout/Layout.vue";
 
 export default {
-  name: 'RegisterForm',
+  name: "RegisterForm",
   components: {
-    Layout
+    Layout,
   },
   data() {
     return {
       accommodation: {
-        title: '',
-        description: '',
-        address: '',
-        sidoCode: '',
-        gugunCode: '',
-        latitude: '',
-        longitude: '',
-        accommodationType: '',
-        phone: '',
-        email: '',
-        website: '',
-        checkInTime: '',
-        checkOutTime: '',
-        amenities: ''
+        title: "",
+        description: "",
+        address: "",
+        sidoCode: "",
+        gugunCode: "",
+        latitude: "",
+        longitude: "",
+        accommodationType: "",
+        phone: "",
+        email: "",
+        website: "",
+        checkInTime: "",
+        checkOutTime: "",
+        amenities: "",
       },
       sidos: [],
       guguns: [],
       imageFiles: [],
       imagePreviews: [],
-      error: '',
+      error: "",
       map: null,
-      marker: null
+      marker: null,
+      isSubmitting: false,
     };
   },
   computed: {
     ...mapState({
-      isLoggedIn: state => state.user.isLoggedIn,
-      isHost: state => state.user.user?.role === 'HOST'
-    })
+      isLoggedIn: (state) => state.user.isLoggedIn,
+      isHost: (state) => state.user.user?.role === "HOST",
+    }),
   },
   mounted() {
     // 로그인 및 호스트 권한 확인
     if (!this.isLoggedIn) {
-      this.$router.push('/user/login');
+      this.$router.push("/user/login");
       return;
     }
 
     if (!this.isHost) {
-      this.$router.push('/');
-      this.error = '호스트 권한이 필요합니다.';
+      this.$router.push("/");
+      this.error = "호스트 권한이 필요합니다.";
       return;
     }
 
-    // 시도 목록 로드
-    this.loadSidos();
+    // 기능 비활성화 안내
+    this.error = "현재 숙소 등록 기능은 지원되지 않습니다. 관리자에게 문의해주세요.";
 
-    // 카카오맵 초기화
+    this.loadSidos();
     this.initializeMap();
   },
   methods: {
-    ...mapActions('accommodation', ['registerAccommodation']),
+    ...mapActions("accommodation", ["registerAccommodation"]),
 
     /**
      * 시도 목록 로드
      */
     async loadSidos() {
       try {
-        const response = await fetch('/api/region/sidos');
+        const response = await fetch("/api/region/sidos");
         this.sidos = await response.json();
       } catch (error) {
-        console.error('시도 목록을 불러오는 중 오류가 발생했습니다:', error);
-        this.error = '시도 목록을 불러올 수 없습니다. 다시 시도해주세요.';
+        console.error("시도 목록을 불러오는 중 오류가 발생했습니다:", error);
+        this.error = "시도 목록을 불러올 수 없습니다. 다시 시도해주세요.";
       }
     },
 
@@ -226,7 +267,7 @@ export default {
     async loadGuguns() {
       if (!this.accommodation.sidoCode) {
         this.guguns = [];
-        this.accommodation.gugunCode = '';
+        this.accommodation.gugunCode = "";
         return;
       }
 
@@ -234,8 +275,8 @@ export default {
         const response = await fetch(`/api/region/guguns?sido=${this.accommodation.sidoCode}`);
         this.guguns = await response.json();
       } catch (error) {
-        console.error('구군 목록을 불러오는 중 오류가 발생했습니다:', error);
-        this.error = '구군 목록을 불러올 수 없습니다. 다시 시도해주세요.';
+        console.error("구군 목록을 불러오는 중 오류가 발생했습니다:", error);
+        this.error = "구군 목록을 불러올 수 없습니다. 다시 시도해주세요.";
       }
     },
 
@@ -246,7 +287,7 @@ export default {
       if (window.kakao && window.kakao.maps) {
         this.loadMap();
       } else {
-        const script = document.createElement('script');
+        const script = document.createElement("script");
         script.src = `//dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.VUE_APP_KAKAO_MAP_API_KEY}&libraries=services&autoload=false`;
         script.onload = () => {
           window.kakao.maps.load(() => {
@@ -261,23 +302,23 @@ export default {
      * 카카오맵 로드
      */
     loadMap() {
-      const mapContainer = document.getElementById('map');
+      const mapContainer = document.getElementById("map");
       const mapOption = {
         center: new window.kakao.maps.LatLng(37.566826, 126.9786567), // 서울 시청
-        level: 3
+        level: 3,
       };
 
       this.map = new window.kakao.maps.Map(mapContainer, mapOption);
 
       // 지도 클릭 이벤트
-      window.kakao.maps.event.addListener(this.map, 'click', (mouseEvent) => {
+      window.kakao.maps.event.addListener(this.map, "click", (mouseEvent) => {
         const latlng = mouseEvent.latLng;
 
         // 마커 생성 또는 이동
         if (!this.marker) {
           this.marker = new window.kakao.maps.Marker({
             position: latlng,
-            map: this.map
+            map: this.map,
           });
         } else {
           this.marker.setPosition(latlng);
@@ -305,7 +346,7 @@ export default {
           if (!this.marker) {
             this.marker = new window.kakao.maps.Marker({
               position: coords,
-              map: this.map
+              map: this.map,
             });
           } else {
             this.marker.setPosition(coords);
@@ -328,7 +369,7 @@ export default {
       this.imageFiles = Array.from(event.target.files);
       this.imagePreviews = [];
 
-      this.imageFiles.forEach(file => {
+      this.imageFiles.forEach((file) => {
         const reader = new FileReader();
         reader.onload = (e) => {
           this.imagePreviews.push(e.target.result);
@@ -341,6 +382,12 @@ export default {
      * 폼 제출 처리
      */
     async submitForm() {
+      this.error = "현재 숙소 등록 기능은 지원되지 않습니다. 관리자에게 문의해주세요.";
+      this.isSubmitting = false; // 실제 제출 안함
+      return; // 기능 중단
+
+      /* 기존 로직 주석 처리
+      this.isSubmitting = true;
       try {
         // 필수 필드 검증
         if (!this.accommodation.title || !this.accommodation.description || !this.accommodation.address ||
@@ -377,8 +424,10 @@ export default {
         console.error('숙소 등록 중 오류가 발생했습니다:', error);
         this.error = '숙소 등록에 실패했습니다. 다시 시도해주세요.';
       }
-    }
-  }
+      this.isSubmitting = false;
+      */
+    },
+  },
 };
 </script>
 
@@ -389,7 +438,7 @@ export default {
   padding: 20px;
   background-color: #f8f9fa;
   border-radius: 10px;
-  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
 }
 
 .required-field::after {
