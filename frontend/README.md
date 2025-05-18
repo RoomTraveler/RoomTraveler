@@ -286,6 +286,7 @@ npm install
 npm install @vuepic/vue-datepicker
 npm install @vuepic/vue-datepicker date-fns
 npm install element-plus
+npm install vuedraggable@next
 
 ```
 

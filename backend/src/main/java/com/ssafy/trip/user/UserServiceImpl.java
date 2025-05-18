@@ -2,11 +2,12 @@ package com.ssafy.trip.user;
 
 import java.sql.SQLException;
 import java.util.List;
-
-import org.springframework.context.annotation.Primary;
-import org.springframework.stereotype.Service;
-
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Primary;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
 
 /**
  * 사용자 서비스 구현 클래스
@@ -14,16 +15,19 @@ import lombok.RequiredArgsConstructor;
 @Service
 @Primary
 @RequiredArgsConstructor
+@Slf4j
 public class UserServiceImpl implements UserService {
 
     private final UserDao dao;
+    private final PasswordEncoder passwordEncoder;
 
     /**
      * 새 사용자를 등록합니다.
      */
     @Override
     public int registUser(User user) throws SQLException {
-    	return dao.insert(user);
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
+        return dao.insert(user);
     }
 
     /**
@@ -31,7 +35,14 @@ public class UserServiceImpl implements UserService {
      */
     @Override
     public User login(String email, String password) throws SQLException {
-    	return dao.login(email, password);
+        User loginUser = dao.login(email);
+        if (loginUser != null) {
+            log.info("loginUser {}", loginUser);
+            if (passwordEncoder.matches(password, loginUser.getPassword())) {
+                return loginUser;
+            }
+        }
+        return null;
     }
 
     /**
@@ -39,7 +50,7 @@ public class UserServiceImpl implements UserService {
      */
     @Override
     public List<User> getUserList() throws SQLException {
-    	return dao.getUsers();
+        return dao.getUsers();
     }
 
     /**
@@ -47,7 +58,10 @@ public class UserServiceImpl implements UserService {
      */
     @Override
     public int updateUser(String email, String username, String password) throws SQLException {
-    	return dao.updateUser(email, username, password);
+        password = (password != null && !password.isBlank())
+                ? passwordEncoder.encode(password)
+                : null;
+        return dao.updateUser(email, username, password);
     }
 
     /**
@@ -71,7 +85,7 @@ public class UserServiceImpl implements UserService {
      */
     @Override
     public int deleteUser(String email) throws SQLException {
-    	return dao.deleteUser(email);
+        return dao.deleteUser(email);
     }
 
     /**
@@ -79,14 +93,14 @@ public class UserServiceImpl implements UserService {
      */
     @Override
     public String findPassword(String username, String email) throws SQLException {
-    	return dao.findPassword(username, email);
+        return dao.findPassword(username, email);
     }
 
     /**
      * 이메일로 사용자를 조회합니다.
      */
     @Override
-    public User getUserByEmail(String email) throws SQLException {
+    public Optional<User> getUserByEmail(String email) throws SQLException {
         return dao.getUserByEmail(email);
     }
 }

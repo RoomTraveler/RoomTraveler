@@ -2,6 +2,7 @@ package com.ssafy.trip;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
  * 방구석 여행자 백엔드 애플리케이션의 메인 클래스
@@ -10,6 +11,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * 모든 Spring 컴포넌트를 초기화하고 애플리케이션을 실행합니다.
  */
 @SpringBootApplication
+@EnableScheduling
 public class TripApplication {
 
 	/**

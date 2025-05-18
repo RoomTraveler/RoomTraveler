@@ -1,10 +1,16 @@
 import { createRouter, createWebHistory } from "vue-router";
+import accommodation from '@/router/accommodation.js'
+import plan from '@/router/plan.js'
 
 // 홈 페이지 컴포넌트 - 지연 로딩 적용
 const Home = () => import("../views/Home.vue");
 const Accommodation = () => import("../views/accommodation/AccommodationList.vue");
 const AccommodationDetail = () => import("../views/accommodation/AccommodationDetail.vue");
 const Plan = () => import("../views/plan/Plan.vue");
+const PlanAlone = () => import('../views/plan/PlanAlone.vue');
+const PlanDetail = () => import('../views/plan/PlanDetail.vue')
+const PlanPublic = () => import('../views/plan/PlanPublic.vue')
+const Attraction = () => import('../views/attraction/Attraction.vue')
 const User = () => import("../views/user/UserProfile.vue");
 const Login = () => import("../views/user/Login.vue");
 const Register = () => import("../views/user/Register.vue");
@@ -61,6 +67,19 @@ const routes = [
     component: Plan,
     meta: { title: "여행 계획 - Room Traveler" },
   },
+  { path: '/plan/alone', component: PlanAlone },
+  // { path: '/plan/together', component: PlanTogetherPage },
+  {
+    path: '/attractions/:id',
+    name: 'AttractionDetail',
+    component: Attraction,
+  },
+  {
+    path: '/plans/:planId',
+    name: 'planDetail',
+    component: PlanDetail,
+  },
+  { path: '/plans/public/:token', component: PlanPublic },
   {
     path: "/accommodation/room/:roomId",
     name: "RoomDetail",

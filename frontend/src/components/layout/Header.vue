@@ -33,7 +33,8 @@
           <!-- 검색 영역 -->
           <div class="search-area">
             <div class="search-input-wrapper">
-              <input type="text" placeholder="지역, 숙소명" class="search-input" />
+              <input v-if="selected !== '숙박'" type="text" placeholder="관광지" class="search-input"/>
+              <input v-else type="text" placeholder="지역, 숙소명" class="search-input" />
               <button class="search-button">
                 <i class="bi bi-search"></i>
               </button>
@@ -155,6 +156,12 @@ export default {
       this.loadNotificationCount()
       // 30초마다 알림 카운트 갱신
       this.notificationInterval = setInterval(this.loadNotificationCount, 30000)
+    }
+
+    if (this.$route.path.includes('/accommodation')) {
+      this.selected = '숙박';
+    } else if (this.$route.path.includes('/plan')) {
+      this.selected = '여행';
     }
   },
   beforeUnmount() {

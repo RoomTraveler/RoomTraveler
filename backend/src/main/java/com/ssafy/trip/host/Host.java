@@ -16,8 +16,10 @@ public class Host {
     private Long hostId;             // 호스트 ID (users.user_id와 1:1 매핑)
     private String businessName;     // 업체명
     private String businessRegNo;    // 사업자 등록번호
+    private String bankName;         // 은행명
     private String bankAccount;      // 정산 계좌 정보
     private String profileText;      // 호스트 소개글
+    private String bankOwner;        // 은행주
     private String hostStatus;       // 심사 상태 (PENDING, APPROVED, REJECTED)
     private String createdAt;        // 생성 시간
     private String updatedAt;        // 수정 시간

@@ -1,0 +1,98 @@
+// src/main/java/com/ssafy/trip/model/service/trip/MapServiceImpl.java
+package com.ssafy.trip.map;
+
+import com.ssafy.trip.map.MapDTO.ContentType;
+import com.ssafy.trip.map.MapDTO.RegionTripResDto;
+import java.util.List;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+@RequiredArgsConstructor
+public class MapServiceImpl implements MapService {
+    private final MapDAO mapDAO;
+    private final RedisTemplate<String, String> redisTemplate;
+
+    @Override
+    public List<ContentType> getContentTypes() {
+        return mapDAO.getContentTypes();
+    }
+
+    @Override
+    @Transactional
+    public void savePlan(MapDTO.PlanStoreDTO planStoreDTO) {
+        mapDAO.insertPlan(planStoreDTO);
+        mapDAO.insertPlanAttractions(planStoreDTO);
+    }
+
+    @Override
+    @Transactional
+    public void deletePlan(Long planId) {
+        mapDAO.deletePlanAttractions(planId);
+        mapDAO.deletePlan(planId);
+    }
+
+    @Override
+    public List<MapDTO.PlanDTO> getPlansByUserId(Long userId) {
+        return mapDAO.getPlansByUserId(userId);
+    }
+
+    @Override
+    public MapDTO.PlanDTO getPlanByPlanId(Long planId) {
+        return mapDAO.getPlanByPlanId(planId);
+    }
+
+    @Override
+    public List<RegionTripResDto> getRegionTripWithinMapRange(MapDTO.MapBound mapBound, int contentType, String keyword, Pageable pageable) {
+        return mapDAO.getRegionTripWithinMapRange(mapBound, contentType, keyword, pageable);
+    }
+
+    @Override
+    public RegionTripResDto getAttractions(Long id) {
+        return mapDAO.getAttractions(id);
+    }
+
+    @Override
+    public List<MapDTO.PlanDTO> getSharedPlans() {
+        return mapDAO.getSharedPlans();
+    }
+
+    @Override
+    @Transactional
+    public void toggleAttractionLike(Long attractionId, Long userId) {
+        int count = mapDAO.getCountOfAttractionLike(attractionId, userId);
+        if (count == 0) {
+            mapDAO.deleteAttractionLike(attractionId, userId);
+            mapDAO.incrementAttractionLikes(attractionId);
+        } else if (count == 1) {
+            mapDAO.insertAttractionLike(attractionId, userId);
+            mapDAO.decrementAttractionLikes(attractionId);
+        }
+    }
+
+    @Override
+    @Transactional
+    public void togglePlanLike(Long planId, Long userId) {
+        int count = mapDAO.getCountOfPlanLike(planId, userId);
+        if (count == 0) {
+            mapDAO.insertPlanLike(planId, userId);
+            mapDAO.incrementPlanLikes(planId);
+        } else if (count == 1) {
+            mapDAO.deletePlanLike(planId, userId);
+            mapDAO.decrementPlanLikes(planId);
+        }
+    }
+
+    @Override
+    public MapDTO.PlanDTO getPublicPlan(String token) {
+        String planIdStr = redisTemplate.opsForValue().get(token);
+        if (planIdStr != null) {
+            Long planId = Long.parseLong(planIdStr);
+            return mapDAO.getPlanByPlanId(planId);
+        }
+        return null;
+    }
+}

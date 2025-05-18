@@ -2,6 +2,7 @@ package com.ssafy.trip.user;
 
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * 사용자 서비스 인터페이스
@@ -58,5 +59,5 @@ public interface UserService {
     /**
      * 이메일로 사용자를 조회합니다.
      */
-    User getUserByEmail(String email) throws SQLException;
+    Optional<User> getUserByEmail(String email) throws SQLException;
 }

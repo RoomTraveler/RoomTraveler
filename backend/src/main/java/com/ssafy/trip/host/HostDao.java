@@ -1,10 +1,8 @@
 package com.ssafy.trip.host;
 
-import java.util.List;
-
-import org.apache.ibatis.annotations.Mapper;
-
 import java.sql.SQLException;
+import java.util.List;
+import org.apache.ibatis.annotations.Mapper;
 
 /**
  * 호스트 데이터 접근 객체 인터페이스
@@ -14,35 +12,35 @@ public interface HostDao {
     /**
      * 새 호스트를 등록합니다.
      */
-    int insert(Host host);
+    int insert(Host host, Long userId) throws SQLException;
 
     /**
      * 호스트 ID로 호스트를 조회합니다.
      */
-    Host getHostById(Long hostId);
-    
+    Host getHostById(Long hostId) throws SQLException;
+
     /**
      * 모든 호스트 목록을 조회합니다.
      */
     List<Host> getHosts() throws SQLException;
-    
+
     /**
      * 호스트 정보를 업데이트합니다.
      */
-    int updateHost(Host host);
-    
+    int updateHost(Host host) throws SQLException;
+
     /**
      * 호스트를 삭제합니다.
      */
-    int deleteHost(Long hostId);
-    
+    int deleteHost(Long hostId) throws SQLException;
+
     /**
      * 호스트 상태를 업데이트합니다.
      */
-    int updateHostStatus(Long hostId, String hostStatus);
-    
+    int updateHostStatus(Long hostId, String hostStatus) throws SQLException;
+
     /**
      * 사용자 ID로 호스트를 조회합니다.
      */
-    Host getHostByUserId(Long userId);
+    Host getHostByUserId(Long userId) throws SQLException;
 }
