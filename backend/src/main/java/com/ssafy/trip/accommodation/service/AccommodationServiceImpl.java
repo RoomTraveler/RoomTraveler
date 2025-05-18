@@ -9,7 +9,6 @@ import com.ssafy.trip.accommodation.model.Image;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.data.domain.Pageable;
 
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -292,30 +291,29 @@ public class AccommodationServiceImpl implements AccommodationService {
     }
 
     /**
-     * 필터링된 숙소 목록을 조회합니다. (페이징 적용)
+     * 필터링된 숙소 목록을 조회합니다.
      */
     @Override
-    public Map<String, Object> getFilteredAccommodations(Map<String, Object> filters, Pageable pageable) throws SQLException {
-        Map<String, Object> params = new HashMap<>(filters);
-        params.put("offset", pageable.getOffset());
-        params.put("limit", pageable.getPageSize());
-
-        log.debug("Service - getFilteredAccommodations - params for DAO: {}", params);
-
-        List<Accommodation> accommodations = accommodationDao.getFilteredAccommodations(params);
-        setMainImageUrlForAccommodations(accommodations);
-
+    public Map<String, Object> getFilteredAccommodations(Map<String, Object> filters) throws SQLException {
+        // 전체 아이템 수 조회
         long totalItems = accommodationDao.countFilteredAccommodations(filters);
-        log.debug("Service - getFilteredAccommodations - totalItems: {}", totalItems);
-
-        Map<String, Object> response = new HashMap<>();
-        response.put("content", accommodations);
-        response.put("currentPage", pageable.getPageNumber() + 1);
-        response.put("totalItems", totalItems);
-        response.put("totalPages", (int) Math.ceil((double) totalItems / pageable.getPageSize()));
         
-        log.debug("Service - getFilteredAccommodations - response: {}", response);
-        return response;
+        // 페이징된 숙소 목록 조회
+        List<Accommodation> accommodations = accommodationDao.getFilteredAccommodations(filters);
+        setMainImageUrlForAccommodations(accommodations);
+        
+        // 페이징 정보 계산
+        int page = (int) filters.get("page");
+        int size = (int) filters.get("size");
+        int totalPages = (int) Math.ceil((double) totalItems / size);
+        
+        Map<String, Object> result = new HashMap<>();
+        result.put("content", accommodations);
+        result.put("currentPage", page);
+        result.put("totalItems", totalItems);
+        result.put("totalPages", totalPages);
+        
+        return result;
     }
 
 

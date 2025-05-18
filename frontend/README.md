@@ -285,7 +285,7 @@ npm install tailwindcss@latest @tailwindcss/vite@latest -D
 npm install
 npm install @vuepic/vue-datepicker
 npm install @vuepic/vue-datepicker date-fns
-
+npm install element-plus
 
 ```
 

@@ -14,7 +14,7 @@ const accommodationApi = {
    * @returns {Promise} 숙박 시설 목록 데이터
    */
   getAccommodations(params = {}) {
-    return api.get('/accommodation/api/accommodations', { params });
+    return api.get('/api/accommodations/filter', { params });
   },
 
   /**

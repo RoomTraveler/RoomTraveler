@@ -4,9 +4,6 @@ import com.ssafy.trip.accommodation.model.Accommodation;
 import com.ssafy.trip.accommodation.model.Room;
 import com.ssafy.trip.accommodation.service.AccommodationService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -140,10 +137,14 @@ public class ApiAccommodationController {
             }
             if (guestCount != null && guestCount > 0) filters.put("guestCount", guestCount);
             if (sortBy != null && !sortBy.trim().isEmpty()) filters.put("sortBy", sortBy.trim());
+            
+            // 페이징 파라미터 추가
+            filters.put("offset", (page - 1) * size);
+            filters.put("limit", size);
+            filters.put("page", page);
+            filters.put("size", size);
 
-            PageRequest pageable = PageRequest.of(page - 1, size);
-
-            Map<String, Object> pagedResult = apiAccommodationService.getFilteredAccommodations(filters, pageable);
+            Map<String, Object> pagedResult = apiAccommodationService.getFilteredAccommodations(filters);
 
             return ResponseEntity.ok(pagedResult);
         } catch (SQLException e) {

@@ -128,11 +128,11 @@ public interface AccommodationService {
     /**
      * 필터링된 숙소 목록을 조회합니다. (페이징 적용)
      * @param filters 필터 조건 (키: 필터 이름, 값: 필터 값)
-     * @param pageable 페이징 정보 (페이지 번호, 페이지 크기 등)
+     *              페이징을 위한 offset과 limit 값이 포함되어야 함
      * @return 페이징된 숙소 목록 및 전체 아이템 수, 전체 페이지 수 등을 포함하는 Map
      *         예: {"content": List<Accommodation>, "currentPage": int, "totalItems": long, "totalPages": int}
      */
-    Map<String, Object> getFilteredAccommodations(Map<String, Object> filters, org.springframework.data.domain.Pageable pageable) throws SQLException;
+    Map<String, Object> getFilteredAccommodations(Map<String, Object> filters) throws SQLException;
 
     /**
      * 필터링된 객실 목록을 조회합니다.

@@ -39,8 +39,8 @@ const routes = [
   {
     path: "/accommodation",
     name: "Accommodation",
-    component: Home,
-    meta: { title: "홈 - Room Traveler" },
+    component: Accommodation,
+    meta: { title: "숙소 목록 - Room Traveler" },
   },
   {
     path: "/accommodation/list",
