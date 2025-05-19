@@ -62,4 +62,10 @@ public interface MapDAO{
     int deletePlanLike(Long planId, Long userId);
 
     List<EmailPlanDTO> selectPlansForToday();
+
+    MapDTO.RecordResponse getRecordByPlanId(Long planId);
+    List<String> getRecordImages(Long RecordId);
+
+    Long saveRecordByPlanId(Long recordId);
+    void saveRecordImages(Long recordId, List<String> imageUrls);
 }

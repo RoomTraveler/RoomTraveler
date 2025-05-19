@@ -1,27 +1,39 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper
-  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
-  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
 <mapper namespace="com.ssafy.trip.user.UserDao">
 
     <!-- 새 사용자 등록 -->
     <insert id="insert" useGeneratedKeys="true" keyProperty="userId">
-        <choose>
-            <when test="userId != null">
-                INSERT INTO users (user_id, username, email, password, phone, role, status)
-                VALUES (#{userId}, #{username}, #{email}, #{password}, #{phone}, #{role}, #{status})
-            </when>
-            <otherwise>
-                INSERT INTO users (username, email, password, phone, role, status)
-                VALUES (#{username}, #{email}, #{password}, #{phone}, 'USER', 'ACTIVE')
-            </otherwise>
-        </choose>
+        INSERT INTO users (username, email, password_hash, phone, role, status)
+        VALUES (#{username}, #{email}, #{password}, #{phone}, 'USER', 'ACTIVE')
     </insert>
 
     <!-- 로그인 -->
-    <select id="login" resultType="com.ssafy.trip.user.User">
-        SELECT * FROM users WHERE email = #{email} AND password = #{password} AND status = 'ACTIVE'
+    <select id="login" resultMap="userMap">
+        SELECT * FROM users WHERE email = #{email} AND status = 'ACTIVE'
+    </select>
+
+    <!-- 이메일로 사용자 ID 찾기 -->
+    <select id="findUserIdByEmail" resultType="long">
+        SELECT user_id FROM users WHERE email = #{email}
+    </select>
+
+    <resultMap id="userMap" type="com.ssafy.trip.user.User">
+        <id property="userId" column="user_id" />
+        <result property="username" column="username" />
+        <result property="email" column="email" />
+        <result property="password" column="password_hash" />
+        <result property="phone" column="phone" />
+        <result property="role" column="role" />
+        <result property="status" column="status" />
+        <result property="createdAt" column="created_at" />
+        <result property="updatedAt" column="updated_at" />
+    </resultMap>
+    <select id="getUserByEmail" resultMap="userMap">
+        SELECT * FROM users WHERE email = #{email}
     </select>
 
     <!-- 모든 사용자 조회 -->
@@ -32,7 +44,10 @@
     <!-- 사용자 정보 업데이트 -->
     <update id="updateUser">
         UPDATE users
-        SET username = #{username}, password = #{password}
+        SET username = #{username}
+        <if test="password != null">
+            , password_hash = #{password}
+        </if>
         WHERE email = #{email}
     </update>
 
@@ -43,26 +58,19 @@
 
     <!-- 비밀번호 찾기 -->
     <select id="findPassword" resultType="String">
-        SELECT password FROM users
+        SELECT password_hash FROM users
         WHERE username = #{username} AND email = #{email}
     </select>
 
-    <!-- 사용자 상태 업데이트 -->
-    <update id="updateUserStatus">
-        UPDATE users
-        SET status = #{status}
-        WHERE user_id = #{userId}
-    </update>
-
-    <!-- 이메일로 사용자 조회 -->
-    <select id="getUserByEmail" resultType="com.ssafy.trip.user.User">
-        SELECT * FROM users WHERE email = #{email}
-    </select>
-
-    <!-- 사용자 역할 업데이트 -->
     <update id="updateUserRole">
         UPDATE users
         SET role = #{role}
+        WHERE user_id = #{userId}
+    </update>
+
+    <update id="updateUserStatus">
+        UPDATE users
+        SET status = #{status}
         WHERE user_id = #{userId}
     </update>
 

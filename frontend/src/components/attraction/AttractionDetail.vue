@@ -1,7 +1,5 @@
 <template>
-  <div
-    class="min-h-screen bg-gradient-to-b from-white to-gray-100 dark:from-gray-900 dark:to-gray-800 py-10 px-4"
-  >
+  <div class="min-h-screen bg-gradient-to-b from-white to-gray-100 dark:from-gray-900 dark:to-gray-800 py-10 px-4">
     <div
       v-if="attraction"
       class="max-w-4xl mx-auto bg-white dark:bg-gray-900 rounded-3xl shadow-2xl p-8 space-y-8 transition-all duration-300"
@@ -12,31 +10,38 @@
           {{ attraction.title }}
         </h1>
         <p class="text-sm text-indigo-600 dark:text-indigo-400">
-          🏷️ {{ contentTypeMap[attraction.contentTypeId] || '기타' }}
+          🏷️ {{ contentTypeMap[attraction.contentTypeId] || "기타" }}
         </p>
       </div>
 
       <!-- 이미지 -->
       <div class="overflow-hidden rounded-2xl shadow-lg">
-        <img
-          :src="attraction.image2"
-          alt="Attraction Image"
-          class="w-full h-80 object-cover transform hover:scale-105 transition-transform duration-500"
-        />
+        <div v-if="attraction.image2.trim().length !== 0">
+          <img
+            v-show="imageLoaded"
+            :src="attraction.image2"
+            alt="Attraction Image"
+            class="w-full h-80 object-cover transform hover:scale-105 transition-transform duration-500"
+            @load="imageLoaded = true"
+          />
+
+          <!-- 로딩 스피너 -->
+          <div v-if="!imageLoaded" class="w-full h-80 flex items-center justify-center bg-gray-200 dark:bg-gray-700">
+            <span class="text-gray-500 dark:text-gray-300 animate-pulse">🖼️ 이미지 로딩 중...</span>
+          </div>
+        </div>
       </div>
 
       <!-- 개요 및 상세 정보 -->
       <div class="space-y-4 text-gray-700 dark:text-gray-300">
         <div v-if="attraction.homepage" class="text-blue-600 dark:text-blue-400 underline text-sm">
-          <a :href="attraction.homepage" target="_blank" rel="noopener noreferrer"
-            >공식 홈페이지 방문</a
-          >
+          <span v-html="attraction.homepage"></span>
         </div>
         <p class="leading-relaxed text-lg">
           {{ attraction.overview }}
         </p>
         <p class="text-sm text-gray-500 dark:text-gray-400">
-          📍 <span class="font-medium">위치:</span> {{ attraction.addr1 + ' ' + attraction.addr2 }}
+          📍 <span class="font-medium">위치:</span> {{ attraction.addr1 + " " + attraction.addr2 }}
         </p>
       </div>
     </div>
@@ -49,33 +54,43 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
-import axios from 'axios'
+import { ref, onMounted } from "vue";
+import { useRoute } from "vue-router";
+import axios from "axios";
 
-const route = useRoute()
-const attraction = ref(null)
+const props = defineProps({
+  id: {
+    type: Number,
+    required: true,
+  },
+});
+
+const route = useRoute();
+const attraction = ref(null);
+const imageLoaded = ref(false);
 
 const contentTypeMap = {
-  12: '관광지',
-  14: '문화시설',
-  15: '축제공연행사',
-  25: '여행코스',
-  28: '레포츠',
-  32: '숙박',
-  38: '쇼핑',
-  39: '음식점',
-}
+  12: "관광지",
+  14: "문화시설",
+  15: "축제공연행사",
+  25: "여행코스",
+  28: "레포츠",
+  32: "숙박",
+  38: "쇼핑",
+  39: "음식점",
+};
 
 onMounted(async () => {
-  const { id } = route.params
+  // const { id } = route.params;
+
   try {
-    const res = await axios.get(`/api/map/attractions/${id}`)
-    attraction.value = res.data
+    const res = await axios.get(`/api/map/attractions/${props.id}`);
+    attraction.value = res.data;
+    console.log(attraction.value);
   } catch (err) {
-    console.error('API 호출 실패:', err)
+    console.error("API 호출 실패:", err);
   }
-})
+});
 </script>
 
 <style scoped>

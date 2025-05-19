@@ -1,18 +1,20 @@
 /**
  * main.js - 방구석 여행자 프론트엔드 애플리케이션의 진입점
- * 
+ *
  * 이 파일은 Vue 애플리케이션을 초기화하고 필요한 플러그인을 설정합니다.
  * 애플리케이션의 시작점으로, 모든 Vue 관련 설정이 이루어집니다.
  */
 
 // 필요한 라이브러리와 컴포넌트 가져오기
-import { createApp } from 'vue';  // Vue 3 앱 생성 함수
-import { createPinia } from 'pinia';  // 상태 관리 라이브러리
-import App from './App.vue';  // 루트 컴포넌트
-import router from './router';  // 라우터 설정
-import './assets/main.css';  //Tailwind 가져오기
-import 'element-plus/dist/index.css'; // Element Plus CSS 추가
+import { createApp } from "vue"; // Vue 3 앱 생성 함수
+import { createPinia } from "pinia"; // 상태 관리 라이브러리
+import App from "./App.vue"; // 루트 컴포넌트
+import router from "./router"; // 라우터 설정
+import "./assets/main.css"; //Tailwind 가져오기
+import "element-plus/dist/index.css"; // Element Plus CSS 추가
 
+import "bootstrap/dist/css/bootstrap.min.css";
+import "bootstrap";
 
 // Vue 앱 인스턴스 생성
 const app = createApp(App);
@@ -27,4 +29,4 @@ app.use(router);
 
 // 앱을 DOM에 마운트
 // #app 요소에 Vue 애플리케이션을 연결합니다.
-app.mount('#app');
+app.mount("#app");

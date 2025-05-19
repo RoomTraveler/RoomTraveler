@@ -3,18 +3,22 @@ package com.ssafy.trip.map;
 
 import com.ssafy.trip.map.MapDTO.ContentType;
 import com.ssafy.trip.map.MapDTO.RegionTripResDto;
+
+import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
 @RequiredArgsConstructor
 public class MapServiceImpl implements MapService {
     private final MapDAO mapDAO;
     private final RedisTemplate<String, String> redisTemplate;
+    //private final S3Uploader s3Uploader;
 
     @Override
     public List<ContentType> getContentTypes() {
@@ -95,4 +99,27 @@ public class MapServiceImpl implements MapService {
         }
         return null;
     }
+
+    @Override
+    @Transactional
+    public MapDTO.RecordResponse getRecord(Long planId) {
+        MapDTO.RecordResponse record = mapDAO.getRecordByPlanId(planId);
+        record.setImages(mapDAO.getRecordImages(record.getRecordId()));
+        return record;
+    }
+
+//    @Override
+//    @Transactional
+//    public Long saveRecord(Long planId, MapDTO.Record record) {
+//        Long recordId = mapDAO.saveRecordByPlanId(planId);
+//
+//        List<String> imageUrls = new ArrayList<>();
+//        for (MultipartFile image : record.getImages()) {
+//            imageUrls.add(s3Uploader.upload(image, image.getOriginalFilename()));
+//        }
+//
+//        mapDAO.saveRecordImages(recordId, imageUrls);
+//
+//        return recordId;
+//    }
 }

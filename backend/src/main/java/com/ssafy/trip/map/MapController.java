@@ -2,13 +2,17 @@ package com.ssafy.trip.map;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ssafy.trip.security.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -19,10 +23,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+@Slf4j
 @CrossOrigin(origins = "http://localhost:5173")
 
 @RestController
-@RequestMapping("/map")
+@RequestMapping("/api/map")
 @RequiredArgsConstructor
 @Tag(name = "PlanRestController", description = "여행 계획 기능 제공")
 public class MapController {
@@ -50,6 +55,7 @@ public class MapController {
 
     @GetMapping("/attractions/{id}")
     public ResponseEntity<?> getAttractions(@PathVariable Long id) {
+        log.info(id.toString());
         return ResponseEntity.ok(mapService.getAttractions(id));
     }
 
@@ -111,4 +117,33 @@ public class MapController {
         return ResponseEntity.ok(planDTO);
     }
 
+    @GetMapping("/plans/{planId}/record")
+    public ResponseEntity<?> getRecord(@PathVariable Long planId) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+
+        // 플랜이 이 사람의 것인지 확인
+        //userDetails.getUserId()
+
+        MapDTO.RecordResponse record = mapService.getRecord(planId);
+        if (record == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(record);
+    }
+
+//    @PostMapping("/plans/{planId}/record")
+//    public ResponseEntity<?> saveRecord(@PathVariable Long planId, @RequestBody MapDTO.Record record) {
+//        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+//        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+//
+//        // 플랜이 이 사람의 것인지 확인
+//        //userDetails.getUserId()
+//
+//        Long success = mapService.saveRecord(planId, record);
+//        if (success == 0) {
+//            return ResponseEntity.notFound().build();
+//        }
+//        return ResponseEntity.ok("저장 성공");
+//    }
 }

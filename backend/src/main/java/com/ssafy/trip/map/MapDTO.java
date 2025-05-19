@@ -10,6 +10,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.apache.ibatis.annotations.Mapper;
+import org.springframework.web.multipart.MultipartFile;
 
 @Mapper
 public class MapDTO {
@@ -133,6 +134,30 @@ public class MapDTO {
     public static class MapBound {
         private LatLng southWest;
         private LatLng northEast;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class Record {
+        private Long recordId;
+        private String title;
+        private String content;
+        private List<MultipartFile> images;
+        private Long planId;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class RecordResponse {
+        private Long recordId;
+        private String title;
+        private String content;
+        private List<String> images;
+        private Long planId;
     }
 
 //    @Data

@@ -31,4 +31,7 @@ public interface MapService {
     void togglePlanLike(Long planId, Long userId);
 
     MapDTO.PlanDTO getPublicPlan(String token);
+
+    MapDTO.RecordResponse getRecord(Long planId);
+    //Long saveRecord(Long planId, MapDTO.Record record);
 }

@@ -1,0 +1,247 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ssafy.trip.map.MapDAO">
+
+  <!-- 1) 관광지 기본 정보(위치 포함) 매핑 -->
+  <resultMap id="RegionTripResDtoMap" type="com.ssafy.trip.map.MapDTO$RegionTripResDto">
+    <id     property="no"        column="no"/>
+    <result property="title"     column="title"/>
+    <result property="image"     column="image"/>
+      <result property="image2"     column="image2"/>
+    <result property="addr1"     column="addr1"/>
+    <result property="addr2"     column="addr2"/>
+    <result property="tel"       column="tel"/>
+    <result property="latitude"  column="latitude"/>
+    <result property="longitude" column="longitude"/>
+    <result property="contentTypeId" column="content_type_id"/>
+    <result property="homepage" column="homepage"/>
+    <result property="overview" column="overview"/>
+    <result property="totalCount" column="totalCount"/>
+    <result property="likes" column="likes"/>
+  </resultMap>
+
+  <resultMap id="ContentTypeMap" type="com.ssafy.trip.map.MapDTO$ContentType">
+    <result property="code" column="content_type_id"/>
+    <result property="name" column="content_type_name"/>
+  </resultMap>
+  <select id="getContentTypes" resultMap="ContentTypeMap">
+    SELECT content_type_id, content_type_name FROM contenttypes;
+  </select>
+
+  <!-- 3) 플랜 저장 및 조회 -->
+  <insert id="insertPlan" parameterType="com.ssafy.trip.map.MapDTO$PlanStoreDTO" useGeneratedKeys="true" keyProperty="planId">
+    INSERT INTO plan (user_id, is_shared, travel_date) VALUES (#{userId}, #{isShared}, #{travelDate})
+  </insert>
+
+  <insert id="insertPlanAttractions" parameterType="map">
+    INSERT INTO plan_attraction (plan_id, attraction_id, order_num)
+    VALUES
+    <foreach collection="attractionIds" item="id" index="idx" separator=",">
+      (#{planId}, #{id}, #{idx})
+    </foreach>
+  </insert>
+
+    <delete id="deletePlan">
+        delete from plan where plan_id = #{planId}
+    </delete>
+
+    <delete id="deletePlanAttractions">
+        delete from plan_attraction where plan_id = #{planId}
+    </delete>
+
+    <resultMap id="PlanWithAttractions" type="com.ssafy.trip.map.MapDTO$PlanDTO">
+        <id property="planId" column="plan_id"/>
+        <result property="likes" column="likes"/>
+        <collection property="planAttractions" ofType="com.ssafy.trip.map.MapDTO$PlanAttractionDTO">
+            <result property="attractionId" column="attraction_id"/>
+            <result property="order"  column="order_num"/>
+            <result property="title"  column="title"/>
+            <result property="contentType" column="content_type_id"/>
+            <result property="imageUrl"  column="first_image2"/>
+            <result property="latitude" column="latitude"/>
+            <result property="longitude"  column="longitude"/>
+        </collection>
+    </resultMap>
+
+    <select id="getPlansByUserId" resultMap="PlanWithAttractions">
+        SELECT
+            p.plan_id        AS plan_id,
+            p.likes          AS likes,
+            pa.attraction_id,
+            pa.order_num,
+            a.title,
+            a.content_type_id,
+            a.first_image2
+        FROM plan p
+                 JOIN plan_attraction pa  ON p.plan_id = pa.plan_id
+                 JOIN attractions    a    ON pa.attraction_id = a.no
+        WHERE p.user_id = #{userId}
+    </select>
+
+    <select id="getPlanByPlanId" resultMap="PlanWithAttractions">
+        SELECT
+            p.plan_id        AS plan_id,
+            p.likes          AS likes,
+            pa.attraction_id,
+            pa.order_num,
+            a.title,
+            a.content_type_id,
+            a.first_image2,
+            a.latitude,
+            a.longitude
+        FROM plan p
+                 JOIN plan_attraction pa  ON p.plan_id = pa.plan_id
+                 JOIN attractions    a    ON pa.attraction_id = a.no
+        WHERE p.plan_id = #{planId}
+    </select>
+
+    <select id="getRegionTripWithinMapRange" resultMap="RegionTripResDtoMap">
+        <bind name="likeKeyword" value="'%' + keyword + '%'" />
+        SELECT no,
+            title,
+            first_image1 AS image,
+            addr1,
+            addr2,
+            tel,
+            latitude,
+            longitude,
+            content_type_id,
+            homepage,
+            overview,
+            COUNT(*) OVER() AS totalCount
+        FROM attractions
+        WHERE latitude BETWEEN #{mapBound.southWest.latitude} AND #{mapBound.northEast.latitude}
+            AND longitude BETWEEN #{mapBound.southWest.longitude} AND #{mapBound.northEast.longitude}
+        <if test="contentType != null and contentType != -1">
+            AND content_type_id = #{contentType}
+        </if>
+        <if test="keyword != null and keyword != ''">
+            AND title LIKE #{likeKeyword}
+        </if>
+        ORDER BY no
+        LIMIT ${pageable.offset}, ${pageable.pageSize}
+    </select>
+
+    <select id="getAttractions" resultMap="RegionTripResDtoMap">
+        SELECT no,
+            title,
+            first_image1 AS image,
+            first_image2 As image2,
+            addr1,
+            addr2,
+            tel,
+            latitude,
+            longitude,
+            content_type_id,
+            homepage,
+            overview
+        FROM attractions WHERE no = #{id}
+    </select>
+
+    <select id="getSharedPlans" resultMap="PlanWithAttractions">
+        SELECT
+            p.plan_id        AS plan_id,
+            p.likes          AS likes,
+            pa.attraction_id,
+            pa.order_num,
+            a.title,
+            a.content_type_id,
+            a.first_image2
+        FROM plan p
+                 JOIN plan_attraction pa  ON p.plan_id = pa.plan_id
+                 JOIN attractions    a    ON pa.attraction_id = a.no
+        WHERE p.is_shared = 1
+    </select>
+
+    <!-- 관광지 좋아요 증가 -->
+    <update id="incrementAttractionLikes">
+        UPDATE attractions
+        SET likes = likes + 1
+        WHERE no = #{attractionId}
+    </update>
+
+    <!-- 관광지 좋아요 감소 -->
+    <update id="decrementAttractionLikes">
+        UPDATE attractions
+        SET likes = CASE WHEN likes > 0 THEN likes - 1 ELSE 0 END
+        WHERE no = #{attractionId}
+    </update>
+
+    <!-- 여행 계획 좋아요 증가 -->
+    <update id="incrementPlanLikes">
+        UPDATE plan
+        SET likes = likes + 1
+        WHERE plan_id = #{planId}
+    </update>
+
+    <!-- 여행 계획 좋아요 감소 -->
+    <update id="decrementPlanLikes">
+        UPDATE plan
+        SET likes = CASE WHEN likes > 0 THEN likes - 1 ELSE 0 END
+        WHERE plan_id = #{planId}
+    </update>
+
+    <select id="getCountOfAttractionLike" resultType="int">
+        SELECT count(*) FROM attraction_likes WHERE user_id = #{userId} AND attraction_id = #{attractionId}
+    </select>
+
+    <delete id="deleteAttractionLike">
+        DELETE FROM attraction_likes WHERE user_id = #{userId} AND attraction_id = #{attractionId}
+    </delete>
+
+    <insert id="insertAttractionLike">
+        INSERT INTO attraction_likes(user_id, attraction_id) VALUES(#{userId}, #{attractionId})
+    </insert>
+
+    <select id="getCountOfPlanLike" resultType="int">
+        SELECT count(*) FROM plan_likes WHERE user_id = #{userId} AND plan_id = #{planId}
+    </select>
+
+    <delete id="insertPlanLike">
+        INSERT INTO plan_likes(user_id, attraction_id) VALUES(#{userId}, #{planId})
+    </delete>
+
+    <insert id="deletePlanLike">
+        DELETE FROM plan_likes WHERE user_id = #{userId} AND plan_id = #{planId}
+    </insert>
+
+    <select id="selectPlansForToday" resultMap="emailPlanResultMap">
+        SELECT plan_id, email
+        FROM plan p
+        JOIN users u USING (user_id)
+        WHERE p.travel_date = CURRENT_DATE
+    </select>
+
+    <resultMap id="emailPlanResultMap" type="com.ssafy.trip.map.MapDTO$EmailPlanDTO">
+        <result property="planId" column="plan_id"/>
+        <result property="email" column="email"/>
+    </resultMap>
+
+    <insert id="saveRecordByPlanId" useGeneratedKeys="true" keyProperty="recordId">
+        INSERT INTO record (title, content, plan_id)
+        VALUES (#{title}, #{content}, #{planId})
+    </insert>
+
+    <insert id="saveRecordImages">
+        INSERT INTO record_image (record_id, image_url)
+        VALUES
+        <foreach collection="imageUrls" item="url" separator=",">
+            (#{recordId}, #{url})
+        </foreach>
+    </insert>
+
+
+    <select id="getRecordByPlanId" resultType="com.ssafy.trip.map.MapDTO$RecordResponse">
+        SELECT record_id, title, content, plan_id
+        FROM record
+        WHERE plan_id = #{planId}
+    </select>
+
+    <select id="getRecordImages" resultType="string">
+        SELECT image_url
+        FROM record_image
+        WHERE record_id = #{recordId}
+    </select>
+</mapper>
