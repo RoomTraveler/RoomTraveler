@@ -78,6 +78,8 @@
                  JOIN plan_attraction pa  ON p.plan_id = pa.plan_id
                  JOIN attractions    a    ON pa.attraction_id = a.no
         WHERE p.user_id = #{userId}
+        ORDER BY p.plan_id DESC
+        LIMIT #{size} OFFSET #{offset}
     </select>
 
     <select id="getPlanByPlanId" resultMap="PlanWithAttractions">

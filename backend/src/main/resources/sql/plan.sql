@@ -87,6 +87,7 @@ CREATE TABLE IF NOT EXISTS `ssafytrip`.`attractions` (
     `addr2` VARCHAR(100) NULL DEFAULT NULL COMMENT '주소2',
     `homepage` VARCHAR(1000) NULL DEFAULT NULL COMMENT '홈페이지',
     `overview` VARCHAR(10000) NULL DEFAULT NULL COMMENT '설명',
+    `likes` bigint unsigned NOT NULL DEFAULT 0,
     PRIMARY KEY (`no`),
     INDEX `attractions_typeid_to_types_typeid_fk_idx` (`content_type_id` ASC) VISIBLE,
     INDEX `attractions_sido_to_sidos_code_fk_idx` (`area_code` ASC) VISIBLE,

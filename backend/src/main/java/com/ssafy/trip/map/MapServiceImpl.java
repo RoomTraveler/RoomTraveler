@@ -40,8 +40,9 @@ public class MapServiceImpl implements MapService {
     }
 
     @Override
-    public List<MapDTO.PlanDTO> getPlansByUserId(Long userId) {
-        return mapDAO.getPlansByUserId(userId);
+    public List<MapDTO.PlanDTO> getPlansByUserId(Long userId, int page, int size) {
+        int offset = page * size;
+        return mapDAO.getPlansByUserId(userId, offset, size);
     }
 
     @Override

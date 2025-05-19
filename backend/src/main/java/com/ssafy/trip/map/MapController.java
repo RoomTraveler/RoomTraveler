@@ -62,8 +62,10 @@ public class MapController {
     @GetMapping("/users/{userId}/plans")
     @Operation(summary = "여행 계획 조회", description = "사용자의 여행 계획 조회")
     @ApiResponse(responseCode = "200", description = "여행 계획 조회 성공")
-    public ResponseEntity<?>  getUsersPlans(@PathVariable Long userId) {
-        return ResponseEntity.ok(mapService.getPlansByUserId(userId));
+    public ResponseEntity<?>  getUsersPlans(@PathVariable Long userId, //@CurrentUserId Long userId 이거 사용
+                                            @RequestParam(defaultValue = "0") int page,
+                                            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(mapService.getPlansByUserId(userId, page, size));
     }
 
     @GetMapping("/plans/{planId}")

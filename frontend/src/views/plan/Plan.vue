@@ -39,7 +39,7 @@
 
     <div class="travel-options">
       <div class="option-card solo">
-        <router-link to="/plan/alone">
+        <router-link to="/plan/alone" class="router-link">
           <div class="card-image">
             <img src="/img/alone.jpg" alt="혼자 여행" />
           </div>
@@ -54,7 +54,7 @@
       </div>
 
       <div class="option-card with-friends">
-        <router-link to="/plan/together">
+        <router-link to="/plan/together" class="router-link">
           <div class="card-image">
             <img src="/img/withFriends.jpg" alt="친구와 여행" />
           </div>
@@ -242,5 +242,8 @@ onUnmounted(() => {
   font-size: 14px;
   color: #7f8c8d;
   margin: 0 10px 15px;
+}
+.router-link {
+  text-decoration: none;
 }
 </style>

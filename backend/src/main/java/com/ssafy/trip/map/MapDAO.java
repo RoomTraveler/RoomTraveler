@@ -37,7 +37,7 @@ public interface MapDAO{
     // 8) plan↔attraction 매핑 테이블에 복수 삽입
     int insertPlanAttractions(PlanStoreDTO planStoreDTO);
     // 9) 사용자별 계획 조회
-    List<PlanDTO> getPlansByUserId(Long planIds);
+    List<PlanDTO> getPlansByUserId(Long userId, int offset, int size);
 
     PlanDTO getPlanByPlanId(Long planId);
 

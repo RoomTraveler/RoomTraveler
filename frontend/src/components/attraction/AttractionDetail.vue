@@ -81,12 +81,13 @@ const contentTypeMap = {
 };
 
 onMounted(async () => {
-  // const { id } = route.params;
+  const { id } = route.params;
+
+  const attractionId = props.id || id
 
   try {
-    const res = await axios.get(`/api/map/attractions/${props.id}`);
+    const res = await axios.get(`/api/map/attractions/${attractionId}`);
     attraction.value = res.data;
-    console.log(attraction.value);
   } catch (err) {
     console.error("API 호출 실패:", err);
   }
