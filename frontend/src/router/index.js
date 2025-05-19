@@ -1,23 +1,21 @@
 import { createRouter, createWebHistory } from "vue-router";
-import accommodation from '@/router/accommodation.js'
-import plan from '@/router/plan.js'
 
-// 홈 페이지 컴포넌트 - 지연 로딩 적용
-const Home = () => import("../views/Home.vue");
-const Accommodation = () => import("../views/accommodation/AccommodationList.vue");
-const AccommodationDetail = () => import("../views/accommodation/AccommodationDetail.vue");
+import { accommodationRoutes } from "./accommodation";
+import { paymentRoutes } from "./payment";
+import { reviewRoutes } from "./review";
+import { notificationRoutes } from "./notification";
+import { commonRoutes } from "./common";
+
 const Plan = () => import("../views/plan/Plan.vue");
-const PlanAlone = () => import('../views/plan/PlanAlone.vue');
-const PlanDetail = () => import('../views/plan/PlanDetail.vue')
-const PlanPublic = () => import('../views/plan/PlanPublic.vue')
-const Attraction = () => import('../views/attraction/Attraction.vue')
+const PlanAlone = () => import("../views/plan/PlanAlone.vue");
+const PlanDetail = () => import("../views/plan/PlanDetail.vue");
+const PlanPublic = () => import("../views/plan/PlanPublic.vue");
+const Attraction = () => import("../views/attraction/Attraction.vue");
 const User = () => import("../views/user/UserProfile.vue");
 const Login = () => import("../views/user/Login.vue");
 const Register = () => import("../views/user/Register.vue");
 const NotFound = () => import("../views/NotFound.vue");
 const ApiTest = () => import("../components/ApiTest.vue");
-
-const RoomDetail = () => import("../views/accommodation/RoomDetail.vue"); // 파일명 맞춰서
 
 // 관리자 페이지 컴포넌트
 const AdminDashboard = () => import("../views/admin/Dashboard.vue");
@@ -31,11 +29,13 @@ const AccessDenied = () => import("../views/error/AccessDenied.vue");
 
 // 라우트 정의
 const routes = [
-  {
-    path: "/",
-    redirect: "/accommodation",
-    meta: { title: "숙소 홈 - Room Traveler" },
-  },
+  // 필요한 모든 라우트 배열 합치기
+  ...commonRoutes,
+  ...accommodationRoutes,
+  ...paymentRoutes,
+  ...reviewRoutes,
+  ...notificationRoutes,
+
   {
     path: "/api-test",
     name: "ApiTest",
@@ -43,50 +43,24 @@ const routes = [
     meta: { title: "API 테스트 - Room Traveler" },
   },
   {
-    path: "/accommodation",
-    name: "Accommodation",
-    component: Accommodation,
-    meta: { title: "숙소 목록 - Room Traveler" },
-  },
-  {
-    path: "/accommodation/list",
-    name: "AccommodationList",
-    component: Accommodation,
-    meta: { title: "숙소 목록 - Room Traveler" },
-  },
-  {
-    path: "/accommodation/:id",
-    name: "AccommodationDetail",
-    component: AccommodationDetail,
-    props: true,
-    meta: { title: "숙소 상세 - Room Traveler" },
-  },
-  {
     path: "/plan",
     name: "Plan",
     component: Plan,
     meta: { title: "여행 계획 - Room Traveler" },
   },
-  { path: '/plan/alone', component: PlanAlone },
+  { path: "/plan/alone", component: PlanAlone },
   // { path: '/plan/together', component: PlanTogetherPage },
   {
-    path: '/attractions/:id',
-    name: 'AttractionDetail',
+    path: "/attractions/:id",
+    name: "AttractionDetail",
     component: Attraction,
   },
   {
-    path: '/plans/:planId',
-    name: 'planDetail',
+    path: "/plans/:planId",
+    name: "planDetail",
     component: PlanDetail,
   },
-  { path: '/plans/public/:token', component: PlanPublic },
-  {
-    path: "/accommodation/room/:roomId",
-    name: "RoomDetail",
-    component: RoomDetail,
-    props: true,
-    meta: { title: "객실 상세 - Room Traveler" },
-  },
+  { path: "/plans/public/:token", component: PlanPublic },
   {
     path: "/user",
     name: "User",

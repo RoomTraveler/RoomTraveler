@@ -43,17 +43,18 @@ public class CustomSecurityConfig {
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http.csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(authorize -> authorize
-                .requestMatchers("/", "/login", "/accommodation", "/plan", "/api/user/register", "/api/user/login", "/user/login-form", "/swagger-ui/*").permitAll()
-                                // 2) Swagger UI & OpenAPI spec
-                                .requestMatchers("/swagger-ui.html", "/swagger-ui/**").permitAll()
-                                .requestMatchers("/v3/api-docs/**").permitAll()
-                                .requestMatchers("/webjars/**").permitAll()
+                .anyRequest().permitAll()
+                // .requestMatchers("/", "/login", "/accommodation", "/plan", "/api/user/register", "/api/user/login", "/user/login-form", "/swagger-ui/*").permitAll()
+                //                 // 2) Swagger UI & OpenAPI spec
+                //                 .requestMatchers("/swagger-ui.html", "/swagger-ui/**").permitAll()
+                //                 .requestMatchers("/v3/api-docs/**").permitAll()
+                //                 .requestMatchers("/webjars/**").permitAll()
 
-                                // 3) 기타 public API
-                                .requestMatchers("/api/logistics").permitAll()
-                .requestMatchers("/accommodation/host/**").hasRole("HOST")
-                .requestMatchers("/accommodation/admin/**").hasRole("ADMIN")
-                .anyRequest().hasRole("USER")
+                //                 // 3) 기타 public API
+                //                 .requestMatchers("/api/logistics").permitAll()
+                // .requestMatchers("/accommodation/host/**").hasRole("HOST")
+                // .requestMatchers("/accommodation/admin/**").hasRole("ADMIN")
+                // .anyRequest().hasRole("USER")
                 )
 
                 .logout(logout -> logout
@@ -72,8 +73,8 @@ public class CustomSecurityConfig {
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 );
 
-        http.addFilterBefore(jwtAuthenticationFilter(),
-                UsernamePasswordAuthenticationFilter.class);
+        // http.addFilterBefore(jwtAuthenticationFilter(),
+        //         UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

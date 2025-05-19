@@ -28,6 +28,7 @@
         <result property="updatedAt" column="updated_at" />
         <result property="hostName" column="host_name" />
         <result property="mainImageUrl" column="main_image_url" />
+        <result property="thumbnailImageUrl" column="thumbnail_image_url" />
     </resultMap>
 
     <!-- 새 숙소를 등록합니다. -->
@@ -252,9 +253,12 @@
         <if test="sortBy != null and sortBy != ''">
             ORDER BY
             <choose>
-                <when test="sortBy == 'priceAsc'">a.min_price ASC</when>
-                <when test="sortBy == 'priceDesc'">a.min_price DESC</when>
+                <!-- <when test="sortBy == 'priceAsc'">a.min_price ASC</when> --> <!-- 임시 주석 처리 -->
+                <!-- <when test="sortBy == 'priceDesc'">a.min_price DESC</when> --> <!-- 임시 주석 처리 -->
+                <when test="sortBy == 'priceAsc'">a.title ASC</when> <!-- 임시로 title 정렬 사용 -->
+                <when test="sortBy == 'priceDesc'">a.title DESC</when> <!-- 임시로 title 정렬 사용 -->
                 <when test="sortBy == 'name'">a.title ASC</when>
+                <when test="sortBy == 'created_at_desc'">a.created_at DESC</when>
                 <otherwise>a.created_at DESC</otherwise>
             </choose>
         </if>
@@ -285,11 +289,17 @@
     </insert>
 
     <!-- 유사한 숙소 목록을 조회합니다. -->
-    <select id="getSimilarAccommodations" resultMap="accommodationResultMap">
-        SELECT a.*, u.username as host_name
+    <select id="getSimilarAccommodations" resultMap="accommodationResultMap" parameterType="map">
+        SELECT
+            a.*,
+            u.username as host_name,
+            sd.sido_name as sido_name,
+            gg.gugun_name as gugun_name
         FROM accommodations a
         JOIN accommodations base ON a.sido_code = base.sido_code AND a.gugun_code = base.gugun_code
         LEFT JOIN users u ON a.host_id = u.user_id
+        LEFT JOIN sido sd ON a.sido_code = sd.sido_code
+        LEFT JOIN gugun gg ON a.gugun_code = gg.gugun_code
         WHERE base.accommodation_id = #{accommodationId}
         AND a.accommodation_id IS NOT NULL
         AND a.accommodation_id != #{accommodationId}

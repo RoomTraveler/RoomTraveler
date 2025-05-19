@@ -51,20 +51,12 @@
       <!-- 알림 관리 버튼 -->
       <div class="d-flex justify-content-between mb-3">
         <div>
-          <button 
-            class="btn btn-outline-primary me-2" 
-            @click="markAllAsRead"
-            :disabled="unreadCount === 0"
-          >
+          <button class="btn btn-outline-primary me-2" @click="markAllAsRead" :disabled="unreadCount === 0">
             <i class="bi bi-check-all me-1"></i> 모두 읽음으로 표시
           </button>
         </div>
         <div>
-          <button 
-            class="btn btn-outline-danger" 
-            @click="confirmDeleteAll"
-            :disabled="notifications.length === 0"
-          >
+          <button class="btn btn-outline-danger" @click="confirmDeleteAll" :disabled="notifications.length === 0">
             <i class="bi bi-trash me-1"></i> 모든 알림 삭제
           </button>
         </div>
@@ -80,15 +72,16 @@
 
       <!-- 알림 목록 -->
       <div v-else>
-        <div v-if="notifications.length === 0" class="alert alert-info">
-          알림이 없습니다.
-        </div>
+        <div v-if="notifications.length === 0" class="alert alert-info">알림이 없습니다.</div>
 
         <div v-else>
-          <div v-for="notification in notifications" :key="notification.notificationId" 
-               class="notification-item" 
-               :class="{ 'unread': !notification.read }"
-               @click="markAsRead(notification.notificationId)">
+          <div
+            v-for="notification in notifications"
+            :key="notification.notificationId"
+            class="notification-item"
+            :class="{ unread: !notification.read }"
+            @click="markAsRead(notification.notificationId)"
+          >
             <div class="notification-icon">
               <i :class="getNotificationIcon(notification.type)"></i>
             </div>
@@ -106,8 +99,8 @@
               </div>
             </div>
             <div class="notification-actions">
-              <button 
-                class="btn btn-sm btn-link text-danger" 
+              <button
+                class="btn btn-sm btn-link text-danger"
                 @click.stop="confirmDelete(notification.notificationId)"
                 title="알림 삭제"
               >
@@ -122,10 +115,10 @@
               <li class="page-item" :class="{ disabled: currentPage === 1 }">
                 <a class="page-link" href="#" @click.prevent="goToPage(currentPage - 1)">이전</a>
               </li>
-              <li 
-                v-for="page in paginationItems" 
-                :key="page" 
-                class="page-item" 
+              <li
+                v-for="page in paginationItems"
+                :key="page"
+                class="page-item"
                 :class="{ active: page === currentPage, disabled: page === '...' }"
               >
                 <a class="page-link" href="#" @click.prevent="page !== '...' && goToPage(page)">{{ page }}</a>
@@ -144,41 +137,41 @@
 <script>
 /**
  * 알림 목록 컴포넌트
- * 
+ *
  * 이 컴포넌트는 사용자의 알림 목록을 표시합니다.
  * 알림 유형별 필터링, 읽음/읽지 않음 상태 필터링, 정렬 기능을 제공합니다.
  * 알림을 읽음으로 표시하거나 삭제할 수 있습니다.
  */
-import { mapState, mapActions } from 'vuex';
-import Layout from '@/components/layout/Layout.vue';
+import { mapState, mapActions } from "vuex";
+import Layout from "@/components/layout/Layout.vue";
 
 export default {
-  name: 'NotificationList',
+  name: "NotificationList",
   components: {
-    Layout
+    Layout,
   },
   data() {
     return {
       loading: true,
-      message: '',
-      error: '',
+      message: "",
+      error: "",
       notifications: [],
       unreadCount: 0,
       totalItems: 0,
       totalPages: 0,
       currentPage: 1,
       filter: {
-        type: '',
-        readStatus: '',
-        sortBy: 'createdAt',
+        type: "",
+        readStatus: "",
+        sortBy: "createdAt",
         page: 1,
-        size: 10
-      }
+        size: 10,
+      },
     };
   },
   computed: {
     ...mapState({
-      isLoggedIn: state => state.user.isLoggedIn
+      isLoggedIn: (state) => state.user.isLoggedIn,
     }),
 
     /**
@@ -199,7 +192,7 @@ export default {
         items.push(1); // 첫 페이지는 항상 표시
 
         if (this.currentPage > 3) {
-          items.push('...'); // 현재 페이지가 3보다 크면 '...' 표시
+          items.push("..."); // 현재 페이지가 3보다 크면 '...' 표시
         }
 
         // 현재 페이지 주변 페이지 표시
@@ -211,19 +204,19 @@ export default {
         }
 
         if (this.currentPage < this.totalPages - 2) {
-          items.push('...'); // 현재 페이지가 마지막에서 3번째 이전이면 '...' 표시
+          items.push("..."); // 현재 페이지가 마지막에서 3번째 이전이면 '...' 표시
         }
 
         items.push(this.totalPages); // 마지막 페이지는 항상 표시
       }
 
       return items;
-    }
+    },
   },
   created() {
     // 로그인 상태 확인
     if (!this.isLoggedIn) {
-      this.$router.push('/user/login');
+      this.$router.push("/user/login");
       return;
     }
 
@@ -238,12 +231,12 @@ export default {
     this.loadNotifications();
   },
   methods: {
-    ...mapActions('notification', [
-      'fetchNotifications', 
-      'markNotificationAsRead', 
-      'markAllNotificationsAsRead', 
-      'deleteNotification',
-      'deleteAllNotifications'
+    ...mapActions("notification", [
+      "fetchNotifications",
+      "markNotificationAsRead",
+      "markAllNotificationsAsRead",
+      "deleteNotification",
+      "deleteAllNotifications",
     ]),
 
     /**
@@ -265,10 +258,10 @@ export default {
         this.currentPage = result.number + 1;
 
         // 읽지 않은 알림 개수 계산
-        this.unreadCount = this.notifications.filter(notification => !notification.read).length;
+        this.unreadCount = this.notifications.filter((notification) => !notification.read).length;
       } catch (error) {
-        console.error('알림 목록을 불러오는 중 오류가 발생했습니다:', error);
-        this.error = '알림 목록을 불러오는 중 오류가 발생했습니다.';
+        console.error("알림 목록을 불러오는 중 오류가 발생했습니다:", error);
+        this.error = "알림 목록을 불러오는 중 오류가 발생했습니다.";
       } finally {
         this.loading = false;
       }
@@ -293,7 +286,7 @@ export default {
 
       if (this.filter.type) query.type = this.filter.type;
       if (this.filter.readStatus) query.readStatus = this.filter.readStatus;
-      if (this.filter.sortBy !== 'createdAt') query.sortBy = this.filter.sortBy;
+      if (this.filter.sortBy !== "createdAt") query.sortBy = this.filter.sortBy;
       if (this.filter.page > 1) query.page = this.filter.page;
 
       this.$router.replace({ query });
@@ -308,7 +301,7 @@ export default {
         await this.markNotificationAsRead(notificationId);
 
         // 알림 상태 업데이트
-        const notification = this.notifications.find(n => n.notificationId === notificationId);
+        const notification = this.notifications.find((n) => n.notificationId === notificationId);
         if (notification) {
           if (!notification.read) {
             notification.read = true;
@@ -321,8 +314,8 @@ export default {
           }
         }
       } catch (error) {
-        console.error('알림 읽음 처리 중 오류가 발생했습니다:', error);
-        this.error = '알림을 읽음으로 표시하는 중 오류가 발생했습니다.';
+        console.error("알림 읽음 처리 중 오류가 발생했습니다:", error);
+        this.error = "알림을 읽음으로 표시하는 중 오류가 발생했습니다.";
       }
     },
 
@@ -336,15 +329,15 @@ export default {
         await this.markAllNotificationsAsRead();
 
         // 알림 상태 업데이트
-        this.notifications.forEach(notification => {
+        this.notifications.forEach((notification) => {
           notification.read = true;
         });
         this.unreadCount = 0;
 
-        this.message = '모든 알림이 읽음으로 표시되었습니다.';
+        this.message = "모든 알림이 읽음으로 표시되었습니다.";
       } catch (error) {
-        console.error('모든 알림 읽음 처리 중 오류가 발생했습니다:', error);
-        this.error = '모든 알림을 읽음으로 표시하는 중 오류가 발생했습니다.';
+        console.error("모든 알림 읽음 처리 중 오류가 발생했습니다:", error);
+        this.error = "모든 알림을 읽음으로 표시하는 중 오류가 발생했습니다.";
       }
     },
 
@@ -353,7 +346,7 @@ export default {
      * @param {number} notificationId - 알림 ID
      */
     confirmDelete(notificationId) {
-      if (confirm('이 알림을 삭제하시겠습니까?')) {
+      if (confirm("이 알림을 삭제하시겠습니까?")) {
         this.deleteNotificationItem(notificationId);
       }
     },
@@ -367,7 +360,7 @@ export default {
         await this.deleteNotification(notificationId);
 
         // 알림 목록에서 삭제
-        const index = this.notifications.findIndex(n => n.notificationId === notificationId);
+        const index = this.notifications.findIndex((n) => n.notificationId === notificationId);
         if (index !== -1) {
           const notification = this.notifications[index];
           if (!notification.read) {
@@ -377,10 +370,10 @@ export default {
           this.totalItems--;
         }
 
-        this.message = '알림이 삭제되었습니다.';
+        this.message = "알림이 삭제되었습니다.";
       } catch (error) {
-        console.error('알림 삭제 중 오류가 발생했습니다:', error);
-        this.error = '알림 삭제 중 오류가 발생했습니다.';
+        console.error("알림 삭제 중 오류가 발생했습니다:", error);
+        this.error = "알림 삭제 중 오류가 발생했습니다.";
       }
     },
 
@@ -390,7 +383,7 @@ export default {
     confirmDeleteAll() {
       if (this.notifications.length === 0) return;
 
-      if (confirm('모든 알림을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) {
+      if (confirm("모든 알림을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.")) {
         this.deleteAllNotificationsItems();
       }
     },
@@ -407,10 +400,10 @@ export default {
         this.totalItems = 0;
         this.unreadCount = 0;
 
-        this.message = '모든 알림이 삭제되었습니다.';
+        this.message = "모든 알림이 삭제되었습니다.";
       } catch (error) {
-        console.error('모든 알림 삭제 중 오류가 발생했습니다:', error);
-        this.error = '모든 알림 삭제 중 오류가 발생했습니다.';
+        console.error("모든 알림 삭제 중 오류가 발생했습니다:", error);
+        this.error = "모든 알림 삭제 중 오류가 발생했습니다.";
       }
     },
 
@@ -421,14 +414,14 @@ export default {
      */
     getNotificationIcon(type) {
       const icons = {
-        'RESERVATION': 'bi bi-calendar-check',
-        'REVIEW': 'bi bi-star',
-        'PAYMENT': 'bi bi-credit-card',
-        'SYSTEM': 'bi bi-gear',
-        'MESSAGE': 'bi bi-chat-dots'
+        RESERVATION: "bi bi-calendar-check",
+        REVIEW: "bi bi-star",
+        PAYMENT: "bi bi-credit-card",
+        SYSTEM: "bi bi-gear",
+        MESSAGE: "bi bi-chat-dots",
       };
 
-      return icons[type] || 'bi bi-bell';
+      return icons[type] || "bi bi-bell";
     },
 
     /**
@@ -438,11 +431,11 @@ export default {
      */
     getNotificationTypeName(type) {
       const types = {
-        'RESERVATION': '예약',
-        'REVIEW': '리뷰',
-        'PAYMENT': '결제',
-        'SYSTEM': '시스템',
-        'MESSAGE': '메시지'
+        RESERVATION: "예약",
+        REVIEW: "리뷰",
+        PAYMENT: "결제",
+        SYSTEM: "시스템",
+        MESSAGE: "메시지",
       };
 
       return types[type] || type;
@@ -455,14 +448,14 @@ export default {
      */
     getNotificationTypeClass(type) {
       const classes = {
-        'RESERVATION': 'type-reservation',
-        'REVIEW': 'type-review',
-        'PAYMENT': 'type-payment',
-        'SYSTEM': 'type-system',
-        'MESSAGE': 'type-message'
+        RESERVATION: "type-reservation",
+        REVIEW: "type-review",
+        PAYMENT: "type-payment",
+        SYSTEM: "type-system",
+        MESSAGE: "type-message",
       };
 
-      return classes[type] || '';
+      return classes[type] || "";
     },
 
     /**
@@ -471,7 +464,7 @@ export default {
      * @returns {string} 포맷팅된 날짜 문자열
      */
     formatDate(date) {
-      if (!date) return '';
+      if (!date) return "";
 
       const now = new Date();
       const d = new Date(date);
@@ -485,7 +478,7 @@ export default {
       if (diffDay < 1) {
         if (diffHour < 1) {
           if (diffMin < 1) {
-            return '방금 전';
+            return "방금 전";
           }
           return `${diffMin}분 전`;
         }
@@ -499,12 +492,12 @@ export default {
 
       // 그 외: YYYY-MM-DD 형식
       const year = d.getFullYear();
-      const month = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
 
       return `${year}-${month}-${day}`;
-    }
-  }
+    },
+  },
 };
 </script>
 

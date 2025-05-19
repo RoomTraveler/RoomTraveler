@@ -4,6 +4,7 @@ import com.ssafy.trip.accommodation.model.Accommodation;
 import com.ssafy.trip.accommodation.model.Room;
 import com.ssafy.trip.accommodation.service.AccommodationService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -18,6 +19,7 @@ import java.util.Map;
  */
 @RestController
 @RequiredArgsConstructor
+@Slf4j // Slf4j 어노테이션 추가
 @RequestMapping("/api/accommodations") // 리소스 명 복수형
 public class ApiAccommodationController {
 
@@ -123,10 +125,13 @@ public class ApiAccommodationController {
             @RequestParam(required = false) Integer gugunCode,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String accommodationType,
-            @RequestParam(required = false) Integer guestCount,
+            @RequestParam(required = false) Integer adults,
+            @RequestParam(required = false) Integer children,
             @RequestParam(required = false) String sortBy,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size) {
+        log.debug("Attempting to get filtered accommodations with params - sidoCode: {}, gugunCode: {}, keyword: {}, type: {}, adults: {}, children: {}, sortBy: {}, page: {}, size: {}",
+                sidoCode, gugunCode, keyword, accommodationType, adults, children, sortBy, page, size);
         try {
             Map<String, Object> filters = new HashMap<>();
             if (sidoCode != null) filters.put("sidoCode", sidoCode);
@@ -135,24 +140,40 @@ public class ApiAccommodationController {
             if (accommodationType != null && !accommodationType.trim().isEmpty() && !accommodationType.equalsIgnoreCase("ALL")) {
                 filters.put("accommodationType", accommodationType.trim());
             }
-            if (guestCount != null && guestCount > 0) filters.put("guestCount", guestCount);
+
+            int totalGuests = 0;
+            if (adults != null && adults > 0) {
+                totalGuests += adults;
+            }
+            if (children != null && children > 0) {
+                totalGuests += children;
+            }
+            if (totalGuests > 0) {
+                filters.put("guestCount", totalGuests);
+            }
+
             if (sortBy != null && !sortBy.trim().isEmpty()) filters.put("sortBy", sortBy.trim());
             
-            // 페이징 파라미터 추가
             filters.put("offset", (page - 1) * size);
             filters.put("limit", size);
             filters.put("page", page);
             filters.put("size", size);
 
+            log.debug("Constructed filters map: {}", filters);
+
+            log.info("Calling apiAccommodationService.getFilteredAccommodations with filters...");
             Map<String, Object> pagedResult = apiAccommodationService.getFilteredAccommodations(filters);
+            log.info("Successfully retrieved pagedResult: {}", pagedResult != null ? "not null, content size: " + ((List<?>)pagedResult.getOrDefault("content", List.of())).size() : "null");
 
             return ResponseEntity.ok(pagedResult);
         } catch (SQLException e) {
+            log.error("SQL Exception in getFilteredAccommodations: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "필터링된 숙소 목록 조회 중 오류 발생: " + e.getMessage()));
+                    .body(Map.of("error", "필터링된 숙소 목록 조회 중 데이터베이스 오류 발생: " + e.getMessage()));
         } catch (Exception e) {
+            log.error("Unexpected Exception in getFilteredAccommodations: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "예상치 못한 오류 발생: " + e.getMessage()));
+                    .body(Map.of("error", "필터링된 숙소 목록 조회 중 예상치 못한 오류 발생: " + e.getMessage()));
         }
     }
 }

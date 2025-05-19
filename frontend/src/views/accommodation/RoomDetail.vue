@@ -1,5 +1,6 @@
 <template>
-  <Layout>
+  <div>
+    <AccommodationHeader title="객실 상세 정보" />
     <div class="container mt-4">
       <div v-if="message" class="alert alert-success alert-dismissible fade show" role="alert">
         {{ message }}
@@ -262,16 +263,16 @@
       </div>
       <a href="#" @click.prevent="scrollToReservation" class="btn btn-yanolja">예약하기</a>
     </div>
-  </Layout>
+  </div>
 </template>
 
 <script>
 import axios from "axios";
-import Layout from "@/components/layout/Layout.vue";
+import AccommodationHeader from "@/views/accommodation/AccommodationHeader.vue";
 
 export default {
   name: "RoomDetail",
-  components: { Layout },
+  components: { AccommodationHeader },
   props: {
     roomId: { type: [String, Number], required: true },
   },

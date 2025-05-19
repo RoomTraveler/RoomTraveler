@@ -42,4 +42,26 @@ public class Accommodation {
     private String gugunName;         // 구군 이름
     private String hostName;          // 호스트 이름
     private String mainImageUrl;      // 대표 이미지 URL
+    private String thumbnailImageUrl; // 썸네일 이미지 URL
+    private String tel; // 전화번호
+
+    public String getMainImageUrl() {
+        return mainImageUrl;
+    }
+
+    public void setMainImageUrl(String mainImageUrl) {
+        this.mainImageUrl = mainImageUrl;
+    }
+
+    public String getThumbnailImageUrl() {
+        return thumbnailImageUrl;
+    }
+
+    public void setThumbnailImageUrl(String thumbnailImageUrl) {
+        this.thumbnailImageUrl = thumbnailImageUrl;
+    }
+
+    public String getTel() {
+        return tel;
+    }
 }

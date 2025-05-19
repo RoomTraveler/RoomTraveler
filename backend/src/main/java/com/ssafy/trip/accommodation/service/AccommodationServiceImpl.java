@@ -143,18 +143,95 @@ public class AccommodationServiceImpl implements AccommodationService {
     }
     
     private void setMainImageUrlForSingleAccommodation(Accommodation accommodation) throws SQLException {
-        if (accommodation == null) return;
-        List<Image> images = imageDao.getImagesByReference(accommodation.getAccommodationId(), "ACCOMMODATION");
+        log.debug("setMainImageUrlForSingleAccommodation - START for accommodation ID: {}", accommodation != null ? accommodation.getAccommodationId() : "null accommodation object");
+        if (accommodation == null) {
+            log.warn("setMainImageUrlForSingleAccommodation - Received null accommodation object.");
+            return;
+        }
+
+        Long currentAccommodationId = accommodation.getAccommodationId();
+        log.debug("Accommodation ID for image fetching: {}", currentAccommodationId);
+        if (currentAccommodationId == null) {
+            log.error("Accommodation ID is NULL before calling imageDao.getImagesByReference for {}. Skipping image fetch.", accommodation);
+            // 기본 이미지 또는 오류 처리
+            accommodation.setMainImageUrl("https://via.placeholder.com/800x600?text=Error+ID+Null");
+            accommodation.setThumbnailImageUrl("https://via.placeholder.com/800x600?text=Error+ID+Null");
+            return;
+        }
+
+        // 1. DB에서 이미 thumbnailImageUrl이 로드되었는지 확인
+        String thumbnailImageUrlFromDb = accommodation.getThumbnailImageUrl();
+        log.debug("ThumbnailImageUrl from DB for accommodation ID {}: {}", currentAccommodationId, thumbnailImageUrlFromDb);
+
+        // 2. mainImageUrl 설정 (기존 로직)
+        log.debug("Calling imageDao.getImagesByReference with ID: {}, Type: ACCOMMODATION", currentAccommodationId);
+        List<Image> images = null;
+        try {
+            images = imageDao.getImagesByReference(currentAccommodationId, "ACCOMMODATION");
+        } catch (Exception e) {
+            log.error("Error calling imageDao.getImagesByReference for accommodation ID {}: {}", currentAccommodationId, e.getMessage(), e);
+            // 기본 이미지 또는 오류 처리
+            accommodation.setMainImageUrl("https://via.placeholder.com/800x600?text=Image+Fetch+Error");
+            accommodation.setThumbnailImageUrl("https://via.placeholder.com/800x600?text=Image+Fetch+Error");
+            // SQLException을 다시 던지거나 상황에 맞게 처리
+            if (e instanceof SQLException) {
+                throw (SQLException) e;
+            }
+            // 혹은 다른 RuntimeException으로 감싸서 던질 수 있습니다.
+            // throw new RuntimeException("Failed to fetch images for accommodation " + currentAccommodationId, e);
+            return; 
+        }
+        
+        log.debug("Retrieved {} images for accommodation ID: {}", (images != null ? images.size() : "null list"), currentAccommodationId);
+
+        if (images == null) { // Defensive check
+            log.warn("imageDao.getImagesByReference returned null for accommodation ID: {}. Treating as no images.", currentAccommodationId);
+            images = new ArrayList<>(); // Null 대신 빈 리스트로 처리
+        }
+
+        String mainImageUrl = null;
         if (!images.isEmpty()) {
             Image mainImage = images.stream().filter(img -> img.getIsMain() != null && img.getIsMain()).findFirst().orElse(images.get(0));
-            String imageUrl = mainImage.getImageUrl();
-            if (imageUrl == null || imageUrl.isEmpty()) {
-                imageUrl = "https://via.placeholder.com/800x600?text=No+Image+Available";
-            } else if (!imageUrl.startsWith("http://") && !imageUrl.startsWith("https://")) {
-                imageUrl = "http://" + imageUrl;
+            mainImageUrl = mainImage.getImageUrl();
+            if (mainImageUrl == null || mainImageUrl.isEmpty()) {
+                mainImageUrl = "https://via.placeholder.com/800x600?text=No+Image+Available";
+            } else if (!mainImageUrl.startsWith("http://") && !mainImageUrl.startsWith("https://")) {
+                mainImageUrl = "http://" + mainImageUrl;
             }
-            accommodation.setMainImageUrl(imageUrl);
+            accommodation.setMainImageUrl(mainImageUrl);
+        } else {
+            // 이미지가 없는 경우의 기본 mainImageUrl
+            mainImageUrl = "https://via.placeholder.com/800x600?text=No+Images";
+            accommodation.setMainImageUrl(mainImageUrl);
         }
+        log.debug("Set mainImageUrl: {} for accommodation ID: {}", mainImageUrl, currentAccommodationId);
+
+        // 3. thumbnailImageUrl 설정
+        if (thumbnailImageUrlFromDb != null && !thumbnailImageUrlFromDb.isEmpty()) {
+            // DB에서 가져온 값이 있으면 사용
+            if (!thumbnailImageUrlFromDb.startsWith("http://") && !thumbnailImageUrlFromDb.startsWith("https://")) {
+                accommodation.setThumbnailImageUrl("http://" + thumbnailImageUrlFromDb);
+            } else {
+                accommodation.setThumbnailImageUrl(thumbnailImageUrlFromDb);
+            }
+        } else if (mainImageUrl != null && !mainImageUrl.contains("placeholder.com")) {
+            // DB에 썸네일 URL이 없고, mainImageUrl이 유효하면 파생 시도 (예: _thumb 접미사)
+            // 실제 이 URL로 접근 가능한 썸네일 파일이 서버에 존재해야 함
+            int dotIndex = mainImageUrl.lastIndexOf('.');
+            if (dotIndex > 0) {
+                String name = mainImageUrl.substring(0, dotIndex);
+                String ext = mainImageUrl.substring(dotIndex);
+                accommodation.setThumbnailImageUrl(name + "_thumb" + ext);
+            } else {
+                // 확장자가 없는 경우, mainImageUrl을 그대로 사용
+                accommodation.setThumbnailImageUrl(mainImageUrl);
+            }
+        } else {
+            // 위 조건 모두 해당 없으면, mainImageUrl을 썸네일로 사용 (플레이스홀더 포함)
+            accommodation.setThumbnailImageUrl(mainImageUrl);
+        }
+        log.debug("Set thumbnailImageUrl: {} for accommodation ID: {}", accommodation.getThumbnailImageUrl(), currentAccommodationId);
+        log.debug("setMainImageUrlForSingleAccommodation - END for accommodation ID: {}", currentAccommodationId);
     }
 
     private void setImagesForSingleRoom(Room room) throws SQLException {
@@ -194,9 +271,21 @@ public class AccommodationServiceImpl implements AccommodationService {
      * 숙소 목록에 대표 이미지 URL을 설정합니다.
      */
     private void setMainImageUrlForAccommodations(List<Accommodation> accommodations) throws SQLException {
+        log.debug("setMainImageUrlForAccommodations - START. Number of accommodations: {}", accommodations != null ? accommodations.size() : "null list");
+        if (accommodations == null) {
+            log.error("setMainImageUrlForAccommodations - accommodations list is null!");
+            // 예외를 던지거나, 빈 리스트로 처리하는 등의 방어 코드 추가 가능
+            return; 
+        }
         for (Accommodation accommodation : accommodations) {
+            if (accommodation == null) {
+                log.warn("setMainImageUrlForAccommodations - Found a null accommodation object in the list. Skipping.");
+                continue;
+            }
+            log.debug("Processing images for accommodation ID: {}", accommodation.getAccommodationId());
             setMainImageUrlForSingleAccommodation(accommodation);
         }
+        log.debug("setMainImageUrlForAccommodations - END");
     }
 
     /**
@@ -295,24 +384,56 @@ public class AccommodationServiceImpl implements AccommodationService {
      */
     @Override
     public Map<String, Object> getFilteredAccommodations(Map<String, Object> filters) throws SQLException {
-        // 전체 아이템 수 조회
+        log.debug("Service: getFilteredAccommodations - START with filters: {}", filters);
+
+        int page = (int) filters.getOrDefault("page", 1); // 기본값 설정
+        int size = (int) filters.getOrDefault("size", 10); // 기본값 설정
+
+        log.debug("Service: Calling DAO countFilteredAccommodations with filters: {}", filters);
         long totalItems = accommodationDao.countFilteredAccommodations(filters);
-        
-        // 페이징된 숙소 목록 조회
-        List<Accommodation> accommodations = accommodationDao.getFilteredAccommodations(filters);
-        setMainImageUrlForAccommodations(accommodations);
-        
-        // 페이징 정보 계산
-        int page = (int) filters.get("page");
-        int size = (int) filters.get("size");
-        int totalPages = (int) Math.ceil((double) totalItems / size);
-        
+        log.debug("Service: DAO countFilteredAccommodations returned: {}", totalItems);
+
+        List<Accommodation> accommodations;
+        if (totalItems > 0) {
+            log.debug("Service: Calling DAO getFilteredAccommodations with filters: {}", filters);
+            accommodations = accommodationDao.getFilteredAccommodations(filters);
+            log.debug("Service: DAO getFilteredAccommodations returned {} accommodations.", accommodations != null ? accommodations.size() : "null list");
+            
+            if (accommodations == null) { // 방어 코드
+                log.warn("Service: accommodationDao.getFilteredAccommodations returned null. Initializing to empty list.");
+                accommodations = new ArrayList<>();
+            }
+        } else {
+            log.debug("Service: No items found by count, returning empty list for accommodations.");
+            accommodations = new ArrayList<>();
+        }
+
+        try {
+            log.debug("Service: Attempting to set main image URLs for {} accommodations.", accommodations.size());
+            setMainImageUrlForAccommodations(accommodations); // 이 메소드 내부도 SQLException을 던질 수 있으니 확인 필요
+            log.debug("Service: Successfully set main image URLs.");
+        } catch (SQLException se) {
+            log.error("Service: SQL Exception during setMainImageUrlForAccommodations: {}", se.getMessage(), se);
+            throw se; // SQLException은 다시 던져서 컨트롤러에서 처리하도록 함
+        } catch (Exception e) {
+            log.error("Service: Unexpected Exception during setMainImageUrlForAccommodations: {}", e.getMessage(), e);
+            // 일반 Exception은 SQLException으로 감싸서 던지거나, 혹은 별도의 처리 필요
+            // 여기서는 RuntimeException으로 변환하여 상황을 알림
+            throw new RuntimeException("Unexpected error while setting image URLs: " + e.getMessage(), e);
+        }
+
+        int totalPages = (totalItems == 0) ? 0 : (int) Math.ceil((double) totalItems / size);
+        if (totalPages == 0 && page > 0 && totalItems == 0) { // 아이템이 없고 페이지가 0보다 크면 현재 페이지를 0 또는 1로 조정
+             page = 0; // 혹은 1로 유지할지 정책에 따라 결정. 현재는 0으로.
+        }
+
         Map<String, Object> result = new HashMap<>();
         result.put("content", accommodations);
         result.put("currentPage", page);
         result.put("totalItems", totalItems);
         result.put("totalPages", totalPages);
         
+        log.debug("Service: getFilteredAccommodations - END returning result: {}", result);
         return result;
     }
 
