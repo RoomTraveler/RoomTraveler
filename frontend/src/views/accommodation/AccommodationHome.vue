@@ -10,7 +10,7 @@
       <div class="section-title">숙소 유형</div>
       <div class="category-grid">
         <!-- 모텔 카테고리 -->
-        <router-link :to="{ name: 'AccommodationList', query: { category: 'MOTEL' } }" class="category-item">
+        <router-link :to="{ name: 'AccommodationList', query: { accommodationType: 'MOTEL' } }" class="category-item">
           <div class="category-image-container">
             <img src="/img/accommodationMotel.png" alt="모텔" class="category-image" />
           </div>
@@ -18,7 +18,7 @@
         </router-link>
 
         <!-- 호텔/리조트 카테고리 -->
-        <router-link :to="{ name: 'AccommodationList', query: { category: 'HOTEL' } }" class="category-item">
+        <router-link :to="{ name: 'AccommodationList', query: { accommodationType: 'HOTEL' } }" class="category-item">
           <div class="category-image-container">
             <img src="/img/accommodationHotel.png" alt="호텔/리조트" class="category-image" />
           </div>
@@ -26,7 +26,7 @@
         </router-link>
 
         <!-- 펜션/풀빌라 카테고리 -->
-        <router-link :to="{ name: 'AccommodationList', query: { category: 'PENSION' } }" class="category-item">
+        <router-link :to="{ name: 'AccommodationList', query: { accommodationType: 'PENSION' } }" class="category-item">
           <div class="category-image-container">
             <img src="/img/accommodationPension.png" alt="펜션/풀빌라" class="category-image" />
           </div>
@@ -34,7 +34,7 @@
         </router-link>
 
         <!-- 프리미엄 카테고리 -->
-        <router-link :to="{ name: 'AccommodationList', query: { category: 'PREMIUM' } }" class="category-item">
+        <router-link :to="{ name: 'AccommodationList', query: { accommodationType: 'PREMIUM' } }" class="category-item">
           <div class="category-image-container">
             <img src="/img/accommodationPremium.png" alt="프리미엄" class="category-image" />
           </div>
@@ -42,7 +42,7 @@
         </router-link>
 
         <!-- 글램핑/캠핑 카테고리 -->
-        <router-link :to="{ name: 'AccommodationList', query: { category: 'CAMPING' } }" class="category-item">
+        <router-link :to="{ name: 'AccommodationList', query: { accommodationType: 'CAMPING' } }" class="category-item">
           <div class="category-image-container">
             <img src="/img/accommodationCamping.png" alt="글램핑/캠핑" class="category-image" />
           </div>

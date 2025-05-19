@@ -15,34 +15,28 @@
       </div>
       <template v-else>
         <!-- Image Carousel -->
-        <div id="roomCarousel" class="carousel slide mb-4" data-bs-ride="carousel">
+        <div id="roomCarousel" class="carousel slide mb-4 position-relative" data-bs-touch="true">
           <div class="carousel-inner">
-            <div v-if="room.mainImageUrl" class="carousel-item active">
-              <img :src="room.mainImageUrl" class="d-block w-100" :alt="room.name" />
-            </div>
             <div
-              v-for="(imageUrl, index) in room.imageUrls"
+              v-for="(imgSrc, index) in imagesForCarousel"
               :key="index"
               class="carousel-item"
-              :class="{ active: !room.mainImageUrl && index === 0 }"
+              :class="{ active: index === activeImageIndex }"
             >
-              <img :src="imageUrl" class="d-block w-100" :alt="room.name" />
+              <img :src="imgSrc" class="d-block w-100" :alt="`${room.name || '객실 이미지'} ${index + 1}`" />
             </div>
-            <div
-              v-if="!room.mainImageUrl && (!room.imageUrls || room.imageUrls.length === 0)"
-              class="carousel-item active"
-            >
-              <img src="@/assets/no-image.jpg" class="d-block w-100" alt="이미지 없음" />
-            </div>
+            <!-- 커스텀 컨트롤 버튼을 carousel-inner 내부로 이동 -->
+            <template v-if="showCustomCarouselControls">
+              <button class="custom-carousel-control prev" @click="prevImage" type="button">
+                <i class="bi bi-chevron-left"></i>
+              </button>
+              <button class="custom-carousel-control next" @click="nextImage" type="button">
+                <i class="bi bi-chevron-right"></i>
+              </button>
+            </template>
           </div>
-          <button class="carousel-control-prev" type="button" data-bs-target="#roomCarousel" data-bs-slide="prev">
-            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-            <span class="visually-hidden">Previous</span>
-          </button>
-          <button class="carousel-control-next" type="button" data-bs-target="#roomCarousel" data-bs-slide="next">
-            <span class="carousel-control-next-icon" aria-hidden="true"></span>
-            <span class="visually-hidden">Next</span>
-          </button>
+          <!-- 기존 컨트롤 버튼 삭제 (이미 삭제됨) -->
+          <!-- 새로운 커스텀 컨트롤 버튼 (carousel-inner 외부에서 내부로 이동) -->
         </div>
         <!-- Room Info -->
         <div class="room-info">
@@ -75,20 +69,44 @@
             <button @click="confirmDeleteRoom" class="btn btn-outline-danger">삭제</button>
           </div>
         </div>
-        <!-- Tab Bar -->
-        <div class="tab-bar">
-          <div
-            v-for="tab in tabs"
-            :key="tab.id"
-            class="tab-item"
-            :class="{ active: activeTab === tab.id }"
-            @click="activeTab = tab.id"
-          >
-            {{ tab.name }}
+
+        <!-- 후기 섹션 (예약하기 섹션 위로 이동) -->
+        <hr class="my-4"> <!-- 객실 정보와 후기 섹션 사이의 구분선 -->
+        <div class="tab-content-section reviews-wrapper mt-4">
+          <h3 class="section-title">후기</h3>
+          <div class="reviews-container">
+            <div v-for="review in visibleReviews" :key="review.id" class="review-card">
+              <div class="review-header">
+                <div class="review-rating">
+                  <i v-for="star in 5" :key="star" class="bi"
+                     :class="star <= review.rating ? 'bi-star-fill' : 'bi-star'"></i>
+                </div>
+                <div class="review-nickname-date">
+                  <span class="review-nickname">{{ review.nickname }}</span>
+                  <span class="review-date">{{ review.date }}</span>
+                </div>
+              </div>
+              <h4 class="review-room-name">{{ review.roomName }}</h4>
+              <p class="review-content">{{ review.content }}</p>
+            </div>
+          </div>
+          <div v-if="totalReviewCount > displayReviewCount" class="text-center mt-3">
+            <button @click="displayReviewCount = totalReviewCount" class="btn btn-outline-secondary w-100">
+              {{ totalReviewCount }}개 객실후기 보기
+            </button>
+          </div>
+          <div v-else-if="totalReviewCount > 0 && totalReviewCount === displayReviewCount" class="text-center mt-3">
+             <button @click="displayReviewCount = 2" class="btn btn-outline-secondary w-100" v-if="totalReviewCount > 2">
+              후기 접기
+            </button>
+          </div>
+           <div v-if="totalReviewCount === 0" class="text-center text-muted mt-3">
+            <p>아직 작성된 후기가 없습니다.</p>
           </div>
         </div>
-        <!-- Tab Contents -->
-        <div v-show="activeTab === 'reservation'" class="tab-content">
+
+        <!-- 예약하기 섹션 -->
+        <div class="tab-content-section reservation-form-wrapper mt-4">
           <div class="reservation-form">
             <h3 class="section-title">날짜 선택</h3>
             <div class="d-flex justify-content-between mb-3">
@@ -172,17 +190,15 @@
                   <div>{{ formatPrice(totalPrice) }}</div>
                 </div>
               </div>
-              <button type="submit" class="btn btn-yanolja w-100 mt-3">예약하기</button>
-            </form>
-            <!-- 장바구니 추가 폼 -->
-            <form @submit.prevent="addToCart" class="mt-2">
-              <div class="d-grid">
-                <button type="submit" class="btn btn-outline-primary">장바구니에 담기</button>
-              </div>
+              <!-- <button type="submit" class="btn btn-yanolja w-100 mt-3">예약하기</button> -->
             </form>
           </div>
         </div>
-        <div v-show="activeTab === 'details'" class="tab-content">
+
+        <hr class="my-4">
+
+        <!-- 상세 정보 섹션 -->
+        <div class="tab-content-section details-wrapper mt-4">
           <div class="room-info">
             <h3 class="section-title">객실 설명</h3>
             <p>{{ room.description }}</p>
@@ -207,14 +223,13 @@
               <div class="info-icon"><i class="bi bi-telephone"></i></div>
               <div class="info-text">{{ accommodation.phone }}</div>
             </div>
-            <router-link
-              :to="`/accommodation/detail/${accommodation.accommodationId}`"
-              class="btn btn-outline-primary mt-3"
-              >숙소 상세 정보 보기</router-link
-            >
           </div>
         </div>
-        <div v-show="activeTab === 'amenities'" class="tab-content">
+
+        <hr class="my-4">
+
+        <!-- 편의시설 섹션 -->
+        <div class="tab-content-section amenities-wrapper mt-4">
           <div class="room-info">
             <h3 class="section-title">객실 내 시설</h3>
             <div class="amenities-list">
@@ -261,7 +276,10 @@
         {{ formatPrice(room.price) }}
         <span class="booking-price-unit">/ 1박</span>
       </div>
-      <a href="#" @click.prevent="scrollToReservation" class="btn btn-yanolja">예약하기</a>
+      <div class="booking-actions">
+        <button @click="addToCart" class="btn btn-outline-primary me-2">장바구니</button>
+        <button @click="submitReservation" class="btn btn-yanolja">바로 예약</button>
+      </div>
     </div>
   </div>
 </template>
@@ -269,6 +287,7 @@
 <script>
 import axios from "axios";
 import AccommodationHeader from "@/views/accommodation/AccommodationHeader.vue";
+import noImagePlaceholder from "@/assets/no-image.jpg";
 
 export default {
   name: "RoomDetail",
@@ -282,12 +301,6 @@ export default {
       message: "",
       room: {},
       accommodation: {},
-      activeTab: "reservation",
-      tabs: [
-        { id: "reservation", name: "예약하기" },
-        { id: "details", name: "상세 정보" },
-        { id: "amenities", name: "편의시설" },
-      ],
       reservation: {
         checkInDate: "",
         checkOutDate: "",
@@ -298,10 +311,31 @@ export default {
       availability: {},
       selectedCheckInDate: null,
       selectedCheckOutDate: null,
-      // 사용자 정보
       userId: null,
       isHost: false,
       isLoggedIn: false,
+      reviews: [
+        {
+          id: 1,
+          rating: 5,
+          nickname: "여행가자**",
+          date: "2025.03.02",
+          roomName: "2 싱글 디럭스 시티뷰",
+          content: "생긴지가 얼마 안 되었다는 후기를 듣고 갔는데 남대문 시장도 바로 앞에 있고 명동도 가까워서 다음에 또 가야겠다는 생각이 드는 숙소 있습니다"
+        },
+        {
+          id: 2,
+          rating: 4,
+          nickname: "너의추억잇******",
+          date: "2025.02.28",
+          roomName: "2 싱글 디럭스 시티뷰",
+          content: "편히 잘 쉬다 갑니다"
+        },
+      ],
+      displayReviewCount: 2,
+      activeImageIndex: 0,
+      carouselInstance: null,
+      noImagePlaceholder,
     };
   },
   computed: {
@@ -356,37 +390,76 @@ export default {
       if (!this.room.amenities) return [];
       return this.room.amenities.split(",").map((item) => item.trim());
     },
-  },
-  async created() {
-    // 사용자 정보 (localStorage에서 가져옴)
-    const userStr = localStorage.getItem("user");
-    if (userStr) {
-      const user = JSON.parse(userStr);
-      this.userId = user.id;
-      this.isHost = user.role === "HOST";
-      this.isLoggedIn = true;
-    }
-    if (this.$route.query.message) this.message = this.$route.query.message;
-    await this.loadRoomDetail();
-    this.initDates();
-  },
-  mounted() {
-    if (window.bootstrap) {
-      new window.bootstrap.Carousel(document.getElementById("roomCarousel"));
+    totalReviewCount() {
+      return this.reviews.length;
+    },
+    visibleReviews() {
+      return this.reviews.slice(0, this.displayReviewCount);
+    },
+    allRawImageUrls() {
+      const urls = [];
+      if (this.room && this.room.mainImageUrl) {
+        urls.push(this.room.mainImageUrl);
+      }
+      if (this.room && this.room.imageUrls && Array.isArray(this.room.imageUrls)) {
+        urls.push(...this.room.imageUrls);
+      }
+      return urls;
+    },
+    imagesForCarousel() {
+      if (this.allRawImageUrls.length > 0) {
+        return this.allRawImageUrls;
+      }
+      return [this.noImagePlaceholder];
+    },
+    showCustomCarouselControls() {
+      return this.allRawImageUrls.length > 1;
     }
   },
   methods: {
     async loadRoomDetail() {
       this.loading = true;
+      this.activeImageIndex = 0;
       try {
         const { data } = await axios.get(`/api/accommodations/room/${this.roomId}`);
         this.room = data.room || {};
         this.accommodation = data.accommodation || {};
+        this.$nextTick(() => {
+          this.setupCarousel();
+        });
       } catch (error) {
         this.message = error.response?.data?.error || error.message || "객실 정보를 불러올 수 없습니다.";
         console.error("객실 정보를 불러오는 중 오류가 발생했습니다:", error);
       } finally {
         this.loading = false;
+      }
+    },
+    setupCarousel() {
+      const carouselElement = document.getElementById("roomCarousel");
+      if (carouselElement) {
+        if (this.carouselInstance) {
+          this.carouselInstance.dispose();
+        }
+        this.carouselInstance = new window.bootstrap.Carousel(carouselElement, {
+          interval: false,
+          ride: false,
+          wrap: true
+        });
+        carouselElement.removeEventListener('slide.bs.carousel', this.handleCarouselSlideEvent);
+        carouselElement.addEventListener('slide.bs.carousel', this.handleCarouselSlideEvent);
+      }
+    },
+    handleCarouselSlideEvent(event) {
+      this.activeImageIndex = event.to;
+    },
+    prevImage() {
+      if (this.carouselInstance) {
+        this.carouselInstance.prev();
+      }
+    },
+    nextImage() {
+      if (this.carouselInstance) {
+        this.carouselInstance.next();
       }
     },
     initDates() {
@@ -547,7 +620,6 @@ export default {
     },
     async deleteRoomItem() {
       try {
-        // 객실 삭제 API 연동 필요 (예시)
         alert("객실이 삭제되었습니다. (API 연동 필요)");
         this.$router.push({ path: `/accommodation/detail/${this.accommodation.accommodationId}` });
       } catch (error) {
@@ -555,13 +627,44 @@ export default {
       }
     },
     scrollToReservation() {
-      this.activeTab = "reservation";
-      const tabBar = document.querySelector(".tab-bar");
-      if (tabBar) {
-        window.scrollTo({ top: tabBar.offsetTop - 20, behavior: "smooth" });
+      const reservationFormSection = document.querySelector('.reservation-form');
+      if (reservationFormSection) {
+        const headerElement = document.querySelector('.yanolja-header');
+        const headerOffset = headerElement ? headerElement.clientHeight : 70;
+        const elementPosition = reservationFormSection.getBoundingClientRect().top + window.pageYOffset;
+        const offsetPosition = elementPosition - headerOffset - 20;
+
+        window.scrollTo({
+          top: offsetPosition,
+          behavior: "smooth"
+        });
       }
     },
   },
+  async created() {
+    const userStr = localStorage.getItem("user");
+    if (userStr) {
+      const user = JSON.parse(userStr);
+      this.userId = user.id;
+      this.isHost = user.role === "HOST";
+      this.isLoggedIn = true;
+    }
+    if (this.$route.query.message) this.message = this.$route.query.message;
+    await this.loadRoomDetail();
+    this.initDates();
+  },
+  mounted() {
+  },
+  beforeUnmount() {
+    const carouselElement = document.getElementById("roomCarousel");
+    if (carouselElement) {
+      carouselElement.removeEventListener('slide.bs.carousel', this.handleCarouselSlideEvent);
+    }
+    if (this.carouselInstance) {
+      this.carouselInstance.dispose();
+      this.carouselInstance = null;
+    }
+  }
 };
 </script>
 
@@ -572,6 +675,37 @@ export default {
   --yanolja-light-gray: #f5f5f5;
   --yanolja-dark-gray: #666;
 }
+
+/* 전체 컨테이너 너비 제한 및 중앙 정렬 */
+.container {
+  max-width: 768px;
+  margin-left: auto;
+  margin-right: auto;
+  margin-bottom: 100px; /* Booking Bar로 인해 가려지는 것을 방지하기 위한 하단 여백 추가 */
+}
+
+/* Image Carousel 크기 조정 */
+#roomCarousel {
+  max-width: 768px;
+  margin: 0 auto 20px auto; /* 기존 mb-4와 유사한 margin */
+}
+
+.carousel-inner {
+  height: 507px; /* 이미지 높이와 동일하게 설정 */
+  border-radius: 0.25rem; /* Bootstrap 기본 테두리 반경과 유사하게 */
+  overflow: hidden; /* 이미지가 넘칠 경우를 대비 */
+  position: relative; /* 자식 앱솔루트 요소(컨트롤 버튼)의 기준점 */
+}
+
+#roomCarousel .carousel-item img {
+  width: 768px;
+  height: 507px;
+  object-fit: cover;
+  display: block;
+}
+
+/* 기본 Bootstrap .carousel-item 에 active가 아닐 때 display: none이므로 */
+/* 명시적인 height 설정이 필요할 수 있음. .carousel-inner로 제어 */
 
 .room-info {
   background-color: white;
@@ -617,38 +751,11 @@ export default {
   flex: 1;
 }
 
-.tab-bar {
-  display: flex;
-  background-color: white;
-  border-radius: 10px;
-  overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  margin-bottom: 20px;
-}
-
-.tab-item {
-  flex: 1;
-  text-align: center;
-  padding: 15px 0;
-  font-weight: bold;
-  cursor: pointer;
-  border-bottom: 3px solid transparent;
-}
-
-.tab-item.active {
-  color: var(--yanolja-red);
-  border-bottom-color: var(--yanolja-red);
-}
-
-.tab-content {
-  display: block;
-}
-
 .booking-bar {
   position: fixed;
   bottom: 0;
-  left: 0;
-  right: 0;
+  /* left: 0; 제거 */
+  /* right: 0; 제거 */
   background-color: white;
   box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
   padding: 15px;
@@ -656,6 +763,12 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
+
+  /* 너비 제한 및 중앙 정렬 */
+  max-width: 768px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%; /* max-width 내에서 100% 사용 */
 }
 
 .booking-price {
@@ -770,7 +883,106 @@ export default {
 /* 모바일 화면에서 하단 여백 추가 */
 @media (max-width: 768px) {
   .container {
-    margin-bottom: 80px;
+    /* margin-bottom: 80px; */ /* 일반 스타일로 이동했으므로 여기서 제거 또는 주석 처리 */
+    /* 필요한 경우 모바일 전용 추가 조정 가능 */
   }
+}
+
+/* Review Section Styles */
+.reviews-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); /* 반응형 그리드 */
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.review-card {
+  background-color: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 15px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.review-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start; /* 닉네임/날짜를 별점 아래로 정렬하고 싶으면 center 또는 flex-start */
+  margin-bottom: 8px;
+}
+
+.review-rating .bi-star-fill {
+  color: #fadb14; /* 별점 색상 */
+}
+.review-rating .bi-star {
+  color: #d9d9d9; /* 빈 별 색상 */
+}
+
+.review-nickname-date {
+  text-align: right;
+}
+
+.review-nickname {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #555;
+  display: block; /* 날짜와 줄바꿈 */
+}
+
+.review-date {
+  font-size: 0.75rem;
+  color: #888;
+}
+
+.review-room-name {
+  font-size: 1rem;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+.review-content {
+  font-size: 0.9rem;
+  color: #444;
+  line-height: 1.5;
+  /* 여러 줄 내용 처리를 위한 스타일 (선택적) */
+  display: -webkit-box;
+  -webkit-line-clamp: 4; /* 보여줄 최대 줄 수 */
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-height: 60px; /* 내용 길이에 따라 조절 */
+}
+
+/* Custom Carousel Controls */
+.custom-carousel-control {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background-color: rgba(0, 0, 0, 0.3);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  z-index: 10; /* 다른 요소 위에 오도록 */
+}
+
+.custom-carousel-control:hover {
+  background-color: rgba(0, 0, 0, 0.6);
+}
+
+.custom-carousel-control.prev {
+  left: 30px;
+}
+
+.custom-carousel-control.next {
+  right: 30px;
 }
 </style>

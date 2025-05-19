@@ -72,6 +72,16 @@ function slideTo(direction) {
   box-shadow: 0 2px 24px 0 rgba(60, 90, 150, 0.06);
 }
 
+.half.left:hover {
+  transform: scale(1.02) translateX(2%);
+  z-index: 2;
+}
+
+.half.right:hover {
+  transform: scale(1.02) translateX(-2%);
+  z-index: 2;
+}
+
 /* ---- 모던 숙소 예약하기 버튼 ---- */
 .modern-signboard {
   display: flex;

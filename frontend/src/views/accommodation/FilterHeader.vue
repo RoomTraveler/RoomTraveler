@@ -1,7 +1,7 @@
 <template>
   <div class="sticky top-0 z-50 bg-white border-b border-gray-200">
     <!-- 기존 헤더 대신 새로운 AccommodationHeader 사용 -->
-    <AccommodationHeader title="숙소 목록" />
+    <AccommodationHeader :selected-accommodation-type="selectedAccommodationType" />
 
     <!-- 필터 트리거 버튼 영역 -->
     <div class="flex items-center justify-between px-3 h-[52.8px] gap-2 border-b border-gray-100 overflow-x-auto scrollbar-hide">
@@ -69,8 +69,8 @@
 import { ref, computed, watch, nextTick } from 'vue';
 import AccommodationHeader from './AccommodationHeader.vue'; // 새로 만든 헤더 컴포넌트 임포트
 import RegionSelectModal from '../../components/modals/RegionSelectModal.vue';
-import DateSelectModal from '@/components/modals/DateSelectModal.vue';
-import GuestSelectModal from '@/components/modals/GuestSelectModal.vue';
+import DateSelectModal from '../../components/modals/DateSelectModal.vue';
+import GuestSelectModal from '../../components/modals/GuestSelectModal.vue';
 
 interface Region {
   sidoCode: number | null;
@@ -92,21 +92,54 @@ interface AccommodationType {
 const accommodationTypes: AccommodationType[] = [
   { label: '전체', value: null },
   { label: '모텔', value: 'MOTEL' },
-  { label: '호텔/리조트', value: 'HOTEL_RESORT' },
-  { label: '펜션/풀빌라', value: 'PENSION_POOL_VILLA' },
+  { label: '호텔/리조트', value: 'HOTEL' },
+  { label: '펜션/풀빌라', value: 'PENSION' },
   { label: '프리미엄', value: 'PREMIUM' },
-  { label: '글램핑/캠핑', value: 'GLAMPING_CAMPING' },
+  { label: '글램핑/캠핑', value: 'CAMPING' },
 ];
+
+interface FilterValuesFromParent {
+  region: Region;
+  dateRange: [Date, Date] | null;
+  guestInfo: GuestSelection;
+  accommodationType: string | null;
+}
+
+const props = defineProps<{
+  initialFilters?: FilterValuesFromParent; // AccommodationList로부터 전체 필터 값 받음
+  initialSort?: string;                   // AccommodationList로부터 정렬 값 받음
+}>();
 
 const emit = defineEmits(['update-filters']);
 
-// State for filters
-const selectedRegion = ref<Region>({
-  sidoCode: null, gugunCode: null, name: '전체 지역',
+// State for filters - props로부터 초기화
+const selectedRegion = ref<Region>(props.initialFilters?.region || { sidoCode: null, gugunCode: null, name: '전체 지역' });
+const dateRange = ref<[Date, Date] | null>(props.initialFilters?.dateRange || null);
+const guestInfo = ref<GuestSelection>(props.initialFilters?.guestInfo || { adults: 2, children: 0 });
+const selectedAccommodationType = ref<string | null>(props.initialFilters?.accommodationType || null);
+const currentSortValue = ref<string>(props.initialSort || 'created_at_desc'); // 정렬 상태 추가
+
+// accommodationTypes와 sorts는 FilterHeader가 자체적으로 가질 수 있음
+const sortOptions: Array<{label: string, value: string}> = [
+  { label: '추천순', value: 'created_at_desc' },
+  { label: '이름순', value: 'name' }, // API가 지원하는 정렬값으로 변경 필요
+  { label: '가격 낮은순', value: 'priceAsc' },
+  { label: '가격 높은순', value: 'priceDesc' },
+];
+
+// Props 변경 감지하여 내부 상태 업데이트
+watch(() => props.initialFilters, (newFilters) => {
+  if (newFilters) {
+    selectedRegion.value = newFilters.region || { sidoCode: null, gugunCode: null, name: '전체 지역' };
+    dateRange.value = newFilters.dateRange || null;
+    guestInfo.value = newFilters.guestInfo || { adults: 2, children: 0 };
+    selectedAccommodationType.value = newFilters.accommodationType || null;
+  }
+}, { deep: true });
+
+watch(() => props.initialSort, (newSort) => {
+  currentSortValue.value = newSort || 'created_at_desc';
 });
-const dateRange = ref<[Date, Date] | null>(null);
-const guestInfo = ref<GuestSelection>({ adults: 2, children: 0 });
-const selectedAccommodationType = ref<string | null>(null); // 선택된 호텔 유형 상태
 
 // Computed labels for display
 const selectedRegionLabel = computed(() => selectedRegion.value.name || '지역을 선택해주세요.');
@@ -174,19 +207,14 @@ function handleGuestApplied(newGuests: GuestSelection) {
   showGuestSelectModal.value = false;
 }
 
-// Emit all current filter states
+// Emit all current filter states (정렬 정보 포함)
 function emitFilters() {
-  console.log('[FilterHeader] Emitting update-filters with:', {
-    region: selectedRegion.value,
-    dateRange: dateRange.value,
-    guestInfo: guestInfo.value,
-    accommodationType: selectedAccommodationType.value,
-  });
   emit('update-filters', {
     region: selectedRegion.value,
     dateRange: dateRange.value,
     guestInfo: guestInfo.value,
     accommodationType: selectedAccommodationType.value,
+    sortBy: currentSortValue.value, // 정렬 값 추가
   });
 }
 
@@ -194,6 +222,14 @@ function emitFilters() {
 function selectAccommodationType(typeValue: string | null) {
   if (selectedAccommodationType.value !== typeValue) {
     selectedAccommodationType.value = typeValue;
+    emitFilters();
+  }
+}
+
+// 정렬 변경 함수 (새로 추가 또는 기존 UI에 연결)
+function selectSort(sortValue: string) {
+  if (currentSortValue.value !== sortValue) {
+    currentSortValue.value = sortValue;
     emitFilters();
   }
 }

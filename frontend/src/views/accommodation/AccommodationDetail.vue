@@ -2,7 +2,7 @@
   <div class="bg-gray-50 min-h-screen">
     <div class="max-w-[768px] mx-auto">
       <!-- MOVED MAIN WRAPPER TO INCLUDE HEADER -->
-      <AccommodationHeader :title="headerTitle" />
+      <AccommodationHeader :accommodationTitle="accommodation.title" />
 
       <!-- 로딩 상태 표시 -->
       <div v-if="loading && !fetchError" class="py-20 flex flex-col items-center justify-center">

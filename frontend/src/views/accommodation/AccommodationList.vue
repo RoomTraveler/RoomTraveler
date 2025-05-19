@@ -3,11 +3,15 @@
     <!-- 전체 너비 제한 컨테이너 -->
     <div class="max-w-[768px] mx-auto">
       <!-- 새로운 필터 헤더 컴포넌트 사용 -->
-      <FilterHeader @update-filters="handleFiltersUpdate" />
+      <FilterHeader 
+        @update-filters="handleFiltersUpdate" 
+        :initialFilters="currentFilters"
+        :initialSort="currentSort"
+      />
 
       <!-- 숙소 리스트 (가로 최대 768px) -->
-      <div class="pb-16">
-        <div v-if="!loading && totalAccommodationsCount > 0" class="px-4 pt-3 pb-1 text-xs text-gray-500">
+      <div class="pb-16 px-2">
+        <div v-if="!loading && totalAccommodationsCount > 0" class="px-2 pt-3 pb-1 text-xs text-gray-500">
           검색 결과 <span class="font-semibold text-gray-700">{{ totalAccommodationsCount }}</span
           >건
         </div>
@@ -27,61 +31,52 @@
           <p class="text-gray-500 text-base">조건에 맞는 숙소가 없어요.</p>
         </div>
 
-        <!-- 숙소 카드 그리드 (항상 2열) -->
-        <div v-else class="grid grid-cols-2 gap-x-0 gap-y-0 px-0">
+        <!-- 숙소 카드 그리드 (항상 2열, 카드 디자인 변경) -->
+        <div v-else class="grid grid-cols-2 gap-3">
           <div
             v-for="item in accommodations"
             :key="item.accommodationId"
-            class="w-full h-[209px] bg-white border border-gray-200 flex overflow-hidden cursor-pointer group relative"
+            class="w-full max-w-[367px] min-h-[416.5px] h-auto bg-white border border-gray-200 rounded-lg shadow-md flex flex-col cursor-pointer group overflow-hidden mx-auto"
             @click="goToDetail(item.accommodationId)"
           >
-            <!-- 이미지: 140x168 -->
-            <div class="relative w-[140px] h-[168px] bg-gray-200 flex-shrink-0 self-center ml-2">
-              <img
-                :src="item.mainImageUrl || 'https://via.placeholder.com/140x168.png?text=NOLPLACE'"
-                class="w-full h-full object-cover"
-                :alt="item.title"
-                loading="lazy"
-                width="140"
-                height="168"
+            <!-- 이미지 영역 -->
+            <div class="relative w-[calc(100%-16px)] h-[167px] mx-auto bg-gray-100 p-2 mt-[33px]">
+              <RoundedImage 
+                :src="item.mainImageUrl || 'https://via.placeholder.com/300x200.png?text=NOLPLACE'" 
+                :alt="item.title" 
+                roundedClass="rounded-xl" 
+                imgClass="object-cover" 
+                containerClass="w-full h-full"
               />
             </div>
-            <!-- 설명: 나머지 공간을 채우도록 width 조정 -->
-            <div class="h-[168px] p-3 flex flex-col justify-between flex-grow self-center ml-2 mr-2 overflow-hidden">
-              <div>
-                <h3 class="font-semibold text-sm text-gray-800 group-hover:underline truncate-2-lines mb-1">
-                  {{ item.title }}
-                </h3>
-                <div v-if="item.rating" class="flex items-center text-xs text-gray-600 mb-1">
-                  <i class="bi bi-star-fill text-yellow-400 text-[11px] mr-0.5"></i>
-                  <span class="font-bold">{{ item.rating.toFixed(1) }}</span>
-                  <span v-if="item.reviewCount" class="ml-0.5">({{ item.reviewCount.toLocaleString() }})</span>
-                </div>
-                <!-- <p class="text-[10px] text-gray-500 truncate">{{ item.address }}</p> -->
-              </div>
-              <div class="text-right">
-                <div
-                  v-if="item.originalPrice && getMinPrice(item.rooms) < item.originalPrice && item.discountRate"
-                  class="text-xs mb-0.5"
-                >
-                  <span class="text-red-500 font-bold">{{ item.discountRate }}%</span>
-                  <span class="text-gray-400 line-through ml-1">{{
-                    formatPrice(item.originalPrice, true, false)
-                  }}</span>
-                </div>
-                <span class="text-base font-bold text-gray-800">
-                  {{ formatPrice(getMinPrice(item.rooms), true, false) }}
-                </span>
-                <span class="text-xs font-medium text-gray-700">원~</span>
-              </div>
-            </div>
-            <button
-              @click.stop="toggleWishlist(item.accommodationId)"
-              class="absolute top-2 right-2 p-1.5 bg-black/30 rounded-full text-white hover:text-red-400 focus:outline-none z-10"
-              :class="{ 'text-red-500': item.isWished }"
+            <!-- 설명 영역 Wrapper -->
+            <div 
+              class="px-3 sm:px-4 md:px-[24.5px] flex flex-col flex-grow" 
+              style="padding-top: 16px; padding-bottom: 12px;"
             >
-              <i class="bi text-lg" :class="item.isWished ? 'bi-heart-fill' : 'bi-heart'"></i>
-            </button>
+              <!-- 텍스트 정보 컴포넌트 사용 -->
+              <AccommodationCardInfo :item="item" class="flex-grow" />
+
+              <!-- 가격 섹션 (항상 하단에 위치) -->
+              <div class="mt-auto pt-2 text-right">
+                <div class="text-xs text-gray-500 mb-0.5">
+                  <span v-if="item.checkInInfo" class="inline-block">{{ item.checkInInfo }}</span>
+                  <template v-if="item.originalPrice && getMinPrice(item.rooms) < item.originalPrice && item.discountRate">
+                    <span class="ml-2 inline-block">{{ item.discountRate }}%</span>
+                    <span class="text-gray-400 line-through ml-1 inline-block">{{ formatPrice(item.originalPrice, false, false) }}</span>
+                  </template>
+                </div>
+                <div class="flex justify-end items-baseline">
+                  <span class="text-xs text-gray-600 mr-1" v-if="item.originalPrice && getMinPrice(item.rooms) < item.originalPrice && item.discountRate">최대할인가</span>
+                  <span class="text-xl font-bold text-gray-900">{{ formatPrice(getMinPrice(item.rooms), false, false) }}</span>
+                  <span class="text-sm font-medium text-gray-800">원~</span>
+                </div>
+              </div>
+            </div> 
+            <!-- DayUse 객실 정보 바 (설명 영역 Wrapper 바깥으로 이동) -->
+            <div v-if="item.additionalBenefits && item.additionalBenefits.includes('DayUse 객실')" class="px-3 py-2 bg-gray-50 border-t border-gray-200">
+                 <span class="text-xs text-gray-700 flex items-center"><i class="bi bi-check-lg text-green-500 mr-1.5"></i>DayUse 객실</span>
+            </div>
           </div>
         </div>
 
@@ -114,6 +109,8 @@ import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import accommodationService from "../../api/accommodationApi.js";
 import FilterHeader from "./FilterHeader.vue";
+import AccommodationCardInfo from './AccommodationCardInfo.vue';
+import RoundedImage from '../../components/common/RoundedImage.vue';
 
 interface Room {
   price: number;
@@ -159,6 +156,18 @@ interface SortOption {
   value: string;
 }
 
+interface UrlFilters {
+  sidoCode?: number;
+  gugunCode?: number;
+  regionName?: string; // URL에 지역 이름도 포함 (복원 시 사용)
+  checkInDate?: string;
+  checkOutDate?: string;
+  adults?: number;
+  children?: number;
+  accommodationType?: string;
+  sortBy?: string;
+}
+
 const route = useRoute();
 const router = useRouter();
 
@@ -171,48 +180,73 @@ const hasMoreData = ref(true);
 const loadingMore = ref(false);
 const totalAccommodationsCount = ref(0);
 
-// FilterHeader로부터 받을 필터 값들 (초기값 설정)
+// 초기 필터 값 (URL 쿼리로부터 설정될 수 있도록 기본값 제공)
 const currentFilters = ref<FilterValues>({
   region: { sidoCode: null, gugunCode: null, name: "전체 지역" },
   dateRange: null,
-  guestInfo: { adults: 2, children: 0 }, // guestCount -> guestInfo
-  accommodationType: null, // 호텔 유형 초기값
+  guestInfo: { adults: 2, children: 0 },
+  accommodationType: null,
 });
 
-// 숙소 유형 및 정렬은 AccommodationList에 유지 (야놀자 사이트 참고)
-const selectedCategory = ref<string | null>(null);
 const currentSort = ref<string>("created_at_desc");
-const sortLabel = ref<string>("추천순"); // 정렬 레이블도 필요 시 FilterHeader에서 관리 가능
+// sortLabel은 FilterHeader에서 자체적으로 관리하거나, currentSort 기반으로 computed해도 됨
+// 여기서는 currentSort만 URL과 동기화
 
-const categories = ref<Category[]>([
-  { label: "전체", value: null },
-  { label: "호텔", value: "HOTEL" },
-  { label: "리조트", value: "RESORT" },
-  { label: "펜션", value: "PENSION" },
-  { label: "모텔", value: "MOTEL" },
-]);
-
-const sorts: SortOption[] = [
-  { label: "추천순", value: "created_at_desc" },
-  { label: "이름순", value: "name" },
-  { label: "가격 낮은순", value: "priceAsc" },
-  { label: "가격 높은순", value: "priceDesc" },
-];
-
-// FilterHeader에서 필터 변경 시 호출될 핸들러
-function handleFiltersUpdate(filters: FilterValues) {
-  console.log("[AccommodationList] Filters updated from FilterHeader:", JSON.parse(JSON.stringify(filters)));
-  currentFilters.value = { ...filters }; // 전체 필터 객체를 업데이트
-  resetAndFetchAccommodations();
-}
-
-const formatDate = (date: Date): string => {
-  if (!(date instanceof Date) || isNaN(date.getTime())) return "";
-  const year = date.getFullYear();
-  const month = (date.getMonth() + 1).toString().padStart(2, "0");
-  const day = date.getDate().toString().padStart(2, "0");
+const formatDate = (date: Date | string | null): string => {
+  if (!date) return "";
+  const d = typeof date === 'string' ? new Date(date) : date;
+  if (!(d instanceof Date) || isNaN(d.getTime())) return "";
+  const year = d.getFullYear();
+  const month = (d.getMonth() + 1).toString().padStart(2, "0");
+  const day = d.getDate().toString().padStart(2, "0");
   return `${year}-${month}-${day}`;
 };
+
+const parseDate = (dateStr: string | null | undefined): Date | null => {
+  if (!dateStr) return null;
+  const date = new Date(dateStr);
+  return isNaN(date.getTime()) ? null : date;
+};
+
+// URL 쿼리 파라미터 업데이트 로직
+watch([currentFilters, currentSort], () => {
+  const query: UrlFilters = {};
+
+  if (currentFilters.value.region.sidoCode) query.sidoCode = currentFilters.value.region.sidoCode;
+  if (currentFilters.value.region.gugunCode) query.gugunCode = currentFilters.value.region.gugunCode;
+  if (currentFilters.value.region.name && currentFilters.value.region.name !== '전체 지역') {
+    query.regionName = currentFilters.value.region.name;
+  }
+  if (currentFilters.value.dateRange && currentFilters.value.dateRange[0] && currentFilters.value.dateRange[1]) {
+    query.checkInDate = formatDate(currentFilters.value.dateRange[0]);
+    query.checkOutDate = formatDate(currentFilters.value.dateRange[1]);
+  }
+  if (currentFilters.value.guestInfo.adults > 0) query.adults = currentFilters.value.guestInfo.adults;
+  if (currentFilters.value.guestInfo.children > 0) query.children = currentFilters.value.guestInfo.children;
+  if (currentFilters.value.accommodationType) query.accommodationType = currentFilters.value.accommodationType;
+  if (currentSort.value) query.sortBy = currentSort.value;
+
+  // 현재 라우트의 쿼리와 다를 경우에만 replace (무한 루프 방지 목적도 있음)
+  // JSON.stringify로 비교하면 객체 순서에 따라 달라질 수 있어, 각 키를 비교하는 것이 더 정확할 수 있으나, 여기서는 단순화
+  if (JSON.stringify(route.query) !== JSON.stringify(query)) {
+    router.replace({ query: query as any }); // UrlFilters 타입이지만 any로 캐스팅
+  }
+}, { deep: true });
+
+// FilterHeader에서 필터 변경 시 호출될 핸들러
+function handleFiltersUpdate(filters: FilterValues & { sortBy?: string }) { // sortBy도 받을 수 있도록 수정
+  console.log("[AccommodationList] Filters updated from FilterHeader:", JSON.parse(JSON.stringify(filters)));
+  currentFilters.value = {
+    region: filters.region,
+    dateRange: filters.dateRange,
+    guestInfo: filters.guestInfo,
+    accommodationType: filters.accommodationType,
+  };
+  if (filters.sortBy) { // FilterHeader에서 정렬 변경도 전달한다면
+    currentSort.value = filters.sortBy;
+  }
+  resetAndFetchAccommodations();
+}
 
 function resetAndFetchAccommodations() {
   currentPage.value = 1;
@@ -242,32 +276,28 @@ async function fetchAccommodations(loadMore = false) {
 
   try {
     const params: any = {
-      gugunCode: currentFilters.value.region.gugunCode,
-      accommodationType: currentFilters.value.accommodationType,
-      adults: currentFilters.value.guestInfo.adults > 0 ? currentFilters.value.guestInfo.adults : undefined,
-      children: currentFilters.value.guestInfo.children > 0 ? currentFilters.value.guestInfo.children : undefined,
-      sortBy: currentSort.value,
       page: pageToFetch,
       size: itemsPerPage.value,
-      checkInDate:
-        currentFilters.value.dateRange && currentFilters.value.dateRange[0]
-          ? formatDate(currentFilters.value.dateRange[0])
-          : undefined,
-      checkOutDate:
-        currentFilters.value.dateRange && currentFilters.value.dateRange[1]
-          ? formatDate(currentFilters.value.dateRange[1])
-          : undefined,
+      sortBy: currentSort.value || 'created_at_desc', // 기본값 또는 현재 정렬값
     };
 
-    if (currentFilters.value.region.sidoCode !== null && currentFilters.value.region.sidoCode !== 0) {
-      params.sidoCode = currentFilters.value.region.sidoCode;
+    if (currentFilters.value.region.sidoCode) params.sidoCode = currentFilters.value.region.sidoCode;
+    if (currentFilters.value.region.gugunCode) params.gugunCode = currentFilters.value.region.gugunCode;
+    if (currentFilters.value.accommodationType) params.accommodationType = currentFilters.value.accommodationType;
+    if (currentFilters.value.guestInfo.adults > 0) params.adults = currentFilters.value.guestInfo.adults;
+    if (currentFilters.value.guestInfo.children > 0) params.children = currentFilters.value.guestInfo.children;
+    if (currentFilters.value.dateRange && currentFilters.value.dateRange[0]) {
+      params.checkInDate = formatDate(currentFilters.value.dateRange[0]);
+    }
+    if (currentFilters.value.dateRange && currentFilters.value.dateRange[1]) {
+      params.checkOutDate = formatDate(currentFilters.value.dateRange[1]);
     }
 
     const filteredParams = Object.fromEntries(
       Object.entries(params).filter(([_, v]) => v !== undefined && v !== null && v !== "")
     );
+    console.log("[AccommodationList] Fetching with params:", filteredParams);
 
-    console.log("[AccommodationList] Fetching with params (modified for sidoCode=0):", filteredParams);
     const response = await accommodationService.getAccommodations(filteredParams);
     console.log("API Response Data:", JSON.parse(JSON.stringify(response.data)));
     console.log("Response Status:", response.status);
@@ -282,6 +312,7 @@ async function fetchAccommodations(loadMore = false) {
         currentPage.value = pageToFetch;
       } else {
         accommodations.value = newAccommodations;
+        currentPage.value = 1; // 새 검색 시 페이지 1로 리셋
       }
       totalAccommodationsCount.value = response.data.totalItems || 0;
       console.log("Updated accommodations ref:", JSON.parse(JSON.stringify(accommodations.value)));
@@ -329,16 +360,6 @@ const goToDetail = (id: number) => {
   router.push({ name: "AccommodationDetail", params: { id } });
 };
 
-// 찜하기 기능 (간단한 토글)
-const toggleWishlist = (id: number) => {
-  const item = accommodations.value.find((acc) => acc.accommodationId === id);
-  if (item) {
-    item.isWished = !item.isWished;
-    // TODO: API 연동 (찜하기/찜취소)
-    console.log(`Accommodation ID ${id} wished status: ${item.isWished}`);
-  }
-};
-
 // 가격 포맷팅 함수
 const formatPrice = (price: number | null | undefined, showSymbol = true, showSuffix = true): string => {
   if (price === null || price === undefined) return "가격문의";
@@ -357,10 +378,29 @@ const getMinPrice = (rooms: Room[] | undefined): number => {
 };
 
 onMounted(() => {
-  // Query Parameter에서 필터 값 로드 (예시, 실제 구현 필요)
-  // if (route.query.sidoCode) currentFilters.value.region.sidoCode = Number(route.query.sidoCode);
-  // ... 다른 필터 값들도 유사하게 로드
+  // URL 쿼리 파라미터에서 필터 값 복원
+  const query = route.query as UrlFilters;
+  let filtersUpdated = false;
 
+  if (query.sidoCode) currentFilters.value.region.sidoCode = Number(query.sidoCode);
+  if (query.gugunCode) currentFilters.value.region.gugunCode = Number(query.gugunCode);
+  if (query.regionName) currentFilters.value.region.name = query.regionName;
+  else if (query.sidoCode && !query.gugunCode) { /* 시/도만 있을 경우 이름 업데이트 로직 필요시 추가 */ }
+  else if (!query.sidoCode) { currentFilters.value.region.name = '전체 지역'; }
+  
+  const checkIn = parseDate(query.checkInDate);
+  const checkOut = parseDate(query.checkOutDate);
+  if (checkIn && checkOut) {
+    currentFilters.value.dateRange = [checkIn, checkOut];
+  }
+  if (query.adults) currentFilters.value.guestInfo.adults = Number(query.adults);
+  if (query.children) currentFilters.value.guestInfo.children = Number(query.children);
+  if (query.accommodationType) currentFilters.value.accommodationType = query.accommodationType;
+  if (query.sortBy) currentSort.value = query.sortBy;
+
+  // 초기 필터값으로 데이터 로드
+  // currentFilters, currentSort가 변경되면 watch에 의해 URL이 업데이트되고,
+  // FilterHeader에 props로 전달된 값들이 변경되어 FilterHeader 내부 상태도 업데이트 될 것임.
   fetchAccommodations();
   window.addEventListener("scroll", handleScroll);
 });
@@ -369,10 +409,10 @@ onUnmounted(() => {
   window.removeEventListener("scroll", handleScroll);
 });
 
-// 라우트 변경 감지하여 필터 초기화 및 데이터 다시 로드 (선택적)
-// watch(route, () => {
-//   resetAndFetchAccommodations();
-// }, { deep: true });
+// categories, sorts 배열 정의는 FilterHeader로 이동하거나, 여기서 유지한다면 FilterHeader에 prop으로 전달 필요
+// 현재는 FilterHeader가 자체적으로 types, sorts를 관리하고 있으므로 여기서는 제거하거나 주석 처리해도 무방
+// const categories = ref<Category[]>([...]);
+// const sorts: SortOption[] = [...];
 </script>
 
 <style scoped>

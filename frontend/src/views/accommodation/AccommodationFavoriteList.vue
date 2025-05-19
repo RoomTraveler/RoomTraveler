@@ -67,8 +67,8 @@
 import { ref, onMounted } from "vue";
 import axios from "axios";
 import dayjs from "dayjs";
-import HeaderComponent from "@/components/HeaderComponent.vue"; // 실제 프로젝트 경로 맞추세요
-import FooterComponent from "@/components/FooterComponent.vue"; // 실제 프로젝트 경로 맞추세요
+import HeaderComponent from "@/views/accommodation/AccommodationHeader.vue";
+import FooterComponent from "@/components/layout/Footer.vue";
 
 const favorites = ref([]);
 const message = ref("");

@@ -294,7 +294,7 @@ npm install @vuepic/vue-datepicker date-fns
 npm install element-plus
 npm install vuedraggable@next
 npm install @vueuse/motion
-
+npm install bootstrap-icons
 ```
 
 2. 개발 서버 실행:

@@ -163,11 +163,9 @@ export default {
     select(value) {
       this.selected = value;
       // 선택된 값에 따라 다른 페이지로 이동
-      if (value === "숙박") {
-        this.$router.push("/accommodation");
-      } else if (value === "여행") {
-        this.$router.push("/plan");
-      }
+      setTimeout(() => {
+          this.$router.push(value === "숙박" ? "/accommodation" : "/plan");
+        }, 200);
     },
     /**
      * 알림 카운트 로드 함수

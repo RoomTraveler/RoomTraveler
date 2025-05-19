@@ -10,8 +10,11 @@ import { createApp } from 'vue';  // Vue 3 앱 생성 함수
 import { createPinia } from 'pinia';  // 상태 관리 라이브러리
 import App from './App.vue';  // 루트 컴포넌트
 import router from './router';  // 라우터 설정
-import './assets/main.css';  //Tailwind 가져오기
+import ElementPlus from 'element-plus'; // Element Plus import 추가
 import 'element-plus/dist/index.css'; // Element Plus CSS 추가
+import koKR from 'element-plus/es/locale/lang/ko'; // Element Plus 한국어 로케일 import
+import './assets/main.css';  //Tailwind 가져오기 (순서는 Element Plus CSS 뒤 또는 상황에 맞게)
+import 'bootstrap-icons/font/bootstrap-icons.css'; // Bootstrap Icons CSS 추가
 
 
 // Vue 앱 인스턴스 생성
@@ -24,6 +27,9 @@ app.use(createPinia());
 // Vue Router 설정
 // 이를 통해 SPA(단일 페이지 애플리케이션)에서 페이지 간 네비게이션이 가능합니다.
 app.use(router);
+
+// Element Plus 등록 및 한국어 로케일 설정
+app.use(ElementPlus, { locale: koKR });
 
 // 앱을 DOM에 마운트
 // #app 요소에 Vue 애플리케이션을 연결합니다.
