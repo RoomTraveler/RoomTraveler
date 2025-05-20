@@ -1,40 +1,38 @@
 package com.ssafy.trip.security;
 
 import com.ssafy.trip.user.User;
+import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
-import lombok.Getter;
+import java.util.List;
+import lombok.Data;
+import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
-@Getter
+@Data
+@RequiredArgsConstructor
 public class CustomUserDetails implements UserDetails {
 
-    private final Long userId;
-    private final String email;
-    private final String password;
-    private final String role;
-
-    public CustomUserDetails(User user) {
-        this.userId = user.getUserId();
-        this.email = user.getEmail();
-        this.password = user.getPassword();
-        this.role = user.getRole();
-    }
+    private @NonNull User user;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + role));
+        List<GrantedAuthority> roles = new ArrayList<>();
+        if (user.getRole() != null) {
+            roles.add(new SimpleGrantedAuthority("ROLE_" + user.getRole()));
+        }
+        return roles;
     }
 
     @Override
     public String getPassword() {
-        return password;
+        return user.getPassword();
     }
 
     @Override
     public String getUsername() {
-        return email;
+        return user.getEmail();
     }
 }

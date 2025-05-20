@@ -1,5 +1,6 @@
 package com.ssafy.trip.security.jwt;
 
+import com.ssafy.trip.user.User;
 import io.jsonwebtoken.*;
 import java.util.Date;
 import java.util.Map;
@@ -22,8 +23,8 @@ public class JwtUtil {
     @Value("${ssafy.jwt.refresh-expmin}")
     private int refreshExpire;
 
-    public String generateAccessToken(String email, String role) {
-        return create("accessToken", accessExpire, Map.of("email", email,"role",role));
+    public String generateAccessToken(User user) {
+        return create("accessToken", accessExpire, Map.of("email", user.getEmail(), "id", user.getUserId(), "name", user.getUsername(),"role",user.getRole()));
     }
 
     public String generateRefreshToken(String email, String role) {
@@ -32,9 +33,9 @@ public class JwtUtil {
 
     private String create(String subject, long expiration, Map<String, Object> claims) {
         Date expirationDate = new Date(System.currentTimeMillis() + 1000 * 60 * expiration);
-        String token = Jwts.builder().subject(subject).claims(claims).expiration(expirationDate).signWith(key).compact();
-        log.debug("token 생성: {}", token);
-        return token;
+        String jwt = Jwts.builder().subject(subject).claims(claims).expiration(expirationDate).signWith(key).compact();
+        log.debug("token 생성: {}", jwt);
+        return jwt;
     }
 
     public boolean isTokenValid(String token) {
@@ -65,7 +66,7 @@ public class JwtUtil {
                 .verifyWith(key)
                 .build();
 
-        var jws = parser.parseSignedClaims(token);
+        Jws<Claims> jws = parser.parseSignedClaims(token);
 
         return jws.getPayload();
     }

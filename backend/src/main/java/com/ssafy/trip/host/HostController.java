@@ -45,7 +45,7 @@ public class HostController {
     public ResponseEntity<?> registerHost(@RequestBody Host host, HttpServletResponse response) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         CustomUserDetails user = (CustomUserDetails) authentication.getPrincipal();
-        Long userId = user.getUserId();
+        Long userId = user.getUser().getUserId();
         host.setRole("HOST");
         try {
             hostService.registHost(host, userId);
@@ -168,7 +168,7 @@ public class HostController {
             @RequestParam(required = false) Long accommodationId) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         CustomUserDetails user = (CustomUserDetails) auth.getPrincipal();
-        if (!user.getUserId().equals(hostId) && !user.getRole().equals("HOST")) {
+        if (!user.getUser().getUserId().equals(hostId) && !user.getUser().getRole().equals("HOST")) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(Map.of("error", "권한이 없습니다."));
         }

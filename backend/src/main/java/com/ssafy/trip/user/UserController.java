@@ -53,7 +53,7 @@ public class UserController {
 			@ApiResponse(responseCode = "500", description = "Internal server error",
 					content = @Content(mediaType = "application/json"))
 	})
-	@PostMapping("/register")
+	@PostMapping("/auth/register")
 	public ResponseEntity<?> registerUser(@RequestBody User user) {
 		Map<String, Object> response = new HashMap<>();
 
@@ -90,8 +90,8 @@ public class UserController {
 			@ApiResponse(responseCode = "500", description = "Internal server error",
 					content = @Content(mediaType = "application/json"))
 	})
-	@PostMapping("/login")
-	public ResponseEntity<?> login(@RequestBody User loginRequest, HttpServletResponse response) {
+	@PostMapping("/auth/login")
+	public ResponseEntity<?> login(@RequestBody User loginRequest) {
 		Map<String, Object> res = new HashMap<>();
 
 		try {
@@ -103,24 +103,8 @@ public class UserController {
 				return new ResponseEntity<>(res, HttpStatus.UNAUTHORIZED);
 			}
 
-			log.info("Login successful {}", loginUser);
-			String email = loginUser.getEmail();
-			String role = loginUser.getRole();
-
-			String token = jwtUtil.generateAccessToken(email, role);
-
-			Cookie cookie = new Cookie("JWT", token);
-			cookie.setHttpOnly(true);
-			cookie.setPath("/");
-			//cookie.setSecure(true); // HTTPS에서만 전송
-			cookie.setMaxAge(60 * 60); // 1시간
-
-			response.addCookie(cookie);
-
-			loginUser.setPassword(null);
 			res.put("success", true);
 			res.put("message", "로그인에 성공했습니다.");
-			res.put("user", loginUser);
 
 			return new ResponseEntity<>(res, HttpStatus.OK);
 		} catch (SQLException e) {
