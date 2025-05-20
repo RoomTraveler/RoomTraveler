@@ -7,12 +7,13 @@ import com.ssafy.trip.map.MapDTO.RegionTripResDto;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
-
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class MapServiceImpl implements MapService {
@@ -51,8 +52,8 @@ public class MapServiceImpl implements MapService {
     }
 
     @Override
-    public List<RegionTripResDto> getRegionTripWithinMapRange(MapDTO.MapBound mapBound, int contentType, String keyword, Pageable pageable) {
-        return mapDAO.getRegionTripWithinMapRange(mapBound, contentType, keyword, pageable);
+    public List<MapDTO.RegionTripRes> getRegionTripWithinMapRange(MapDTO.MapBound mapBound, int contentType, String keyword, Pageable pageable, Long userId) {
+        return mapDAO.getRegionTripWithinMapRange(mapBound, contentType, keyword, pageable, userId);
     }
 
     @Override
@@ -61,19 +62,21 @@ public class MapServiceImpl implements MapService {
     }
 
     @Override
-    public List<MapDTO.PlanDTO> getSharedPlans() {
-        return mapDAO.getSharedPlans();
+    public List<MapDTO.PlanDTO> getSharedPlans(int page, int size) {
+        int offset = page * size;
+        return mapDAO.getSharedPlans(offset, size);
     }
 
     @Override
     @Transactional
     public void toggleAttractionLike(Long attractionId, Long userId) {
         int count = mapDAO.getCountOfAttractionLike(attractionId, userId);
+        log.info("count: {}", count);
         if (count == 0) {
-            mapDAO.deleteAttractionLike(attractionId, userId);
+            mapDAO.insertAttractionLike(attractionId, userId);
             mapDAO.incrementAttractionLikes(attractionId);
         } else if (count == 1) {
-            mapDAO.insertAttractionLike(attractionId, userId);
+            mapDAO.deleteAttractionLike(attractionId, userId);
             mapDAO.decrementAttractionLikes(attractionId);
         }
     }
@@ -107,6 +110,11 @@ public class MapServiceImpl implements MapService {
         MapDTO.RecordResponse record = mapDAO.getRecordByPlanId(planId);
         record.setImages(mapDAO.getRecordImages(record.getRecordId()));
         return record;
+    }
+
+    @Override
+    public List<MapDTO.RegionTripRes> getLikedAttractionsByUser(Long userId) {
+        return mapDAO.findLikedAttractionsByUserId(userId);
     }
 
 //    @Override

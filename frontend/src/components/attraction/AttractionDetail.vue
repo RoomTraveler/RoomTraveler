@@ -65,6 +65,8 @@ const props = defineProps({
   },
 });
 
+const emit = defineEmits(["location-loaded"]);
+
 const route = useRoute();
 const attraction = ref(null);
 const imageLoaded = ref(false);
@@ -83,11 +85,16 @@ const contentTypeMap = {
 onMounted(async () => {
   const { id } = route.params;
 
-  const attractionId = props.id || id
+  const attractionId = props.id || id;
 
   try {
     const res = await axios.get(`/api/map/attractions/${attractionId}`);
     attraction.value = res.data;
+
+    const latitude = attraction.value.latitude;
+    const longitude = attraction.value.longitude;
+
+    emit("location-loaded", { latitude, longitude });
   } catch (err) {
     console.error("API 호출 실패:", err);
   }

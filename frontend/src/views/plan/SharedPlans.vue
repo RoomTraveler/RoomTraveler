@@ -1,34 +1,35 @@
 <template>
-  <section class="plans-section">
-    <h2 class="section-title">&nbsp;&nbsp; 내가 만든 여행 플랜</h2>
+  <div class="plans-container">
+    <div v-for="plan in plans" :key="plan.planId" class="plan-card">
+      <h3>Plan #{{ plan.planId }}</h3>
 
-    <div class="plans-grid">
-      <div v-for="plan in plans" :key="plan.planId" class="plan-card">
-        <div class="plan-header">
-          <h3>플랜 #{{ plan.planId }}</h3>
-          <span class="likes"> ❤️ {{ plan.likes }} </span>
-        </div>
+      <!-- Likes: 하트 아이콘 + 개수 -->
+      <p class="likes">
+        <span class="heart">❤️</span>
+        {{ plan.likes }}
+      </p>
 
-        <ul class="attractions-list">
-          <li v-for="attraction in plan.planAttractions" :key="attraction.attractionId" class="attraction-item">
-            <a href="#" class="attraction-link" @click.prevent="goToAttraction(attraction.attractionId)">
-              {{ attraction.title }}
-            </a>
-            <span class="content-type">
-              {{ contentTypeMap[attraction.contentType] || "기타" }}
-            </span>
-          </li>
-        </ul>
+      <!-- Attractions 리스트 -->
+      <ul class="attractions-list">
+        <li v-for="attraction in plan.planAttractions" :key="attraction.attractionId" class="attraction-item">
+          <!-- 클릭하면 /attractions/:id 로 이동 -->
+          <a href="#" class="attraction-link" @click.prevent="goToAttraction(attraction.attractionId)">
+            {{ attraction.title }}
+          </a>
+          <!-- contentType 표시 -->
+          <small class="content-type">({{ contentTypeMap[attraction.contentType] }})</small>
+        </li>
+      </ul>
 
-        <button class="detail-button" @click="goToPlan(plan.planId)">✨ 자세히 보기</button>
-      </div>
+      <!-- Plan 상세보기 버튼 -->
+      <button class="detail-button" @click="goToPlan(plan.planId)">자세히 보기</button>
     </div>
 
     <div ref="infiniteScrollTrigger" class="loading">
-      <p v-if="loading">🔄 불러오는 중...</p>
-      <p v-if="finished">✅ 더 이상 플랜이 없습니다.</p>
+      <p v-if="loading">Loading more plans...</p>
+      <p v-if="finished">No more plans.</p>
     </div>
-  </section>
+  </div>
 </template>
 
 <script setup>
@@ -62,7 +63,7 @@ const fetchPlans = async () => {
 
   loading.value = true;
   try {
-    const response = await axios.get("http://localhost:8080/api/map/users/1/plans", {
+    const response = await axios.get("http://localhost:8080/api/map/plans", {
       params: { page: page.value, size },
     });
     const data = response.data;
@@ -70,7 +71,6 @@ const fetchPlans = async () => {
     // 불러온 항목 수가 페이지 크기보다 작으면 끝
     if (data.length < size) finished.value = true;
     plans.value.push(...data);
-    console.log(plans.value);
     page.value++;
   } catch (err) {
     console.error("Error fetching plans:", err);
@@ -110,91 +110,70 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.plans-section {
-  max-width: 900px;
+.plans-container {
+  max-width: 600px;
   margin: 0 auto;
-  padding: 2rem 1rem;
-}
-
-.section-title {
-  font-size: 1.5rem;
-  font-weight: bold;
-  margin-bottom: 1.5rem;
-  color: #333;
-}
-
-.plans-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 1.5rem;
 }
 
 .plan-card {
-  background: #ffffff;
-  border: 1px solid #ddd;
-  border-radius: 12px;
   padding: 1rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  transition: transform 0.2s;
-}
-.plan-card:hover {
-  transform: translateY(-3px);
+  margin-bottom: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 8px;
 }
 
-.plan-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.8rem;
-}
+/* Likes 스타일 */
 .likes {
-  font-weight: bold;
-  color: #ff4d4f;
+  display: flex;
+  align-items: center;
+  font-size: 1.1rem;
+  margin: 0.5rem 0;
+}
+.heart {
+  margin-right: 0.5rem;
 }
 
+/* Attractions 리스트 스타일 */
 .attractions-list {
   list-style: none;
   padding: 0;
-  margin: 0 0 1rem;
+  margin: 0.5rem 0 1rem;
 }
 .attraction-item {
-  margin-bottom: 0.4rem;
+  margin-bottom: 0.25rem;
 }
 .attraction-link {
-  font-weight: 600;
-  color: #007bff;
   text-decoration: none;
+  font-weight: 500;
+  cursor: pointer;
 }
 .attraction-link:hover {
   text-decoration: underline;
 }
 .content-type {
-  background: #f0f0f0;
-  font-size: 0.8rem;
-  padding: 0.2rem 0.5rem;
-  border-radius: 6px;
-  margin-left: 0.4rem;
-  color: #666;
+  color: #888;
+  margin-left: 0.5rem;
+  font-size: 0.9rem;
 }
 
+/* 자세히보기 버튼 */
 .detail-button {
-  width: 100%;
-  padding: 0.6rem;
+  display: inline-block;
+  padding: 0.5rem 1rem;
   font-size: 0.95rem;
-  background-color: #4caf50;
-  color: white;
   border: none;
-  border-radius: 8px;
+  border-radius: 4px;
   cursor: pointer;
+  background-color: #007bff;
+  color: white;
 }
 .detail-button:hover {
-  background-color: #45a049;
+  background-color: #0056b3;
 }
 
 .loading {
   text-align: center;
-  padding: 2rem 0;
-  font-size: 0.95rem;
-  color: #888;
+  padding: 2rem;
+  color: #666;
 }
 </style>

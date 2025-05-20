@@ -107,7 +107,7 @@ public class UserController {
 			String email = loginUser.getEmail();
 			String role = loginUser.getRole();
 
-			String token = jwtUtil.generateToken(email, role);
+			String token = jwtUtil.generateAccessToken(email, role);
 
 			Cookie cookie = new Cookie("JWT", token);
 			cookie.setHttpOnly(true);

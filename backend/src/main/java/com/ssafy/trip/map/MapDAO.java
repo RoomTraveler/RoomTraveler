@@ -40,13 +40,14 @@ public interface MapDAO{
     List<PlanDTO> getPlansByUserId(Long userId, int offset, int size);
 
     PlanDTO getPlanByPlanId(Long planId);
+    List<PlanDTO> getPlans();
 
-    List<RegionTripResDto> getRegionTripWithinMapRange(MapBound mapBound, int contentType, String keyword, Pageable pageable);
+    List<MapDTO.RegionTripRes> getRegionTripWithinMapRange(MapBound mapBound, int contentType, String keyword, Pageable pageable, Long userId);
 
     RegionTripResDto getAttractions(Long id);
     //Integer countRegionTrips(MapBound mapBound, int contentType, String keyword);
 
-    List<PlanDTO> getSharedPlans();
+    List<PlanDTO> getSharedPlans(int offset, int size);
 
     int incrementAttractionLikes(Long attractionId);
     int decrementAttractionLikes(Long attractionId);
@@ -68,4 +69,6 @@ public interface MapDAO{
 
     Long saveRecordByPlanId(Long recordId);
     void saveRecordImages(Long recordId, List<String> imageUrls);
+
+    List<MapDTO.RegionTripRes> findLikedAttractionsByUserId(Long userId);
 }

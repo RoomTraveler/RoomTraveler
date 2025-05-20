@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory } from "vue-router";
 // import accommodation from '@/router/accommodation.js'
-// import plan from '@/router/plan.js'
+import plan from "@/router/plan.js";
 
 // 홈 페이지 컴포넌트 - 지연 로딩 적용
 const Home = () => import("../views/Home.vue");
@@ -31,6 +31,7 @@ const AccessDenied = () => import("../views/error/AccessDenied.vue");
 
 // 라우트 정의
 const routes = [
+  ...plan,
   {
     path: "/",
     redirect: "/accommodation",

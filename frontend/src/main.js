@@ -16,6 +16,8 @@ import "element-plus/dist/index.css"; // Element Plus CSS 추가
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap";
 
+import { useKakao } from "vue3-kakao-maps/@utils";
+useKakao("a1b7d43f74e8d7c4fa60d02ce2c13f58");
 // Vue 앱 인스턴스 생성
 const app = createApp(App);
 

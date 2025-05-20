@@ -22,6 +22,24 @@
     <result property="likes" column="likes"/>
   </resultMap>
 
+    <resultMap id="RegionTripResMap" type="com.ssafy.trip.map.MapDTO$RegionTripRes">
+        <id     property="no"        column="no"/>
+        <result property="title"     column="title"/>
+        <result property="image"     column="image"/>
+        <result property="image2"     column="image2"/>
+        <result property="addr1"     column="addr1"/>
+        <result property="addr2"     column="addr2"/>
+        <result property="tel"       column="tel"/>
+        <result property="latitude"  column="latitude"/>
+        <result property="longitude" column="longitude"/>
+        <result property="contentTypeId" column="content_type_id"/>
+        <result property="homepage" column="homepage"/>
+        <result property="overview" column="overview"/>
+        <result property="totalCount" column="totalCount"/>
+        <result property="likes" column="likes"/>
+        <result property="attractionLikeId" column="id"/>
+    </resultMap>
+
   <resultMap id="ContentTypeMap" type="com.ssafy.trip.map.MapDTO$ContentType">
     <result property="code" column="content_type_id"/>
     <result property="name" column="content_type_name"/>
@@ -99,7 +117,7 @@
         WHERE p.plan_id = #{planId}
     </select>
 
-    <select id="getRegionTripWithinMapRange" resultMap="RegionTripResDtoMap">
+    <select id="getRegionTripWithinMapRange" resultMap="RegionTripResMap">
         <bind name="likeKeyword" value="'%' + keyword + '%'" />
         SELECT no,
             title,
@@ -112,8 +130,11 @@
             content_type_id,
             homepage,
             overview,
+            al.id,
+            likes,
             COUNT(*) OVER() AS totalCount
-        FROM attractions
+        FROM attractions a
+        LEFT JOIN attraction_likes al ON a.no = al.attraction_id
         WHERE latitude BETWEEN #{mapBound.southWest.latitude} AND #{mapBound.northEast.latitude}
             AND longitude BETWEEN #{mapBound.southWest.longitude} AND #{mapBound.northEast.longitude}
         <if test="contentType != null and contentType != -1">
@@ -155,6 +176,12 @@
                  JOIN plan_attraction pa  ON p.plan_id = pa.plan_id
                  JOIN attractions    a    ON pa.attraction_id = a.no
         WHERE p.is_shared = 1
+        ORDER BY p.likes DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="findLikedAttractionsByUserId" resultMap="RegionTripResMap">
+        SELECT * FROM attraction_likes al JOIN attractions a ON al.attraction_id = a.no WHERE al.user_id = #{userId}
     </select>
 
     <!-- 관광지 좋아요 증가 -->

@@ -1,41 +1,37 @@
 <template>
   <Layout>
     <div class="main-banner">
-      <div
-        class="banner-wrapper"
-        :style="{ transform: `translateX(-${currentIndex * 100}%)` }"
-      >
-        <img
-          v-for="(image, index) in images"
-          :key="index"
-          :src="image"
-          class="banner-image"
-          alt="배너 이미지"
-        />
+      <div class="banner-wrapper" :style="{ transform: `translateX(-${currentIndex * 100}%)` }">
+        <img v-for="(image, index) in images" :key="index" :src="image" class="banner-image" alt="배너 이미지" />
       </div>
     </div>
 
-  <section class="popular-section">
-  <h2 class="section-title">인기 있는 관광지</h2>
-  <div class="card-list">
-    <div class="place-card" v-for="(place, index) in popularPlaces" :key="index">
-      <img :src="place.image" :alt="place.name" />
-      <h3>{{ place.name }}</h3>
-    </div>
-  </div>
-</section>
+    <section class="popular-section">
+      <h2 class="section-title">인기 있는 관광지</h2>
+      <div class="card-list">
+        <div class="place-card" v-for="(place, index) in popularPlaces" :key="index">
+          <img :src="place.image" :alt="place.name" />
+          <h3>{{ place.name }}</h3>
+        </div>
+      </div>
+    </section>
 
-<!-- 인기 여행 플랜 섹션 -->
-<section class="popular-section">
-  <h2 class="section-title">인기 있는 여행 플랜</h2>
-  <div class="card-list">
-    <div class="plan-card" v-for="(plan, index) in popularPlans" :key="index">
-      <img :src="plan.image" :alt="plan.title" />
-      <h3>{{ plan.title }}</h3>
-      <p>{{ plan.summary }}</p>
-    </div>
-  </div>
-</section>
+    <!-- 인기 여행 플랜 섹션 -->
+    <section class="popular-section">
+      <div class="section-header">
+        <h2 class="section-title">인기 있는 여행 플랜</h2>
+        <button class="view-all-button" @click="goToAllPlans">전체 보기</button>
+      </div>
+
+      <div class="card-list">
+        <div class="plan-card" v-for="(plan, index) in popularPlans" :key="index" @click="goToPlanDetail(plan.planId)">
+          <img :src="plan.image" :alt="plan.title" class="plan-image" />
+          <h3>{{ plan.title }}</h3>
+          <p>{{ plan.summary }}</p>
+          <span class="likes">❤️ {{ plan.likes }}</span>
+        </div>
+      </div>
+    </section>
 
     <div class="travel-options">
       <div class="option-card solo">
@@ -46,8 +42,8 @@
           <div class="card-content">
             <h2 class="card-title">혼자 여행 계획 짜기</h2>
             <p class="card-description">
-              나만의 페이스로 자유롭게 여행하세요. 원하는 곳을 원하는 시간에 방문할 수 있는 완벽한
-              자유 여행을 계획해보세요.
+              나만의 페이스로 자유롭게 여행하세요. 원하는 곳을 원하는 시간에 방문할 수 있는 완벽한 자유 여행을
+              계획해보세요.
             </p>
           </div>
         </router-link>
@@ -61,8 +57,7 @@
           <div class="card-content">
             <h2 class="card-title">친구랑 여행 계획 짜기</h2>
             <p class="card-description">
-              친구들과 함께하는 특별한 여행을 계획해보세요. 모두가 만족할 수 있는 완벽한 일정을
-              만들어보세요.
+              친구들과 함께하는 특별한 여행을 계획해보세요. 모두가 만족할 수 있는 완벽한 일정을 만들어보세요.
             </p>
           </div>
         </router-link>
@@ -72,17 +67,18 @@
 </template>
 
 <script setup>
-import Layout from '@/components/layout/Layout.vue';
-import { ref, onMounted, onUnmounted } from 'vue';
+import axios from "axios";
+import Layout from "@/components/layout/Layout.vue";
+import { ref, onMounted, onUnmounted } from "vue";
+import { useRouter } from "vue-router";
 
-const images = ref([
-  '/img/planBanner1.png',
-  '/img/planBanner2.png'
-])
+const router = useRouter();
+
+const images = ref(["/img/planBanner1.png", "/img/planBanner2.png"]);
 
 // 가져와서 띄우기
-const popularPlaces = ref([]) 
-const popularPlans = ref([])
+const popularPlaces = ref([]);
+const popularPlans = ref([]);
 
 const currentIndex = ref(0);
 let intervalId;
@@ -91,7 +87,39 @@ onMounted(() => {
   intervalId = setInterval(() => {
     currentIndex.value = (currentIndex.value + 1) % images.value.length;
   }, 5000);
+  popularFivePlans();
 });
+
+const popularFivePlans = async () => {
+  try {
+    const res = await axios.get("http://localhost:8080/api/map/plans?size=5");
+    popularPlans.value = res.data.map((plan) => {
+      const attractions = plan.planAttractions || [];
+      const titles = attractions.map((a) => a.title);
+      const summary = titles.length > 1 ? `${titles[0]} 외 ${titles.length - 1}곳` : titles[0] || "장소 없음";
+
+      const image = attractions[0]?.imageUrl || "기본이미지경로.jpg";
+      const title = `여행 플랜 #${plan.planId}`; // 혹은 plan.title 사용
+
+      return {
+        ...plan,
+        summary,
+        image,
+        title,
+      };
+    });
+  } catch (error) {
+    console.error("플랜 불러오기 실패:", error);
+  }
+};
+
+function goToPlanDetail(planId) {
+  router.push(`/plans/${planId}`);
+}
+
+function goToAllPlans() {
+  router.push("/plans/shared");
+}
 
 onUnmounted(() => {
   clearInterval(intervalId);
@@ -192,14 +220,6 @@ onUnmounted(() => {
   margin-top: 60px;
 }
 
-.section-title {
-  font-size: 28px;
-  font-weight: bold;
-  margin-bottom: 20px;
-  color: #2c3e50;
-  text-align: left;
-}
-
 .card-list {
   display: flex;
   flex-wrap: nowrap;
@@ -245,5 +265,31 @@ onUnmounted(() => {
 }
 .router-link {
   text-decoration: none;
+}
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.section-title {
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin: 0;
+}
+
+.view-all-button {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.view-all-button:hover {
+  background-color: #0056b3;
 }
 </style>

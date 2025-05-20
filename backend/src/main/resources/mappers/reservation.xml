@@ -34,13 +34,16 @@
 
     <!-- 숙소 ID로 예약 목록을 조회합니다. -->
     <select id="getReservationsByAccommodationId" resultType="com.ssafy.trip.accommodation.model.Reservation">
-        SELECT * FROM reservations WHERE accommodation_id = #{accommodationId}
+        SELECT * FROM reservations r
+        JOIN rooms rm ON r.room_id = rm.room_id
+        WHERE rm.accommodation_id = #{accommodationId}
     </select>
 
     <!-- 호스트 ID로 예약 목록을 조회합니다. -->
     <select id="getReservationsByHostId" resultType="com.ssafy.trip.accommodation.model.Reservation">
         SELECT r.* FROM reservations r
-        JOIN accommodations a ON r.accommodation_id = a.accommodation_id
+        JOIN rooms rm ON r.room_id = rm.room_id
+        JOIN accommodations a ON rm.accommodation_id = a.accommodation_id
         WHERE a.host_id = #{hostId}
     </select>
 

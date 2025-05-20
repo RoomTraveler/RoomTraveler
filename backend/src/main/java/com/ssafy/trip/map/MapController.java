@@ -13,22 +13,16 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @Slf4j
-@CrossOrigin(origins = "http://localhost:5173")
 
 @RestController
 @RequestMapping("/api/map")
 @RequiredArgsConstructor
+@CrossOrigin(origins = "http://localhost:5173", methods = {RequestMethod.OPTIONS, RequestMethod.DELETE, RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT})
 @Tag(name = "PlanRestController", description = "여행 계획 기능 제공")
 public class MapController {
 
@@ -50,7 +44,7 @@ public class MapController {
                                                        @RequestParam(required = false) String keyword,
                                                        @PageableDefault(size = 10) Pageable pageable) throws JsonProcessingException {
         MapDTO.MapBound mapBoundObj = objectMapper.readValue(mapBound, MapDTO.MapBound.class);
-        return ResponseEntity.ok(mapService.getRegionTripWithinMapRange(mapBoundObj, contentType, keyword, pageable));
+        return ResponseEntity.ok(mapService.getRegionTripWithinMapRange(mapBoundObj, contentType, keyword, pageable, 1L));
     }
 
     @GetMapping("/attractions/{id}")
@@ -88,8 +82,18 @@ public class MapController {
     }
 
     @GetMapping("/plans")
-    public ResponseEntity<?> getPlans() {
-        return ResponseEntity.ok(mapService.getSharedPlans());
+    public ResponseEntity<?> getPlans(@RequestParam(defaultValue = "0") int page,
+                                      @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(mapService.getSharedPlans(page, size));
+    }
+
+    @GetMapping("/likes/attractions")
+    @Operation(summary = "사용자 좋아요한 관광지 목록", description = "현재 로그인한 사용자가 좋아요한 관광지들을 조회합니다.")
+    @ApiResponse(responseCode = "200", description = "관광지 좋아요 목록 조회 성공")
+    public ResponseEntity<?> getLikedAttractions() {
+        Long userId = 1L; // 실제 서비스에서는 JWT에서 추출
+        List<MapDTO. RegionTripRes> likedAttractions = mapService.getLikedAttractionsByUser(userId);
+        return ResponseEntity.ok(likedAttractions);
     }
 
     @PostMapping("/likes/attractions/{attractionId}")
@@ -97,6 +101,7 @@ public class MapController {
     @ApiResponse(responseCode = "200", description = "관광지 좋아요 처리 성공")
     public ResponseEntity<?> toggleAttractionLike(
             @PathVariable Long attractionId) { // get userId on jwt
+        log.info("come? " + attractionId);
         mapService.toggleAttractionLike(attractionId, 1L);
         return ResponseEntity.ok("success");
     }

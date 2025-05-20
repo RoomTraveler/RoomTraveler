@@ -1,34 +1,46 @@
 package com.ssafy.trip.security.jwt;
 
 import io.jsonwebtoken.*;
-import io.jsonwebtoken.security.Keys;
-import java.util.Base64;
 import java.util.Date;
+import java.util.Map;
 import javax.crypto.SecretKey;
+
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+@Slf4j
 @Component
 public class JwtUtil {
 
-    private final String base64Key = Base64.getEncoder()
-            .encodeToString("BeomHwangSSAFY13giBeomHwangSSAFY13giBeomHwangSSAFY13giBeomHwangSSAFY13gi".getBytes());
-    private final SecretKey secretKey = Keys.hmacShaKeyFor(Base64.getDecoder().decode(base64Key));
+    private final SecretKey key;
+    public JwtUtil() {
+        key = Jwts.SIG.HS256.key().build();
+    }
+    @Value("${ssafy.jwt.access-expmin}")
+    private int accessExpire;
+    @Value("${ssafy.jwt.refresh-expmin}")
+    private int refreshExpire;
 
-    public String generateToken(String email, String role) {
-        long expirationMs = 1000 * 60 * 60; // 1시간
-        return Jwts.builder()
-                .subject(email)
-                .claim("role", role)
-                .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + expirationMs))
-                .signWith(secretKey, Jwts.SIG.HS256)
-                .compact();
+    public String generateAccessToken(String email, String role) {
+        return create("accessToken", accessExpire, Map.of("email", email,"role",role));
+    }
+
+    public String generateRefreshToken(String email, String role) {
+        return create("refreshToken", refreshExpire, Map.of("email", email,"role", role));
+    }
+
+    private String create(String subject, long expiration, Map<String, Object> claims) {
+        Date expirationDate = new Date(System.currentTimeMillis() + 1000 * 60 * expiration);
+        String token = Jwts.builder().subject(subject).claims(claims).expiration(expirationDate).signWith(key).compact();
+        log.debug("token 생성: {}", token);
+        return token;
     }
 
     public boolean isTokenValid(String token) {
         try {
             JwtParser parser = Jwts.parser()
-                    .verifyWith(secretKey)
+                    .verifyWith(key)
                     .build();
 
             parser.parse(token); // 예외 없으면 유효
@@ -40,7 +52,7 @@ public class JwtUtil {
 
     public String getEmail(String token) {
         Claims claims = getClaims(token);
-        return claims.getSubject();
+        return claims.get("email", String.class);
     }
 
     public String getRole(String token) {
@@ -50,11 +62,11 @@ public class JwtUtil {
 
     public Claims getClaims(String token) {
         JwtParser parser = Jwts.parser()
-                .verifyWith(secretKey)
+                .verifyWith(key)
                 .build();
 
-        Jwt<?, ?> jwt = parser.parse(token);
+        var jws = parser.parseSignedClaims(token);
 
-        return (Claims) jwt.getPayload();
+        return jws.getPayload();
     }
 }

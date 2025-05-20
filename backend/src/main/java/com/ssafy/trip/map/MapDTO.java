@@ -58,6 +58,28 @@ public class MapDTO {
     @NoArgsConstructor
     @AllArgsConstructor
     @Builder
+    public static class RegionTripRes {
+        private int no;
+        private String title;
+        private String image;
+        private String image2;
+        private String addr1;
+        private String addr2;
+        private String tel;
+        private double latitude;
+        private double longitude;
+        private int contentTypeId;
+        private String homepage;
+        private String overview;
+        private int totalCount;
+        private long likes;
+        private long attractionLikeId;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
     public static class PlanAttractionDTO {
         private Long attractionId;
         private int order;

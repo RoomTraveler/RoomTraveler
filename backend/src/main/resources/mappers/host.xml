@@ -31,6 +31,7 @@
         UPDATE hosts
         SET business_name = #{businessName},
         business_reg_no = #{businessRegNo},
+        bank_name = #{bankName},
         bank_account = #{bankAccount},
         profile_text = #{profileText}
         WHERE host_id = #{hostId}

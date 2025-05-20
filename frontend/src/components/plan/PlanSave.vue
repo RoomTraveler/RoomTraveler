@@ -47,6 +47,11 @@
                   <input type="checkbox" :value="spot" v-model="selectedPlaces" />
                   <strong>{{ spot.title }}</strong>
                 </label>
+
+                <span @click.stop="toggleLike(spot.no)" style="color: red; cursor: pointer; margin-left: 10px">
+                  {{ likedAttractions[spot.no] ? "❤️" : "🤍" }} {{ likeCounts[spot.no] }}
+                </span>
+
                 <br />
                 <img
                   v-if="spot.image.trim().length !== 0"
@@ -64,31 +69,18 @@
             </ul>
             <nav aria-label="Page navigation">
               <ul id="pagination" class="pagination">
-                <li
-                  class="page-item"
-                  v-if="currentPage !== 1"
-                  @click="goToPage(currentPage - 1)"
-                  style="cursor: pointer; padding: 0.5rem; display: inline-block"
-                >
-                  &lt;
+                <li class="page-item" :class="{ disabled: currentPage === 1 }">
+                  <a class="page-link" href="#" @click.prevent="goToPage(currentPage - 1)">&lt;</a>
                 </li>
-                <li
-                  class="page-item"
-                  v-for="page in pageNumbers"
-                  :key="page"
-                  :class="{ active: page === currentPage }"
-                  @click="goToPage(page)"
-                  style="cursor: pointer; padding: 0.5rem; display: inline-block"
-                >
-                  {{ page }}
+
+                <li class="page-item" v-for="page in pageNumbers" :key="page" :class="{ active: page === currentPage }">
+                  <a class="page-link" href="#" @click.prevent="goToPage(page)">
+                    {{ page }}
+                  </a>
                 </li>
-                <li
-                  class="page-item"
-                  v-if="totalPages !== 0 && currentPage !== totalPages"
-                  @click="goToPage(currentPage + 1)"
-                  style="cursor: pointer; padding: 0.5rem; display: inline-block"
-                >
-                  &gt;
+
+                <li class="page-item" :class="{ disabled: currentPage === totalPages }">
+                  <a class="page-link" href="#" @click.prevent="goToPage(currentPage + 1)">&gt;</a>
                 </li>
               </ul>
             </nav>
@@ -143,6 +135,7 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import draggable from "vuedraggable";
+import axios from "axios";
 import ModalWrapper from "@/components/attraction/ModelWrapper.vue";
 import AttractionDetail from "@/components/attraction/AttractionDetail.vue";
 
@@ -163,6 +156,8 @@ const totalPages = ref(0);
 const savePolyline = ref(null);
 const imageSize = ref(null);
 const imageOption = ref(null);
+const likedAttractions = ref({});
+const likeCounts = ref({});
 
 // 상수 설정
 let map = null;
@@ -229,13 +224,14 @@ const setMinDate = () => {
   minDate.value = `${yyyy}-${mm}-${dd}`;
 };
 
-const loadKakaoMapScript = () => {
+const loadKakaoMapScript = async () => {
   return new Promise((resolve, reject) => {
-    // 이미 스크립트가 로드되어 있는지 확인
-    if (window.kakao && window.kakao.maps) {
-      resolve();
-      return;
-    }
+    // console.log(window.kakao);
+    // console.log(window.kakao.maps);
+    // if (window.kakao && window.kakao.maps) {
+    //   resolve();
+    //   return;
+    // }
 
     const script = document.createElement("script");
     script.src = "//dapi.kakao.com/v2/maps/sdk.js?appkey=a1b7d43f74e8d7c4fa60d02ce2c13f58&autoload=false";
@@ -243,6 +239,7 @@ const loadKakaoMapScript = () => {
 
     script.onload = () => {
       window.kakao.maps.load(() => {
+        console.log(123);
         const centerLatLng = { latitude: 35.205432, longitude: 126.811591 };
         const options = {
           center: new window.kakao.maps.LatLng(centerLatLng.latitude, centerLatLng.longitude),
@@ -331,6 +328,16 @@ const fetchTourSpots = async (pageIndex) => {
 
     const data = await response.json();
     spots.value = data || [];
+    likedAttractions.value = data.reduce((acc, item) => {
+      acc[item.no] = item.attractionLikeId !== 0;
+      return acc;
+    }, {});
+
+    likeCounts.value = data.reduce((acc, item) => {
+      acc[item.no] = item.likes;
+      return acc;
+    }, {});
+
     totalPages.value = Math.ceil(data[0].totalCount / 10) || 1;
     currentPage.value = pageIndex + 1;
     updateMap(data || []);
@@ -533,8 +540,6 @@ const savePlan = async () => {
       attractionIds: selectedPlaces.value.map((place) => place.no),
     };
 
-    console.log(planData);
-
     const response = await fetch("/api/map/plans", {
       method: "POST",
       headers: {
@@ -561,6 +566,21 @@ const savePlan = async () => {
   } catch (error) {
     console.error("여행 계획 저장 중 오류 발생:", error);
     alert("여행 계획 저장에 실패했습니다.");
+  }
+};
+
+const toggleLike = async (attractionId) => {
+  try {
+    const response = await axios.post(`http://localhost:8080/api/map/likes/attractions/${attractionId}`);
+    if (likedAttractions.value[attractionId]) {
+      likeCounts.value[attractionId]--;
+    } else {
+      likeCounts.value[attractionId]++;
+    }
+    likedAttractions.value[attractionId] = !likedAttractions.value[attractionId];
+  } catch (error) {
+    console.error("좋아요 토글 실패:", error);
+    alert("좋아요 처리 중 오류 발생");
   }
 };
 </script>
