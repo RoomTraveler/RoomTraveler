@@ -25,32 +25,28 @@ CREATE TABLE accommodations (
     FOREIGN KEY (gugun_code) REFERENCES guguns(gugun_code)
 );
 
--- 숙소 샘플 데이터 추가 (테스트용)
-INSERT INTO accommodations (accommodation_id, host_id, title, description, address, sido_code, gugun_code, check_in_time, check_out_time, status)
-VALUES 
-(1, 4, '서울 시티 호텔', '서울 중심부에 위치한 현대적인 호텔입니다.', '서울특별시 중구 명동길 123', 1, 1, '15:00:00', '11:00:00', 'ACTIVE'),
-(2, 5, '부산 비치 리조트', '해변가에 위치한 아름다운 리조트입니다.', '부산광역시 해운대구 해운대해변로 456', 2, 2, '16:00:00', '10:00:00', 'ACTIVE'),
-(3, 4, '제주 오션 뷰 펜션', '제주 바다가 보이는 아늑한 펜션입니다.', '제주특별자치도 서귀포시 중문관광로 789', 3, 3, '14:00:00', '12:00:00', 'ACTIVE');
-
 -- 객실 테이블
 CREATE TABLE IF NOT EXISTS rooms (
   room_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   accommodation_id BIGINT UNSIGNED NOT NULL,
   name VARCHAR(100)       NOT NULL,
   description TEXT,
+  price_per_night DECIMAL(10,2) NOT NULL DEFAULT 0, -- 최종 판매가 (할인 적용되었을 수 있음)
+  original_price DECIMAL(10,2) NULL,             -- 원래 가격 (할인 전)
+  discount_rate DECIMAL(5,4) NULL,                -- 할인율 (예: 0.1100은 11%)
+  cancellation_policy VARCHAR(255) NULL,          -- 취소 및 환불 정책
   capacity INT,
-  price_per_night DECIMAL(10,2) NOT NULL DEFAULT 0,
   room_type VARCHAR(50),
-                                     bed_type VARCHAR(50),
-                                     bathroom_count INT,
-                                     amenities TEXT,
-                                     status VARCHAR(20),
-                                     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                                     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                                     PRIMARY KEY (room_id),
-                                     FOREIGN KEY (accommodation_id)
-                                         REFERENCES accommodations(accommodation_id)
-                                         ON DELETE CASCADE
+  bed_type VARCHAR(50),
+  bathroom_count INT,
+  amenities TEXT,
+  status VARCHAR(20),
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (room_id),
+  FOREIGN KEY (accommodation_id)
+      REFERENCES accommodations(accommodation_id)
+      ON DELETE CASCADE
 );
 
 

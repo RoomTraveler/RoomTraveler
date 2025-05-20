@@ -111,13 +111,22 @@ public class AccommodationServiceImpl implements AccommodationService {
     }
 
     /**
-     * 숙소 ID로 객실 목록을 조회합니다.
+     * 숙소 ID와 선택적 날짜 범위로 객실 목록을 조회합니다.
      */
     @Override
-    public List<Room> getRoomsByAccommodationId(Long accommodationId) throws SQLException {
-        List<Room> rooms = roomDao.getRoomsByAccommodationId(accommodationId);
+    public List<Room> getRoomsByAccommodationId(Long accommodationId, String startDate, String endDate) throws SQLException {
+        List<Room> rooms;
+        if (startDate != null && !startDate.isEmpty() && endDate != null && !endDate.isEmpty()) {
+            Map<String, Object> params = new HashMap<>();
+            params.put("accommodationId", accommodationId);
+            params.put("startDate", startDate);
+            params.put("endDate", endDate);
+            rooms = accommodationDao.getRoomsWithAvailabilityByAccommodationId(params);
+        } else {
+            rooms = accommodationDao.getRoomsByAccommodationId(accommodationId); // 날짜 정보 없으면 기본 조회
+        }
         for (Room room : rooms) {
-            setImagesForSingleRoom(room);
+            setImagesForSingleRoom(room); // 기존 이미지 설정 로직 유지
         }
         return rooms;
     }

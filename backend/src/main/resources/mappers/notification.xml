@@ -20,8 +20,8 @@
 
     <!-- 새 알림 추가 -->
     <insert id="insert" useGeneratedKeys="true" keyProperty="notificationId">
-        INSERT INTO notifications (user_id, title, content, notification_type, reference_id, is_read)
-        VALUES (#{userId}, #{title}, #{content}, #{notificationType}, #{referenceId}, #{isRead})
+        INSERT INTO notifications (user_id, title, content, notification_type, reference_id, is_read, created_at)
+        VALUES (#{userId}, #{title}, #{content}, #{notificationType}, #{referenceId}, #{isRead}, #{createdAt})
     </insert>
 
     <!-- 알림 ID로 알림 조회 -->
@@ -32,7 +32,7 @@
         WHERE n.notification_id = #{notificationId}
     </select>
 
-    <!-- 사용자 ID로 알림 목록 조회 -->
+    <!-- 사용자 ID로 알림 목록 조회 (기본 정렬: 최신순) -->
     <select id="selectByUserId" resultMap="notificationResultMap">
         SELECT n.*, u.username
         FROM notifications n
@@ -75,5 +75,56 @@
         DELETE FROM notifications
         WHERE user_id = #{userId}
     </delete>
+
+    <!-- 사용자 ID와 필터 조건에 따라 알림 목록 조회 (페이지네이션 및 정렬 포함) -->
+    <select id="selectByUserIdWithFilter" resultMap="notificationResultMap">
+        SELECT n.*, u.username
+        FROM notifications n
+        LEFT JOIN users u ON n.user_id = u.user_id
+        <where>
+            n.user_id = #{userId}
+            <if test="notificationType != null and notificationType != ''">
+                AND n.notification_type = #{notificationType}
+            </if>
+            <if test="isRead != null">
+                AND n.is_read = #{isRead}
+            </if>
+        </where>
+        <choose>
+            <when test="sortBy == 'createdAt'">
+                ORDER BY n.created_at ${sortDir}
+            </when>
+            <when test="sortBy == 'type'"> <!-- notification_type으로 정렬 -->
+                ORDER BY n.notification_type ${sortDir}, n.created_at DESC
+            </when>
+            <!-- 다른 정렬 조건 추가 가능 -->
+            <otherwise>
+                ORDER BY n.created_at DESC <!-- 기본 정렬 -->
+            </otherwise>
+        </choose>
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <!-- 사용자 ID와 필터 조건에 따른 알림 총 개수를 조회 -->
+    <select id="countByUserIdWithFilter" resultType="long">
+        SELECT COUNT(*)
+        FROM notifications n
+        <where>
+            n.user_id = #{userId}
+            <if test="notificationType != null and notificationType != ''">
+                AND n.notification_type = #{notificationType}
+            </if>
+            <if test="isRead != null">
+                AND n.is_read = #{isRead}
+            </if>
+        </where>
+    </select>
+
+    <!-- 사용자 ID로 읽지 않은 알림 개수를 조회 -->
+    <select id="countUnreadByUserId" resultType="long">
+        SELECT COUNT(*)
+        FROM notifications
+        WHERE user_id = #{userId} AND is_read = FALSE
+    </select>
 
 </mapper>

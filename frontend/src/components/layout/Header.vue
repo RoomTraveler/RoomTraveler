@@ -31,13 +31,18 @@
 
           <!-- 사용자 메뉴 영역 -->
           <div class="user-menu">
-            <!-- 찜 목록 버튼 -->
-            <router-link to="/accommodation/favorites" class="user-menu-item icon-btn" title="찜 목록">
+            <!-- 찜 목록 버튼 (로그인 시에만 보이도록) -->
+            <router-link
+              v-if="isLoggedIn"
+              to="/accommodation/favorites"
+              class="user-menu-item icon-btn"
+              title="찜 목록"
+            >
               <i class="bi bi-heart"></i>
             </router-link>
 
-            <!-- 장바구니 버튼 -->
-            <router-link to="/cart" class="user-menu-item icon-btn" title="장바구니">
+            <!-- 장바구니 버튼 (로그인 시에만 보이도록) -->
+            <router-link v-if="isLoggedIn" to="/accommodation/cart" class="user-menu-item icon-btn" title="장바구니">
               <i class="bi bi-cart"></i>
             </router-link>
 
@@ -47,7 +52,7 @@
             </template>
             <template v-else>
               <!-- 알림 아이콘 -->
-              <router-link to="/notification" class="user-menu-item position-relative icon-btn" title="알림">
+              <router-link to="/notification/my" class="user-menu-item position-relative icon-btn" title="알림">
                 <i class="bi bi-bell-fill"></i>
                 <span v-if="unreadNotificationCount > 0" class="notification-badge">
                   {{ unreadNotificationCount }}
@@ -82,6 +87,8 @@
 
 <script>
 import { useUserStore } from "@/store/userStore";
+import { useNotificationStore } from "@/store/notificationStore";
+import { storeToRefs } from "pinia";
 import api from "@/api/index";
 
 /**
@@ -95,12 +102,21 @@ export default {
   setup() {
     // Pinia 스토어 사용
     const userStore = useUserStore();
-    return { userStore };
+    const notificationStore = useNotificationStore();
+
+    const { unreadCount: unreadNotificationCount } = storeToRefs(notificationStore);
+    const { fetchUnreadCount } = notificationStore;
+
+    return {
+      userStore,
+      unreadNotificationCount,
+      fetchUnreadCount,
+    };
   },
   data() {
     return {
-      unreadNotificationCount: 0,
       selected: "숙박",
+      notificationInterval: null,
     };
   },
   computed: {
@@ -134,11 +150,18 @@ export default {
     isAdmin() {
       return this.userStore.userRole === "ADMIN";
     },
+    /**
+     * 사용자가 호스트인지 확인
+     * @returns {boolean} 호스트 여부
+     */
+    isHost() {
+      return this.userStore.userRole === "HOST";
+    },
   },
   mounted() {
     // 로그인 상태일 때만 알림 카운트 로드
     if (this.isLoggedIn) {
-      this.loadNotificationCount();
+      this.loadInitialNotificationCount();
       // 30초마다 알림 카운트 갱신
       this.notificationInterval = setInterval(this.loadNotificationCount, 30000);
     }
@@ -164,22 +187,36 @@ export default {
       this.selected = value;
       // 선택된 값에 따라 다른 페이지로 이동
       setTimeout(() => {
-          this.$router.push(value === "숙박" ? "/accommodation" : "/plan");
-        }, 200);
+        this.$router.push(value === "숙박" ? "/accommodation" : "/plan");
+      }, 200);
     },
     /**
-     * 알림 카운트 로드 함수
+     * 초기 알림 카운트 로드 함수 (컴포넌트 마운트 시)
      */
-    loadNotificationCount() {
-      // API 호출로 알림 카운트 가져오기
-      api
-        .get("/api/notification/count/unread")
-        .then((response) => {
-          this.unreadNotificationCount = response.data;
-        })
-        .catch((error) => {
-          console.error("알림 카운트 로드 중 오류:", error);
-        });
+    async loadInitialNotificationCount() {
+      try {
+        await this.fetchUnreadCount();
+      } catch (error) {
+        console.error("초기 알림 카운트 로드 중 오류:", error);
+      }
+    },
+    /**
+     * 주기적 알림 카운트 로드 함수
+     */
+    async loadNotificationCount() {
+      // 로그인 상태일 때만 실행 (로그아웃 후 인터벌이 계속 실행될 수 있으므로)
+      if (!this.isLoggedIn) {
+        if (this.notificationInterval) {
+          clearInterval(this.notificationInterval);
+          this.notificationInterval = null;
+        }
+        return;
+      }
+      try {
+        await this.fetchUnreadCount();
+      } catch (error) {
+        console.error("주기적 알림 카운트 로드 중 오류:", error);
+      }
     },
     /**
      * 로그아웃 처리 함수
@@ -449,7 +486,7 @@ export default {
   font-weight: bold;
   font-size: 15px;
   cursor: pointer;
-  background-color: #f8f8f8;
+  background-color: #ffffff;
   margin: 0 15px 0 20px;
 }
 

@@ -261,6 +261,7 @@ export default {
   margin-bottom: 40px;
   border-radius: 8px;
   overflow: hidden;
+  background-color: #ffffff !important; /* 이미 흰색 배경 */
 }
 
 .banner-image {
@@ -276,13 +277,14 @@ export default {
 .card-image-container {
   position: relative;
   overflow: hidden;
+  background-color: #ffffff; /* 흰색 배경 추가 */
 }
 
 .like-button {
   position: absolute;
   top: 10px;
   right: 10px;
-  background-color: rgba(255, 255, 255, 0.8);
+  background-color: rgba(221, 221, 221, 0.8); /* 기존 배경 유지 또는 투명도 조정된 흰색으로 변경 가능 */
   border: none;
   width: 32px;
   height: 32px;
@@ -295,7 +297,7 @@ export default {
 }
 
 .like-button:hover {
-  background-color: white;
+  background-color: #ffffff; /* 흰색 배경 */
   transform: scale(1.1);
 }
 
@@ -326,6 +328,7 @@ export default {
   grid-template-columns: repeat(5, 1fr);
   gap: 15px;
   margin-bottom: 30px;
+  background-color: #ffffff; /* 흰색 배경 추가 */
 }
 
 .category-item {
@@ -335,6 +338,7 @@ export default {
   text-decoration: none;
   color: #333;
   transition: transform 0.3s ease;
+  background-color: #ffffff; /* 흰색 배경 추가 */
 }
 
 .category-item:hover {
@@ -347,6 +351,7 @@ export default {
   overflow: hidden;
   margin-bottom: 10px;
   aspect-ratio: 1 / 1;
+  background-color: #ffffff; /* 흰색 배경 추가 */
 }
 
 .category-image {
@@ -367,6 +372,7 @@ export default {
   grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
   gap: 20px;
   margin-bottom: 30px;
+  background-color: #ffffff; /* 흰색 배경 추가 */
 }
 
 .event-card {
@@ -375,6 +381,7 @@ export default {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   transition: transform 0.3s ease;
   cursor: pointer;
+  background-color: #ffffff; /* 흰색 배경 추가 */
 }
 
 .event-card:hover {
@@ -389,6 +396,7 @@ export default {
 
 .event-info {
   padding: 15px;
+  background-color: #ffffff; /* 흰색 배경 추가 */
 }
 
 .event-title {
@@ -408,12 +416,13 @@ export default {
   overflow-x: auto;
   margin-bottom: 20px;
   padding-bottom: 5px;
+  background-color: #ffffff; /* 흰색 배경 추가 */
 }
 
 .region-tab {
   padding: 8px 20px;
   margin-right: 10px;
-  background-color: white;
+  background-color: #ffffff; /* 기본 배경 흰색으로 변경 */
   border: 1px solid #ddd;
   border-radius: 20px;
   font-size: 14px;
@@ -424,13 +433,13 @@ export default {
 }
 
 .region-tab.active {
-  background-color: var(--yanolja-red);
+  background-color: var(--yanolja-red); /* 활성 탭은 기존 색상 유지 */
   color: white;
   border-color: var(--yanolja-red);
 }
 
 .region-tab:hover:not(.active) {
-  background-color: #f5f5f5;
+  background-color: #f0f0f0; /* hover 시 약간 어두운 흰색 계열로 변경 */
 }
 
 /* 지역별 인기 숙소 인라인 스타일 */
@@ -440,6 +449,7 @@ export default {
   gap: 15px;
   padding: 5px 0;
   scrollbar-width: thin;
+  background-color: #ffffff; /* 흰색 배경 추가 */
 }
 
 .region-hotel-item {
@@ -449,7 +459,7 @@ export default {
   overflow: hidden;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   transition: transform 0.3s ease;
-  background-color: white;
+  background-color: #ffffff; /* 이미 흰색 배경 */
 }
 
 .region-hotel-item:hover {
@@ -460,6 +470,7 @@ export default {
   width: 100%;
   height: 150px;
   overflow: hidden;
+  background-color: #ffffff; /* 흰색 배경 추가 */
 }
 
 .hotel-image img {
@@ -470,6 +481,7 @@ export default {
 
 .hotel-info {
   padding: 10px;
+  background-color: #ffffff; /* 흰색 배경 추가 */
 }
 
 .hotel-rating {
@@ -498,6 +510,7 @@ export default {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 20px;
+  background-color: #ffffff; /* 흰색 배경 추가 */
 }
 
 .destination-card {
@@ -507,6 +520,7 @@ export default {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   transition: transform 0.3s ease;
   cursor: pointer;
+  background-color: #ffffff; /* 흰색 배경 추가 */
 }
 
 .destination-card:hover {
@@ -524,7 +538,7 @@ export default {
   bottom: 0;
   left: 0;
   right: 0;
-  background-color: rgba(0, 0, 0, 0.6);
+  background-color: rgba(0, 0, 0, 0.6); /* 텍스트 가독성을 위해 유지 */
   color: white;
   padding: 10px;
   font-weight: bold;
@@ -536,6 +550,7 @@ export default {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   gap: 15px;
+  background-color: #ffffff; /* 흰색 배경 추가 */
 }
 
 .user-menu-item {
@@ -543,7 +558,7 @@ export default {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background-color: white;
+  background-color: #ffffff; /* 이미 흰색 배경 */
   border-radius: 8px;
   padding: 20px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
@@ -556,6 +571,7 @@ export default {
   transform: translateY(-5px);
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
   color: var(--yanolja-red);
+  background-color: #ffffff; /* hover 시에도 흰색 배경 유지 */
 }
 
 .user-menu-item i {
@@ -615,7 +631,7 @@ export default {
 body {
   font-family: "Noto Sans KR", sans-serif;
   color: #333;
-  background-color: #f9f9f9;
+  background-color: #ffffff !important; /* 이미 흰색 배경 */
 }
 
 .card {
@@ -623,7 +639,7 @@ body {
   overflow: hidden;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   margin-bottom: 20px;
-  background-color: white;
+  background-color: #ffffff; /* 흰색 배경 추가 또는 확인 */
   transition:
     transform 0.3s ease-in-out,
     box-shadow 0.3s ease-in-out;
@@ -636,6 +652,7 @@ body {
 
 .card-body {
   padding: 15px;
+  background-color: #ffffff; /* 흰색 배경 추가 */
 }
 
 .card-title {
@@ -665,6 +682,10 @@ body {
   color: white;
 }
 
+.section {
+  background-color: #ffffff !important; /* 이미 흰색 배경 */
+}
+
 .section-title {
   font-weight: bold;
   margin-bottom: 20px;
@@ -676,5 +697,6 @@ body {
 .loading {
   text-align: center;
   padding: 20px;
+  background-color: #ffffff; /* 흰색 배경 추가 */
 }
 </style>

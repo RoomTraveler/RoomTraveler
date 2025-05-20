@@ -13,6 +13,8 @@ import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Comparator;
+import java.util.stream.Collectors;
 
 /**
  * API를 통해 숙소 정보를 제공하는 REST 컨트롤러
@@ -76,14 +78,19 @@ public class ApiAccommodationController {
      * 숙소 상세 정보 조회
      */
     @GetMapping("/{accommodationId}")
-    public ResponseEntity<?> getAccommodationDetail(@PathVariable Long accommodationId) {
+    public ResponseEntity<?> getAccommodationDetail(
+            @PathVariable Long accommodationId,
+            @RequestParam(required = false) String checkInDate, 
+            @RequestParam(required = false) String checkOutDate) {
         try {
             Accommodation accommodation = apiAccommodationService.getAccommodationById(accommodationId);
             if (accommodation == null) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(Map.of("error", "숙소를 찾을 수 없습니다. ID: " + accommodationId));
             }
-            List<Room> rooms = apiAccommodationService.getRoomsByAccommodationId(accommodationId);
+            // 날짜 파라미터를 사용하여 객실 정보 조회 (minAvailableCount 포함 가능)
+            List<Room> rooms = apiAccommodationService.getRoomsByAccommodationId(accommodationId, checkInDate, checkOutDate);
+            
             Map<String, Object> response = new HashMap<>();
             response.put("accommodation", accommodation);
             response.put("rooms", rooms);

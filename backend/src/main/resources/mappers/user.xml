@@ -21,7 +21,7 @@
 
     <!-- 로그인 -->
     <select id="login" resultType="com.ssafy.trip.user.User">
-        SELECT * FROM users WHERE email = #{email} AND password = #{password} AND status = 'ACTIVE'
+        SELECT * FROM users WHERE email = #{email} AND status = 'ACTIVE'
     </select>
 
     <!-- 모든 사용자 조회 -->

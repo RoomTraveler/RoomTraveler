@@ -295,6 +295,7 @@ npm install element-plus
 npm install vuedraggable@next
 npm install @vueuse/motion
 npm install bootstrap-icons
+npm install bootstrap
 ```
 
 2. 개발 서버 실행:

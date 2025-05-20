@@ -4,7 +4,7 @@ const AccommodationDetail = () => import("../views/accommodation/AccommodationDe
 const AccommodationReserve = () => import("../views/reservation/ReservationForm.vue");
 const AccommodationReviews = () => import("../views/review/ReviewForm.vue");
 const RoomDetail = () => import("../views/accommodation/RoomDetail.vue");
-const AccommodationCart = () => import("../views/accommodation/Cart.vue");
+const AccommodationCart = () => import("../views/cart/Cart.vue");
 const AccommodationFavorite = () => import("../views/accommodation/AccommodationFavoriteList.vue");
 
 export const accommodationRoutes = [
@@ -31,7 +31,7 @@ export const accommodationRoutes = [
   },
   { path: "/accommodation/cart", name: "AccommodationCart", component: AccommodationCart, meta: { title: "장바구니" } },
   {
-    path: "/accommodation/favorite",
+    path: "/accommodation/favorites",
     name: "AccommodationFavorite",
     component: AccommodationFavorite,
     meta: { title: "찜한 숙소" },

@@ -5,24 +5,17 @@ import { paymentRoutes } from "./payment";
 import { reviewRoutes } from "./review";
 import { notificationRoutes } from "./notification";
 import { commonRoutes } from "./common";
+import { userRoutes } from "./user";
+import { adminRoutes } from "./admin";
 
 const Plan = () => import("../views/plan/Plan.vue");
 const PlanAlone = () => import("../views/plan/PlanAlone.vue");
 const PlanDetail = () => import("../views/plan/PlanDetail.vue");
 const PlanPublic = () => import("../views/plan/PlanPublic.vue");
 const Attraction = () => import("../views/attraction/Attraction.vue");
-const User = () => import("../views/user/UserProfile.vue");
-const Login = () => import("../views/user/Login.vue");
-const Register = () => import("../views/user/Register.vue");
+
 const NotFound = () => import("../views/NotFound.vue");
 const ApiTest = () => import("../components/ApiTest.vue");
-
-// 관리자 페이지 컴포넌트
-const AdminDashboard = () => import("../views/admin/Dashboard.vue");
-const AdminUsers = () => import("../views/admin/Users.vue");
-const AdminAccommodations = () => import("../views/admin/AdminAccommodations.vue");
-const AdminRegions = () => import("../views/admin/Regions.vue");
-const AdminApiConfig = () => import("../views/admin/ApiConfig.vue");
 
 // 에러 페이지 컴포넌트
 const AccessDenied = () => import("../views/error/AccessDenied.vue");
@@ -35,7 +28,9 @@ const routes = [
   ...paymentRoutes,
   ...reviewRoutes,
   ...notificationRoutes,
-
+  ...userRoutes,
+  ...adminRoutes,
+  { path: "/plans/public/:token", component: PlanPublic, meta: { title: "공개 여행 계획 - Room Traveler" } },
   {
     path: "/api-test",
     name: "ApiTest",
@@ -60,57 +55,6 @@ const routes = [
     name: "planDetail",
     component: PlanDetail,
   },
-  { path: "/plans/public/:token", component: PlanPublic },
-  {
-    path: "/user",
-    name: "User",
-    component: User,
-    meta: { title: "사용자 프로필 - Room Traveler", requiresAuth: true },
-  },
-  {
-    path: "/login",
-    name: "Login",
-    component: Login,
-    meta: { title: "로그인 - Room Traveler" },
-  },
-  {
-    path: "/register",
-    name: "Register",
-    component: Register,
-    meta: { title: "회원가입 - Room Traveler" },
-  },
-  // 관리자 페이지 라우트
-  {
-    path: "/admin",
-    name: "AdminDashboard",
-    component: AdminDashboard,
-    meta: { title: "관리자 대시보드 - Room Traveler", requiresAuth: true, requiresAdmin: true },
-  },
-  {
-    path: "/admin/users",
-    name: "AdminUsers",
-    component: AdminUsers,
-    meta: { title: "사용자 관리 - Room Traveler", requiresAuth: true, requiresAdmin: true },
-  },
-  {
-    path: "/admin/accommodations",
-    name: "AdminAccommodations",
-    component: AdminAccommodations,
-    meta: { title: "숙소 관리 - Room Traveler", requiresAuth: true, requiresAdmin: true },
-  },
-  {
-    path: "/admin/regions",
-    name: "AdminRegions",
-    component: AdminRegions,
-    meta: { title: "지역 데이터 관리 - Room Traveler", requiresAuth: true, requiresAdmin: true },
-  },
-  {
-    path: "/admin/api-config",
-    name: "AdminApiConfig",
-    component: AdminApiConfig,
-    meta: { title: "API 설정 관리 - Room Traveler", requiresAuth: true, requiresAdmin: true },
-  },
-
   // 에러 페이지 라우트
   {
     path: "/error/access-denied",

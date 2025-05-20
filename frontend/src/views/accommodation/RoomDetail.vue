@@ -286,7 +286,7 @@
 
 <script>
 import axios from "axios";
-import AccommodationHeader from "@/views/accommodation/AccommodationHeader.vue";
+import AccommodationHeader from "@/components/accommodation/AccommodationHeader.vue";
 import noImagePlaceholder from "@/assets/no-image.jpg";
 
 export default {

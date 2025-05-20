@@ -69,13 +69,13 @@
 <script>
 /**
  * 푸터 컴포넌트
- * 
+ *
  * 이 컴포넌트는 웹사이트의 공통 푸터 부분을 담당합니다.
  * 회사 정보, 주요 링크, 고객센터 정보 등을 표시합니다.
  */
 export default {
-  name: 'Footer'
-}
+  name: "Footer",
+};
 </script>
 
 <style scoped>
@@ -87,7 +87,7 @@ export default {
 }
 
 .yanolja-footer {
-  background-color: #f8f9fa;
+  background-color: #ffffff;
   padding: 40px 0 20px;
   margin-top: 50px;
   border-top: 1px solid #eee;
@@ -167,7 +167,8 @@ export default {
   color: var(--yanolja-red);
 }
 
-.cs-time, .cs-email {
+.cs-time,
+.cs-email {
   font-size: 14px;
   margin-bottom: 5px;
 }

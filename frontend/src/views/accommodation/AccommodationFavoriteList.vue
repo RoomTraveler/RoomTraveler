@@ -67,7 +67,7 @@
 import { ref, onMounted } from "vue";
 import axios from "axios";
 import dayjs from "dayjs";
-import HeaderComponent from "@/views/accommodation/AccommodationHeader.vue";
+import HeaderComponent from "@/components/accommodation/AccommodationHeader.vue";
 import FooterComponent from "@/components/layout/Footer.vue";
 
 const favorites = ref([]);
@@ -81,7 +81,9 @@ function formatDate(date) {
 
 async function fetchFavorites() {
   try {
-    const { data } = await axios.get("/api/favorites");
+    const { data } = await axios.get("/api/favorites", {
+      withCredentials: true,
+    });
     if (data && data.success) {
       favorites.value = data.favorites || [];
     } else {

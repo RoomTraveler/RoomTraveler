@@ -3,11 +3,7 @@
     <!-- 전체 너비 제한 컨테이너 -->
     <div class="max-w-[768px] mx-auto">
       <!-- 새로운 필터 헤더 컴포넌트 사용 -->
-      <FilterHeader 
-        @update-filters="handleFiltersUpdate" 
-        :initialFilters="currentFilters"
-        :initialSort="currentSort"
-      />
+      <FilterHeader @update-filters="handleFiltersUpdate" :initialFilters="currentFilters" :initialSort="currentSort" />
 
       <!-- 숙소 리스트 (가로 최대 768px) -->
       <div class="pb-16 px-2">
@@ -41,41 +37,76 @@
           >
             <!-- 이미지 영역 -->
             <div class="relative w-[calc(100%-16px)] h-[167px] mx-auto bg-gray-100 p-2 mt-[33px]">
-              <RoundedImage 
-                :src="item.mainImageUrl || 'https://via.placeholder.com/300x200.png?text=NOLPLACE'" 
-                :alt="item.title" 
-                roundedClass="rounded-xl" 
-                imgClass="object-cover" 
+              <RoundedImage
+                :src="item.mainImageUrl || 'https://via.placeholder.com/300x200.png?text=NOLPLACE'"
+                :alt="item.title"
+                roundedClass="rounded-xl"
+                imgClass="object-cover"
                 containerClass="w-full h-full"
               />
             </div>
             <!-- 설명 영역 Wrapper -->
-            <div 
-              class="px-3 sm:px-4 md:px-[24.5px] flex flex-col flex-grow" 
-              style="padding-top: 16px; padding-bottom: 12px;"
+            <div
+              class="px-3 sm:px-4 md:px-[24.5px] flex flex-col flex-grow"
+              style="padding-top: 16px; padding-bottom: 12px"
             >
               <!-- 텍스트 정보 컴포넌트 사용 -->
               <AccommodationCardInfo :item="item" class="flex-grow" />
 
+              <!-- 체크인 시간 정보 -->
+              <div
+                v-if="item.checkInTime"
+                class="text-sm text-gray-700 mt-2 mb-1 text-right flex items-center justify-end"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="1em"
+                  height="1em"
+                  fill="currentColor"
+                  class="bi bi-clock-fill mr-1.5"
+                  viewBox="0 0 16 16"
+                >
+                  <path
+                    d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71V3.5z"
+                  />
+                </svg>
+                <span>{{ formatCheckInTime(item.checkInTime) }} ~ </span>
+              </div>
+
               <!-- 가격 섹션 (항상 하단에 위치) -->
               <div class="mt-auto pt-2 text-right">
                 <div class="text-xs text-gray-500 mb-0.5">
-                  <span v-if="item.checkInInfo" class="inline-block">{{ item.checkInInfo }}</span>
-                  <template v-if="item.originalPrice && getMinPrice(item.rooms) < item.originalPrice && item.discountRate">
+                  <!-- <span v-if="item.earliestCheckInTime" class="inline-block">{{ item.earliestCheckInTime }}</span> 이 부분은 상단에 별도 표시되므로 제거 또는 주석처리 -->
+                  <template
+                    v-if="item.originalPrice && getMinPrice(item.rooms) < item.originalPrice && item.discountRate"
+                  >
                     <span class="ml-2 inline-block">{{ item.discountRate }}%</span>
-                    <span class="text-gray-400 line-through ml-1 inline-block">{{ formatPrice(item.originalPrice, false, false) }}</span>
+                    <span class="text-gray-400 line-through ml-1 inline-block">{{
+                      formatPrice(item.originalPrice, false, false)
+                    }}</span>
                   </template>
                 </div>
                 <div class="flex justify-end items-baseline">
-                  <span class="text-xs text-gray-600 mr-1" v-if="item.originalPrice && getMinPrice(item.rooms) < item.originalPrice && item.discountRate">최대할인가</span>
-                  <span class="text-xl font-bold text-gray-900">{{ formatPrice(getMinPrice(item.rooms), false, false) }}</span>
+                  <span
+                    class="text-xs text-gray-600 mr-1"
+                    v-if="item.originalPrice && getMinPrice(item.rooms) < item.originalPrice && item.discountRate"
+                    >최대할인가</span
+                  >
+                  <span class="text-xl font-bold text-gray-900">{{
+                    formatPrice(getMinPrice(item.rooms), false, false)
+                  }}</span>
                   <span class="text-sm font-medium text-gray-800">원~</span>
                 </div>
               </div>
-            </div> 
+            </div>
             <!-- DayUse 객실 정보 바 (설명 영역 Wrapper 바깥으로 이동) -->
-            <div v-if="item.additionalBenefits && item.additionalBenefits.includes('DayUse 객실')" class="px-3 py-2 bg-gray-50 border-t border-gray-200">
-                 <span class="text-xs text-gray-700 flex items-center"><i class="bi bi-check-lg text-green-500 mr-1.5"></i>DayUse 객실</span>
+            <div
+              v-if="item.additionalBenefits && item.additionalBenefits.includes('DayUse 객실')"
+              class="px-3 py-2 bg-gray-50 border-t border-gray-200"
+            >
+              <span class="text-xs text-gray-700 flex items-center"
+                ><i class="bi bi-check-lg text-green-500 mr-1.5"></i>DayUse 객실</span
+              >
             </div>
           </div>
         </div>
@@ -108,9 +139,9 @@
 import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import accommodationService from "../../api/accommodationApi.js";
-import FilterHeader from "./FilterHeader.vue";
-import AccommodationCardInfo from './AccommodationCardInfo.vue';
-import RoundedImage from '../../components/common/RoundedImage.vue';
+import FilterHeader from "../../components/accommodation/FilterHeader.vue";
+import AccommodationCardInfo from "../../components/accommodation/AccommodationCardInfo.vue";
+import RoundedImage from "../../components/common/RoundedImage.vue";
 
 interface Room {
   price: number;
@@ -130,7 +161,7 @@ interface Accommodation {
   accommodationType?: string;
   couponInfo?: string;
   discountRate?: string;
-  checkInInfo?: string;
+  checkInTime?: [number, number];
   additionalBenefits?: string[];
   isWished?: boolean;
   distance?: string;
@@ -194,7 +225,7 @@ const currentSort = ref<string>("created_at_desc");
 
 const formatDate = (date: Date | string | null): string => {
   if (!date) return "";
-  const d = typeof date === 'string' ? new Date(date) : date;
+  const d = typeof date === "string" ? new Date(date) : date;
   if (!(d instanceof Date) || isNaN(d.getTime())) return "";
   const year = d.getFullYear();
   const month = (d.getMonth() + 1).toString().padStart(2, "0");
@@ -209,32 +240,37 @@ const parseDate = (dateStr: string | null | undefined): Date | null => {
 };
 
 // URL 쿼리 파라미터 업데이트 로직
-watch([currentFilters, currentSort], () => {
-  const query: UrlFilters = {};
+watch(
+  [currentFilters, currentSort],
+  () => {
+    const query: UrlFilters = {};
 
-  if (currentFilters.value.region.sidoCode) query.sidoCode = currentFilters.value.region.sidoCode;
-  if (currentFilters.value.region.gugunCode) query.gugunCode = currentFilters.value.region.gugunCode;
-  if (currentFilters.value.region.name && currentFilters.value.region.name !== '전체 지역') {
-    query.regionName = currentFilters.value.region.name;
-  }
-  if (currentFilters.value.dateRange && currentFilters.value.dateRange[0] && currentFilters.value.dateRange[1]) {
-    query.checkInDate = formatDate(currentFilters.value.dateRange[0]);
-    query.checkOutDate = formatDate(currentFilters.value.dateRange[1]);
-  }
-  if (currentFilters.value.guestInfo.adults > 0) query.adults = currentFilters.value.guestInfo.adults;
-  if (currentFilters.value.guestInfo.children > 0) query.children = currentFilters.value.guestInfo.children;
-  if (currentFilters.value.accommodationType) query.accommodationType = currentFilters.value.accommodationType;
-  if (currentSort.value) query.sortBy = currentSort.value;
+    if (currentFilters.value.region.sidoCode) query.sidoCode = currentFilters.value.region.sidoCode;
+    if (currentFilters.value.region.gugunCode) query.gugunCode = currentFilters.value.region.gugunCode;
+    if (currentFilters.value.region.name && currentFilters.value.region.name !== "전체 지역") {
+      query.regionName = currentFilters.value.region.name;
+    }
+    if (currentFilters.value.dateRange && currentFilters.value.dateRange[0] && currentFilters.value.dateRange[1]) {
+      query.checkInDate = formatDate(currentFilters.value.dateRange[0]);
+      query.checkOutDate = formatDate(currentFilters.value.dateRange[1]);
+    }
+    if (currentFilters.value.guestInfo.adults > 0) query.adults = currentFilters.value.guestInfo.adults;
+    if (currentFilters.value.guestInfo.children > 0) query.children = currentFilters.value.guestInfo.children;
+    if (currentFilters.value.accommodationType) query.accommodationType = currentFilters.value.accommodationType;
+    if (currentSort.value) query.sortBy = currentSort.value;
 
-  // 현재 라우트의 쿼리와 다를 경우에만 replace (무한 루프 방지 목적도 있음)
-  // JSON.stringify로 비교하면 객체 순서에 따라 달라질 수 있어, 각 키를 비교하는 것이 더 정확할 수 있으나, 여기서는 단순화
-  if (JSON.stringify(route.query) !== JSON.stringify(query)) {
-    router.replace({ query: query as any }); // UrlFilters 타입이지만 any로 캐스팅
-  }
-}, { deep: true });
+    // 현재 라우트의 쿼리와 다를 경우에만 replace (무한 루프 방지 목적도 있음)
+    // JSON.stringify로 비교하면 객체 순서에 따라 달라질 수 있어, 각 키를 비교하는 것이 더 정확할 수 있으나, 여기서는 단순화
+    if (JSON.stringify(route.query) !== JSON.stringify(query)) {
+      router.replace({ query: query as any }); // UrlFilters 타입이지만 any로 캐스팅
+    }
+  },
+  { deep: true }
+);
 
 // FilterHeader에서 필터 변경 시 호출될 핸들러
-function handleFiltersUpdate(filters: FilterValues & { sortBy?: string }) { // sortBy도 받을 수 있도록 수정
+function handleFiltersUpdate(filters: FilterValues & { sortBy?: string }) {
+  // sortBy도 받을 수 있도록 수정
   console.log("[AccommodationList] Filters updated from FilterHeader:", JSON.parse(JSON.stringify(filters)));
   currentFilters.value = {
     region: filters.region,
@@ -242,7 +278,8 @@ function handleFiltersUpdate(filters: FilterValues & { sortBy?: string }) { // s
     guestInfo: filters.guestInfo,
     accommodationType: filters.accommodationType,
   };
-  if (filters.sortBy) { // FilterHeader에서 정렬 변경도 전달한다면
+  if (filters.sortBy) {
+    // FilterHeader에서 정렬 변경도 전달한다면
     currentSort.value = filters.sortBy;
   }
   resetAndFetchAccommodations();
@@ -278,7 +315,7 @@ async function fetchAccommodations(loadMore = false) {
     const params: any = {
       page: pageToFetch,
       size: itemsPerPage.value,
-      sortBy: currentSort.value || 'created_at_desc', // 기본값 또는 현재 정렬값
+      sortBy: currentSort.value || "created_at_desc", // 기본값 또는 현재 정렬값
     };
 
     if (currentFilters.value.region.sidoCode) params.sidoCode = currentFilters.value.region.sidoCode;
@@ -377,6 +414,15 @@ const getMinPrice = (rooms: Room[] | undefined): number => {
   return Math.min(...rooms.map((room) => room.price));
 };
 
+const formatCheckInTime = (timeArray: [number, number] | undefined | null): string => {
+  if (!timeArray || !Array.isArray(timeArray) || timeArray.length < 2) {
+    return "-"; // 또는 '시간 정보 없음' 등
+  }
+  const hour = timeArray[0].toString().padStart(2, "0");
+  const minute = timeArray[1].toString().padStart(2, "0");
+  return `${hour}:${minute}`;
+};
+
 onMounted(() => {
   // URL 쿼리 파라미터에서 필터 값 복원
   const query = route.query as UrlFilters;
@@ -385,9 +431,12 @@ onMounted(() => {
   if (query.sidoCode) currentFilters.value.region.sidoCode = Number(query.sidoCode);
   if (query.gugunCode) currentFilters.value.region.gugunCode = Number(query.gugunCode);
   if (query.regionName) currentFilters.value.region.name = query.regionName;
-  else if (query.sidoCode && !query.gugunCode) { /* 시/도만 있을 경우 이름 업데이트 로직 필요시 추가 */ }
-  else if (!query.sidoCode) { currentFilters.value.region.name = '전체 지역'; }
-  
+  else if (query.sidoCode && !query.gugunCode) {
+    /* 시/도만 있을 경우 이름 업데이트 로직 필요시 추가 */
+  } else if (!query.sidoCode) {
+    currentFilters.value.region.name = "전체 지역";
+  }
+
   const checkIn = parseDate(query.checkInDate);
   const checkOut = parseDate(query.checkOutDate);
   if (checkIn && checkOut) {

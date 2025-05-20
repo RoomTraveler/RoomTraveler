@@ -2,10 +2,13 @@ package com.ssafy.trip.accommodation.controller;
 
 import com.ssafy.trip.accommodation.model.Favorite;
 import com.ssafy.trip.accommodation.service.FavoriteService;
+import com.ssafy.trip.security.CustomUserDetails;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.sql.SQLException;
@@ -14,6 +17,7 @@ import java.util.*;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/favorites")
+@CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
 public class FavoriteRestController {
 
     private final FavoriteService favoriteService;
@@ -23,7 +27,10 @@ public class FavoriteRestController {
      */
     @GetMapping
     public ResponseEntity<?> getFavorites(HttpSession session) {
-        Long userId = (Long) session.getAttribute("userId");
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+        Long userId = userDetails.getUserId();
+        //Long userId = (Long) session.getAttribute("userId");
         if (userId == null)
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("success", false, "message", "로그인이 필요합니다."));

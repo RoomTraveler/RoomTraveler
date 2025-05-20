@@ -5,10 +5,11 @@ CREATE TABLE users (
                        email           VARCHAR(100)         NOT NULL,    -- 로그인용 이메일
                        password        VARCHAR(255)         NOT NULL,    -- 비밀번호
                        phone           VARCHAR(20)          NULL,        -- 휴대폰 번호
+                       profile_image   VARCHAR(255)         NULL,        -- 대표 이미지(프로필)
                        role            ENUM('USER','HOST','ADMIN')
-                   NOT NULL DEFAULT 'USER',         -- 권한 구분
+                        NOT NULL DEFAULT 'USER',         -- 권한 구분
                        status          ENUM('ACTIVE','INACTIVE','SUSPENDED')
-                   NOT NULL DEFAULT 'ACTIVE',       -- 계정 상태
+                        NOT NULL DEFAULT 'ACTIVE',       -- 계정 상태
                        created_at      DATETIME             NOT NULL DEFAULT CURRENT_TIMESTAMP,
                        updated_at      DATETIME             NOT NULL DEFAULT CURRENT_TIMESTAMP
                            ON UPDATE CURRENT_TIMESTAMP,
@@ -17,6 +18,8 @@ CREATE TABLE users (
                        UNIQUE KEY uq_users_username (username)
 );
 
+
+ALTER TABLE users ADD COLUMN profile_image VARCHAR(255) NULL AFTER phone;
 
 -- 비밀번호는 평문으로 저장됩니다.
 INSERT INTO users (username, email, password, phone, role, status) VALUES

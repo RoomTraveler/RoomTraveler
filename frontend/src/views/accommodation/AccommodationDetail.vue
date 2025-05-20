@@ -24,7 +24,7 @@
       </div>
 
       <!-- 콘텐츠 영역 (이제 max-w는 상위에서 처리) -->
-      <div v-else class="pb-16">
+      <div v-else>
         <!-- 메인 이미지 -->
         <div class="mt-4">
           <img
@@ -298,41 +298,14 @@
         <!-- 객실 목록 (id 추가) -->
         <div class="mt-8" id="room-list-section">
           <div v-if="rooms && rooms.length > 0" class="space-y-6">
-            <div
+            <RoomListItem
               v-for="room in rooms"
               :key="room.roomId"
-              class="w-full bg-white p-0 rounded-lg shadow flex flex-col sm:flex-row overflow-hidden min-h-[301px] border border-gray-200 hover:shadow-lg transition-shadow duration-300"
-            >
-              <div class="w-full sm:w-1/2 h-48 sm:h-full flex-shrink-0">
-                <img
-                  :src="room.mainImageUrl || noImage"
-                  :alt="room.name || '객실 이미지'"
-                  class="w-full h-full object-cover"
-                />
-              </div>
-              <div class="w-full sm:w-1/2 p-5 flex flex-col justify-between">
-                <div>
-                  <h3 class="text-xl font-semibold text-gray-800 mb-2">{{ room.name || "객실명 없음" }}</h3>
-                  <p class="text-sm text-gray-600 mb-1">
-                    <i class="bi bi-people-fill mr-1.5"></i>수용 인원: {{ room.capacity || "정보 없음" }}명
-                  </p>
-                  <p class="text-sm text-gray-600 mb-3">
-                    <i class="bi bi-aspect-ratio-fill mr-1.5"></i>침대 종류: {{ room.bedType || "정보 없음" }}
-                  </p>
-                </div>
-                <div class="mt-auto">
-                  <p class="text-lg font-bold text-pink-600 mb-2">{{ formatPrice(room.price) }} / 박</p>
-                  <p class="text-xs text-gray-500 mb-1">체크인: {{ room.checkInTime || "15:00" }}</p>
-                  <p class="text-xs text-gray-500 mb-3">체크아웃: {{ room.checkOutTime || "11:00" }}</p>
-                  <button
-                    @click="goToRoomDetail(room.roomId)"
-                    class="w-full bg-pink-500 text-white py-2.5 rounded-md hover:bg-pink-600 transition font-medium"
-                  >
-                    객실 상세보기
-                  </button>
-                </div>
-              </div>
-            </div>
+              :room="room"
+              @view-detail="goToRoomDetail"
+              @book-room="handleBookRoom"
+              @add-to-cart="handleAddToCart"
+            />
           </div>
           <div v-else-if="!loading" class="text-center py-10 bg-white p-6 rounded-lg shadow border border-gray-200">
             <i class="bi bi-door-closed text-4xl text-gray-400 mb-3"></i>
@@ -341,7 +314,11 @@
         </div>
 
         <!-- 호텔(숙소) 소개 -->
-        <div class="mt-8 bg-white p-6 rounded-lg shadow border border-gray-200" id="accommodation-description-section">
+        <div
+          class="mt-8 bg-white p-6 rounded-lg shadow border border-gray-200"
+          id="accommodation-description-section"
+          style="margin-bottom: 6rem"
+        >
           <h2 class="text-2xl font-bold text-gray-800 mb-4">숙소 소개</h2>
           <p class="text-gray-700 leading-relaxed whitespace-pre-line mb-6">
             {{ accommodation.description || "등록된 숙소 설명이 없습니다." }}
@@ -397,7 +374,7 @@
         <p class="text-xs text-gray-500 mt-4 text-center">가격: 1박 기준 (단위: 만원)</p>
       </div>
       <template #footer>
-        <div class="flex justify-between items-center w-full px-2 sm:px-4 pb-2">
+        <div class="flex justify-between items-center w-full px-2 sm:px-4 pb-6">
           <el-button @click="resetDateSelection" link class="text-gray-600 hover:text-pink-500">초기화</el-button>
           <el-button
             type="primary"
@@ -478,7 +455,7 @@
         </div>
       </div>
       <template #footer>
-        <div class="w-full px-2 sm:px-4 pb-2">
+        <div class="w-full px-2 sm:px-4 pb-6">
           <el-button
             type="primary"
             @click="confirmGuestSelectionAndCloseModal"
@@ -573,7 +550,8 @@
 
 <script>
 import { useUserStore } from "@/store/userStore";
-import AccommodationHeader from "./AccommodationHeader.vue";
+import AccommodationHeader from "../../components/accommodation/AccommodationHeader.vue";
+import RoomListItem from "../../components/accommodation/RoomListItem.vue";
 import noImage from "@/assets/no-image.jpg";
 import axios from "axios";
 import { ElDialog, ElButton, ElCalendar } from "element-plus";
@@ -585,6 +563,7 @@ export default {
   name: "AccommodationDetail",
   components: {
     AccommodationHeader,
+    RoomListItem,
     ElDialog,
     ElButton,
     ElCalendar,
@@ -599,8 +578,12 @@ export default {
   },
   data() {
     const today = new Date();
-    const tomorrow = new Date(today);
-    tomorrow.setDate(today.getDate() + 1);
+    // 기본 체크인 날짜: 오늘
+    // 기본 체크아웃 날짜: 내일
+    // 이 값들은 사용자가 날짜 선택 모달에서 확정하기 전까지 UI 표시 및 초기 API 호출에 사용될 수 있음
+    const initialCheckIn = new Date(today);
+    const initialCheckOut = new Date(today);
+    initialCheckOut.setDate(today.getDate() + 1);
 
     return {
       accommodation: {},
@@ -626,8 +609,8 @@ export default {
       averageRating: 0,
       reviewCount: 0,
       toasts: [],
-      selectedCheckInDate: today,
-      selectedCheckOutDate: tomorrow,
+      selectedCheckInDate: initialCheckIn, // 초기값 설정
+      selectedCheckOutDate: initialCheckOut, // 초기값 설정
       selectedAdults: 2,
       selectedChildren: 0,
       currentReviewSlideIndex: 0,
@@ -730,7 +713,13 @@ export default {
     },
     async fetchAccommodationAndRooms() {
       try {
-        const res = await axios.get(`/api/accommodations/${this.id}`);
+        const params = {};
+        if (this.selectedCheckInDate && this.selectedCheckOutDate) {
+          params.checkInDate = this.formatDateForApi(this.selectedCheckInDate);
+          params.checkOutDate = this.formatDateForApi(this.selectedCheckOutDate);
+        }
+
+        const res = await axios.get(`/api/accommodations/${this.id}`, { params });
         if (res.data && res.data.accommodation) {
           this.accommodation = res.data.accommodation;
           this.rooms = res.data.rooms || (Array.isArray(this.accommodation.rooms) ? this.accommodation.rooms : []);
@@ -903,6 +892,13 @@ export default {
         this.toasts = this.toasts.filter((t) => t.id !== toastId);
       }, duration);
     },
+    formatDateForApi(date) {
+      if (!date) return null;
+      const year = date.getFullYear();
+      const month = (date.getMonth() + 1).toString().padStart(2, "0");
+      const day = date.getDate().toString().padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    },
     formatDateWithDay(date) {
       if (!date) return "";
       const month = (date.getMonth() + 1).toString().padStart(2, "0");
@@ -919,8 +915,34 @@ export default {
     openDateSelectionModal() {
       this.showDateModal = true;
     },
-    confirmDateSelection() {
-      this.showToast("날짜가 선택되었습니다. (구현 필요)");
+    resetDateSelection() {
+      this.tempSelectedCheckInDate = null;
+      this.tempSelectedCheckOutDate = null;
+      this.calendarDate = new Date(); // 달력 현재 달로 리셋
+    },
+    async confirmDateSelectionAndCloseModal() {
+      if (this.tempSelectedCheckInDate && this.tempSelectedCheckOutDate) {
+        this.selectedCheckInDate = new Date(this.tempSelectedCheckInDate);
+        this.selectedCheckOutDate = new Date(this.tempSelectedCheckOutDate);
+        this.showToast("날짜가 선택되어 객실 정보를 업데이트합니다.");
+        this.showDateModal = false;
+
+        this.loading = true; // 로딩 상태 활성화
+        try {
+          await this.fetchAccommodationAndRooms(); // 객실 정보 포함 전체 데이터 다시 로드
+        } catch (error) {
+          console.error("날짜 변경 후 데이터 다시 로드 실패:", error);
+          this.showToast("객실 정보 업데이트 중 오류가 발생했습니다.", "error");
+        } finally {
+          this.loading = false; // 로딩 상태 비활성화
+        }
+      } else if (this.tempSelectedCheckInDate && !this.tempSelectedCheckOutDate) {
+        this.showToast("체크아웃 날짜를 선택해주세요.");
+        return;
+      } else {
+        // 날짜 선택 없이 확인 누를 경우 (예: 초기화 직후) 그냥 닫기
+        this.showDateModal = false;
+      }
     },
     openGuestSelectionModal() {
       this.tempSelectedAdults = this.selectedAdults;
@@ -1004,21 +1026,15 @@ export default {
       if (day % 3 === 0) return "13.7";
       return "16.7";
     },
-    resetDateSelection() {
-      this.tempSelectedCheckInDate = null;
-      this.tempSelectedCheckOutDate = null;
-      this.calendarDate = new Date();
+    handleBookRoom(roomId) {
+      // TODO: Implement booking logic
+      console.log(`Book room: ${roomId}`);
+      // Ex: router.push(`/booking/${roomId}`);
     },
-    confirmDateSelectionAndCloseModal() {
-      if (this.tempSelectedCheckInDate && this.tempSelectedCheckOutDate) {
-        this.selectedCheckInDate = new Date(this.tempSelectedCheckInDate);
-        this.selectedCheckOutDate = new Date(this.tempSelectedCheckOutDate);
-        this.showToast("날짜가 선택되었습니다.");
-      } else if (this.tempSelectedCheckInDate) {
-        this.showToast("체크아웃 날짜를 선택해주세요.");
-        return;
-      }
-      this.showDateModal = false;
+    handleAddToCart(roomId) {
+      // TODO: Implement add to cart logic
+      console.log(`Add to cart: ${roomId}`);
+      // Ex: cartStore.addItem(roomId);
     },
   },
 };

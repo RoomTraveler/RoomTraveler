@@ -68,9 +68,9 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue';
 import AccommodationHeader from './AccommodationHeader.vue'; // 새로 만든 헤더 컴포넌트 임포트
-import RegionSelectModal from '../../components/modals/RegionSelectModal.vue';
-import DateSelectModal from '../../components/modals/DateSelectModal.vue';
-import GuestSelectModal from '../../components/modals/GuestSelectModal.vue';
+import RegionSelectModal from '../modals/RegionSelectModal.vue';
+import DateSelectModal from '../modals/DateSelectModal.vue';
+import GuestSelectModal from '../modals/GuestSelectModal.vue';
 
 interface Region {
   sidoCode: number | null;
