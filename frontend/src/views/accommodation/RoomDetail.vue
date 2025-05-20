@@ -288,12 +288,19 @@
 import axios from "axios";
 import AccommodationHeader from "@/components/accommodation/AccommodationHeader.vue";
 import noImagePlaceholder from "@/assets/no-image.jpg";
+import { useCartStore } from "@/store/cartStore";
+import { useUserStore } from "@/store/userStore";
 
 export default {
   name: "RoomDetail",
   components: { AccommodationHeader },
   props: {
     roomId: { type: [String, Number], required: true },
+  },
+  setup() {
+    const cartStore = useCartStore();
+    const userStore = useUserStore();
+    return { cartStore, userStore };
   },
   data() {
     return {
@@ -311,9 +318,6 @@ export default {
       availability: {},
       selectedCheckInDate: null,
       selectedCheckOutDate: null,
-      userId: null,
-      isHost: false,
-      isLoggedIn: false,
       reviews: [
         {
           id: 1,
@@ -414,7 +418,16 @@ export default {
     },
     showCustomCarouselControls() {
       return this.allRawImageUrls.length > 1;
-    }
+    },
+    isLoggedIn() {
+      return this.userStore.isAuthenticated;
+    },
+    userId() {
+      return this.userStore.user?.id;
+    },
+    isHost() {
+      return this.userStore.userRole === 'HOST';
+    },
   },
   methods: {
     async loadRoomDetail() {
@@ -592,25 +605,27 @@ export default {
         this.$router.push({ path: "/user/login", query: { redirect: this.$route.fullPath } });
         return;
       }
+      if (!this.reservation.checkInDate || !this.reservation.checkOutDate) {
+        this.message = "체크인 및 체크아웃 날짜를 선택해주세요.";
+        this.scrollToReservation();
+        return;
+      }
+      const itemDetails = {
+        roomId: parseInt(this.roomId),
+        checkInDate: this.reservation.checkInDate,
+        checkOutDate: this.reservation.checkOutDate,
+        guestCount: this.reservation.guestCount,
+        price: this.room.price,
+      };
       try {
-        const cartItem = {
-          roomId: this.roomId,
-          userId: this.userId,
-          accommodationId: this.accommodation.accommodationId,
-          checkInDate: this.reservation.checkInDate,
-          checkOutDate: this.reservation.checkOutDate,
-          guestCount: this.reservation.guestCount,
-          price: this.room.price,
-        };
-        this.message =
-          "장바구니 추가 기능은 백엔드 API 구현 후 연동 예정입니다.\n선택된 정보:\n" +
-          JSON.stringify(cartItem, null, 2);
+        const response = await this.cartStore.addToCart(itemDetails);
+        this.message = response.message || "객실이 장바구니에 추가되었습니다.";
         setTimeout(() => {
           this.message = "";
-        }, 5000);
+        }, 3000);
       } catch (error) {
-        console.error("Error adding to cart:", error);
-        alert(error.response?.data?.message || error.message || "장바구니 추가에 실패했습니다. 다시 시도해주세요.");
+        console.error("RoomDetail - Error adding to cart:", error);
+        this.message = error || "장바구니 추가 중 오류가 발생했습니다.";
       }
     },
     confirmDeleteRoom() {
@@ -642,13 +657,6 @@ export default {
     },
   },
   async created() {
-    const userStr = localStorage.getItem("user");
-    if (userStr) {
-      const user = JSON.parse(userStr);
-      this.userId = user.id;
-      this.isHost = user.role === "HOST";
-      this.isLoggedIn = true;
-    }
     if (this.$route.query.message) this.message = this.$route.query.message;
     await this.loadRoomDetail();
     this.initDates();

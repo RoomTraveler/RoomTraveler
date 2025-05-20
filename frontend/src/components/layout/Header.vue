@@ -42,8 +42,11 @@
             </router-link>
 
             <!-- 장바구니 버튼 (로그인 시에만 보이도록) -->
-            <router-link v-if="isLoggedIn" to="/accommodation/cart" class="user-menu-item icon-btn" title="장바구니">
+            <router-link v-if="isLoggedIn" to="/accommodation/cart" class="user-menu-item icon-btn position-relative" title="장바구니">
               <i class="bi bi-cart"></i>
+              <span v-if="cartItemCount > 0" class="notification-badge cart-badge">
+                {{ cartItemCount }}
+              </span>
             </router-link>
 
             <template v-if="!isLoggedIn">
@@ -88,6 +91,7 @@
 <script>
 import { useUserStore } from "@/store/userStore";
 import { useNotificationStore } from "@/store/notificationStore";
+import { useCartStore } from "@/store/cartStore";
 import { storeToRefs } from "pinia";
 import api from "@/api/index";
 
@@ -103,14 +107,19 @@ export default {
     // Pinia 스토어 사용
     const userStore = useUserStore();
     const notificationStore = useNotificationStore();
+    const cartStore = useCartStore();
 
     const { unreadCount: unreadNotificationCount } = storeToRefs(notificationStore);
     const { fetchUnreadCount } = notificationStore;
+    const { fetchCart: fetchCartItems } = cartStore;
+    const { cart } = storeToRefs(cartStore);
 
     return {
       userStore,
       unreadNotificationCount,
       fetchUnreadCount,
+      cart,
+      fetchCartItems,
     };
   },
   data() {
@@ -137,6 +146,13 @@ export default {
       return this.userStore.isAuthenticated;
     },
     /**
+     * 장바구니 아이템 개수
+     * @returns {number} 장바구니 아이템 총 개수
+     */
+    cartItemCount() {
+      return this.cart ? this.cart.totalItems : 0;
+    },
+    /**
      * 현재 로그인한 사용자 ID
      * @returns {number|null} 사용자 ID 또는 null
      */
@@ -159,9 +175,10 @@ export default {
     },
   },
   mounted() {
-    // 로그인 상태일 때만 알림 카운트 로드
+    // 로그인 상태일 때만 알림 카운트 로드 및 장바구니 정보 로드
     if (this.isLoggedIn) {
       this.loadInitialNotificationCount();
+      this.loadCartData();
       // 30초마다 알림 카운트 갱신
       this.notificationInterval = setInterval(this.loadNotificationCount, 30000);
     }
@@ -177,6 +194,22 @@ export default {
     if (this.notificationInterval) {
       clearInterval(this.notificationInterval);
     }
+  },
+  watch: {
+    isLoggedIn(newVal) {
+      if (newVal) {
+        this.loadInitialNotificationCount();
+        this.loadCartData();
+        if (!this.notificationInterval) {
+          this.notificationInterval = setInterval(this.loadNotificationCount, 30000);
+        }
+      } else {
+        if (this.notificationInterval) {
+          clearInterval(this.notificationInterval);
+          this.notificationInterval = null;
+        }
+      }
+    },
   },
   methods: {
     /**
@@ -198,6 +231,16 @@ export default {
         await this.fetchUnreadCount();
       } catch (error) {
         console.error("초기 알림 카운트 로드 중 오류:", error);
+      }
+    },
+    /**
+     * 장바구니 데이터 로드 함수
+     */
+    async loadCartData() {
+      try {
+        await this.fetchCartItems();
+      } catch (error) {
+        console.error("장바구니 데이터 로드 중 오류:", error);
       }
     },
     /**
@@ -352,6 +395,12 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
+  line-height: 1;
+}
+
+.cart-badge {
+  top: -6px;
+  right: -8px;
 }
 
 .user-dropdown {

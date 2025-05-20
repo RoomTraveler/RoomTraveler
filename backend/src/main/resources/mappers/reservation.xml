@@ -5,6 +5,29 @@
 
 <mapper namespace="com.ssafy.trip.accommodation.dao.ReservationDao">
 
+    <resultMap id="ReservationMap" type="com.ssafy.trip.accommodation.model.Reservation">
+        <id property="reservationId" column="reservation_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="roomId" column="room_id"/>
+        <result property="checkInDate" column="check_in_date"/>
+        <result property="checkOutDate" column="check_out_date"/>
+        <result property="guestCount" column="guest_count"/>
+        <result property="totalPrice" column="total_price"/>
+        <result property="status" column="status"/>
+        <result property="paymentStatus" column="payment_status"/>
+        <result property="specialRequests" column="special_requests"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+        <result property="userName" column="user_name"/>
+        <result property="userEmail" column="user_email"/>
+        <result property="userPhone" column="user_phone"/>
+        <result property="roomName" column="room_name"/>
+        <result property="accommodationTitle" column="accommodation_title"/>
+        <result property="accommodationId" column="accommodation_id"/>
+        <result property="hostName" column="host_name"/>
+        <result property="nights" column="nights"/>
+    </resultMap>
+
     <!-- 새 예약을 등록합니다. -->
     <insert id="insert" useGeneratedKeys="true" keyProperty="reservationId">
         INSERT INTO reservations (
@@ -79,22 +102,22 @@
     </delete>
 
     <!-- 필터링된 예약 목록을 조회합니다. -->
-    <select id="getFilteredReservations" resultType="com.ssafy.trip.accommodation.model.Reservation">
-        SELECT * FROM reservations
+    <select id="getFilteredReservations" parameterType="map" resultMap="ReservationMap">
+        SELECT
+            reservation_id, user_id, room_id, check_in_date, check_out_date, guest_count,
+            total_price, status, payment_status, special_requests, created_at, updated_at
+        FROM reservations
         <where>
             <if test="userId != null">
-                user_id = #{userId}
+                AND user_id = #{userId}
             </if>
             <if test="roomId != null">
                 AND room_id = #{roomId}
             </if>
-            <if test="accommodationId != null">
-                AND accommodation_id = #{accommodationId}
-            </if>
-            <if test="status != null">
+            <if test="status != null and status != ''">
                 AND status = #{status}
             </if>
-            <if test="paymentStatus != null">
+            <if test="paymentStatus != null and paymentStatus != ''">
                 AND payment_status = #{paymentStatus}
             </if>
             <if test="startDate != null">
@@ -103,6 +126,21 @@
             <if test="endDate != null">
                 AND check_out_date &lt;= #{endDate}
             </if>
+            <!-- 추가적인 필터 조건들 -->
         </where>
+        ORDER BY created_at DESC
+    </select>
+
+    <!-- 사용자가 특정 숙소에 대해 완료된 예약을 가지고 있는지 확인 -->
+    <select id="existsCompletedReservationByUserAndAccommodation" resultType="boolean">
+        SELECT EXISTS (
+            SELECT 1
+            FROM reservations r
+            JOIN rooms rm ON r.room_id = rm.room_id
+            WHERE r.user_id = #{userId}
+            AND rm.accommodation_id = #{accommodationId}
+            AND r.status = 'COMPLETED' <!-- 실제 사용하는 '숙박 완료' 상태로 변경 필요 -->
+            AND r.check_out_date &lt; CURDATE() <!-- 체크아웃 날짜가 오늘보다 이전인지 확인 -->
+        )
     </select>
 </mapper>

@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.sql.SQLException;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 import lombok.RequiredArgsConstructor;
@@ -46,10 +47,10 @@ public class CartServiceImpl implements CartService {
      */
     @Override
     public Long addToCart(Long userId, Long roomId, LocalDate checkInDate, LocalDate checkOutDate,
-                         Integer guestCount, double price) throws SQLException {
+                          Integer guestCount, double price) throws SQLException {
         // 사용자의 장바구니 조회 또는 생성
         Cart cart = getOrCreateCart(userId);
-        
+
         // 장바구니 아이템 생성
         CartItem cartItem = CartItem.builder()
                 .cartId(cart.getCartId())
@@ -59,7 +60,7 @@ public class CartServiceImpl implements CartService {
                 .guestCount(guestCount)
                 .price(BigDecimal.valueOf(price))
                 .build();
-        
+
         // 장바구니에 아이템 추가
         return cartDao.addCartItem(cartItem);
     }
@@ -71,21 +72,17 @@ public class CartServiceImpl implements CartService {
     public boolean removeFromCart(Long cartItemId, Long userId) throws SQLException {
         // 사용자의 장바구니 조회
         Cart cart = cartDao.getCartByUserId(userId);
-        if (cart == null) {
-            return false;
-        }
-        
+        if (cart == null) return false;
+
         // 장바구니 아이템 목록 조회
         List<CartItem> items = cartDao.getCartItems(cart.getCartId());
-        
+
         // 삭제하려는 아이템이 사용자의 장바구니에 있는지 확인
         boolean itemExists = items.stream()
                 .anyMatch(item -> item.getCartItemId().equals(cartItemId));
-        
-        if (!itemExists) {
-            return false;
-        }
-        
+
+        if (!itemExists) return false;
+
         // 장바구니 아이템 삭제
         int result = cartDao.removeCartItem(cartItemId);
         return result > 0;
@@ -98,10 +95,8 @@ public class CartServiceImpl implements CartService {
     public int clearCart(Long userId) throws SQLException {
         // 사용자의 장바구니 조회
         Cart cart = cartDao.getCartByUserId(userId);
-        if (cart == null) {
-            return 0;
-        }
-        
+        if (cart == null) return 0;
+
         // 장바구니 비우기
         return cartDao.clearCart(cart.getCartId());
     }
@@ -113,21 +108,17 @@ public class CartServiceImpl implements CartService {
     public boolean updateCartItem(CartItem cartItem, Long userId) throws SQLException {
         // 사용자의 장바구니 조회
         Cart cart = cartDao.getCartByUserId(userId);
-        if (cart == null) {
-            return false;
-        }
-        
+        if (cart == null) return false;
+
         // 장바구니 아이템 목록 조회
         List<CartItem> items = cartDao.getCartItems(cart.getCartId());
-        
+
         // 업데이트하려는 아이템이 사용자의 장바구니에 있는지 확인
         boolean itemExists = items.stream()
                 .anyMatch(item -> item.getCartItemId().equals(cartItem.getCartItemId()));
-        
-        if (!itemExists) {
-            return false;
-        }
-        
+
+        if (!itemExists) return false;
+
         // 장바구니 아이템 업데이트
         int result = cartDao.updateCartItem(cartItem);
         return result > 0;
@@ -140,11 +131,38 @@ public class CartServiceImpl implements CartService {
     public List<CartItem> getCartItems(Long userId) throws SQLException {
         // 사용자의 장바구니 조회
         Cart cart = cartDao.getCartByUserId(userId);
-        if (cart == null) {
-            return List.of();
-        }
-        
+        if (cart == null) return List.of();
+
         // 장바구니 아이템 목록 조회
         return cartDao.getCartItems(cart.getCartId());
+    }
+
+    /**
+     * 사용자의 장바구니 총액을 계산합니다.
+     * 각 아이템의 가격과 숙박 기간을 고려하여 총액을 계산합니다.
+     *
+     * @param userId 사용자 ID
+     * @return 장바구니 총액
+     * @throws SQLException SQL 예외
+     */
+    @Override
+    public BigDecimal calculateTotalPrice(Long userId) throws SQLException {
+        List<CartItem> cartItems = getCartItems(userId); // 기존 getCartItems 메서드 활용
+        BigDecimal totalPrice = BigDecimal.ZERO;
+
+        if (cartItems == null || cartItems.isEmpty()) {
+            return totalPrice;
+        }
+
+        for (CartItem item : cartItems) {
+            if (item.getCheckInDate() != null && item.getCheckOutDate() != null && item.getPrice() != null) {
+                long nights = ChronoUnit.DAYS.between(item.getCheckInDate(), item.getCheckOutDate());
+                if (nights > 0) {
+                    BigDecimal itemTotalPrice = item.getPrice().multiply(BigDecimal.valueOf(nights));
+                    totalPrice = totalPrice.add(itemTotalPrice);
+                }
+            }
+        }
+        return totalPrice;
     }
 }

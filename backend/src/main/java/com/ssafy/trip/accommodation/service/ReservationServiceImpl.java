@@ -1,13 +1,15 @@
 package com.ssafy.trip.accommodation.service;
 
+import com.ssafy.trip.accommodation.dao.AccommodationDao;
 import com.ssafy.trip.accommodation.dao.ReservationDao;
 import com.ssafy.trip.accommodation.dao.RoomDao;
 import com.ssafy.trip.accommodation.dao.RoomAvailabilityDao;
+import com.ssafy.trip.accommodation.model.Accommodation;
 import com.ssafy.trip.accommodation.model.Reservation;
 import com.ssafy.trip.accommodation.model.Room;
 import com.ssafy.trip.accommodation.model.RoomAvailability;
-import com.ssafy.trip.review.Review;
-import com.ssafy.trip.review.ReviewService;
+// import com.ssafy.trip.review.Review; // Review 모델은 더 이상 직접 사용하지 않음
+// import com.ssafy.trip.review.ReviewService; // ReviewService 의존성 제거
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,15 +18,22 @@ import java.math.BigDecimal;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import lombok.RequiredArgsConstructor;
+// import java.io.IOException; // MultipartFile 관련 import도 ReviewService와 함께 제거될 수 있음 (현재는 사용되지 않음)
+// import org.springframework.web.multipart.MultipartFile; // ReviewService와 함께 제거될 수 있음 (현재는 사용되지 않음)
 
 /**
  * 예약 서비스 구현 클래스
+ * 예약 생성, 조회, 수정, 취소 및 관련 비즈니스 로직을 처리합니다.
+ * 필요한 경우 AccommodationService 등 다른 서비스를 호출합니다.
  */
 @Service
 @RequiredArgsConstructor
@@ -33,66 +42,173 @@ public class ReservationServiceImpl implements ReservationService {
     private final ReservationDao reservationDao;
     private final RoomDao roomDao;
     private final RoomAvailabilityDao roomAvailabilityDao;
-    private final ReviewService reviewService;
+    private final AccommodationDao accommodationDao; // 숙소 정보 접근을 위해 추가
+    // private final ReviewService reviewService; // ReviewService 필드 제거
+
+    /**
+     * 예약 폼을 위한 데이터를 조회합니다.
+     * 객실 정보, 체크인/아웃 날짜, 투숙객 수, 총 숙박일수, 총 가격 등을 포함합니다.
+     * 객실 가용성을 확인하여 예약 불가능할 경우 예외를 발생시킵니다.
+     *
+     * @param roomId      객실 ID
+     * @param checkInDate 체크인 날짜
+     * @param checkOutDate 체크아웃 날짜
+     * @param guestCount  투숙객 수
+     * @param userId      현재 사용자 ID (로그인 확인용, 현재는 직접 사용되지 않으나 향후 확장 가능성 있음)
+     * @return 예약 _Form_ 데이터를 담은 Map
+     * @throws SQLException 데이터베이스 오류 또는 객실 예약 불가 시
+     */
+    @Override
+    public Map<String, Object> getReservationFormData(Long roomId, LocalDate checkInDate, LocalDate checkOutDate, int guestCount, Long userId) throws SQLException {
+        Room room = roomDao.getRoomById(roomId);
+        if (room == null) {
+            throw new SQLException("객실 정보를 찾을 수 없습니다.");
+        }
+
+        boolean isAvailable = isRoomAvailable(roomId, checkInDate, checkOutDate, guestCount);
+        if (!isAvailable) {
+            throw new SQLException("선택한 날짜에 예약 가능한 객실이 없습니다.");
+        }
+
+        long nights = ChronoUnit.DAYS.between(checkInDate, checkOutDate);
+        if (nights <= 0) {
+            throw new SQLException("체크아웃 날짜는 체크인 날짜 이후여야 합니다.");
+        }
+        BigDecimal totalPrice = room.getPrice().multiply(BigDecimal.valueOf(nights));
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("room", room);
+        result.put("checkInDate", checkInDate);
+        result.put("checkOutDate", checkOutDate);
+        result.put("guestCount", guestCount);
+        result.put("nights", nights);
+        result.put("totalPrice", totalPrice);
+        return result;
+    }
 
     /**
      * 새 예약을 등록합니다.
+     * 사용자 ID, 예약 상태(PENDING), 결제 상태(UNPAID)를 설정하여 예약을 생성합니다.
+     * 객실 가용성을 확인하고, 예약 생성 후 객실 가용성 정보를 업데이트합니다.
+     *
+     * @param reservation 등록할 예약 정보 (userId, status, paymentStatus는 서비스에서 설정)
+     * @param userId      예약자 ID
+     * @return 생성된 예약의 ID
+     * @throws SQLException 데이터베이스 오류 또는 객실 예약 불가 시
      */
     @Override
     @Transactional
-    public Long createReservation(Reservation reservation) throws SQLException {
+    public Long createReservation(Reservation reservation, Long userId) throws SQLException {
         // 객실 가용성 확인
         if (!isRoomAvailable(reservation.getRoomId(), reservation.getCheckInDate(), reservation.getCheckOutDate(), reservation.getGuestCount())) {
             throw new SQLException("선택한 날짜에 예약 가능한 객실이 없습니다.");
         }
 
+        reservation.setUserId(userId);
+        reservation.setStatus("PENDING"); // 기본 상태
+        reservation.setPaymentStatus("UNPAID"); // 기본 결제 상태
+        reservation.setCreatedAt(LocalDateTime.now());
+
         // 예약 등록
         Long reservationId = reservationDao.insert(reservation);
 
-        // 객실 가용성 업데이트
-        Room room = roomDao.getRoomById(reservation.getRoomId());
-        LocalDate currentDate = reservation.getCheckInDate();
-
-        while (!currentDate.isAfter(reservation.getCheckOutDate().minusDays(1))) {
-            RoomAvailability availability = roomAvailabilityDao.getAvailabilityByRoomIdAndDate(reservation.getRoomId(), currentDate);
-
-            if (availability != null) {
-                // 기존 가용성 정보가 있는 경우 업데이트
-                int availableCount = availability.getAvailableCount() - reservation.getGuestCount();
-                if (availableCount < 0) availableCount = 0;
-
-                roomAvailabilityDao.updateAvailableCount(reservation.getRoomId(), currentDate, availableCount);
-            } else {
-                // 기존 가용성 정보가 없는 경우 새로 생성
-                int availableCount = room.getRoomCount() - reservation.getGuestCount();
-                if (availableCount < 0) availableCount = 0;
-
-                RoomAvailability newAvailability = RoomAvailability.builder()
-                        .roomId(reservation.getRoomId())
-                        .date(currentDate)
-                        .availableCount(availableCount)
-                        .price(null) // 기본 가격 사용
-                        .build();
-
-                roomAvailabilityDao.insert(newAvailability);
-            }
-
-            currentDate = currentDate.plusDays(1);
-        }
+        // 객실 가용성 업데이트 (체크아웃 날짜는 포함하지 않음)
+        updateRoomAvailabilityForBooking(reservation.getRoomId(), reservation.getCheckInDate(), reservation.getCheckOutDate(), reservation.getGuestCount(), true);
 
         return reservationId;
     }
 
     /**
-     * 예약 ID로 예약을 조회합니다.
+     * 장바구니의 항목들로 여러 예약을 한 번에 생성합니다.
+     * 각 장바구니 항목에 대해 예약을 생성하고, 생성 후 장바구니를 비웁니다.
+     * 현재 cartItems는 Map 형태의 DTO로 전달받는다고 가정합니다.
+     * 실제 CartItem 클래스가 있다면 해당 클래스를 사용하는 것이 좋습니다.
+     *
+     * @param cartItems       장바구니 아이템 목록 (Map: roomId, checkInDate, checkOutDate, guestCount, price)
+     * @param userId          예약자 ID
+     * @param specialRequests 공통 특별 요청 사항
+     * @return 생성된 예약들의 ID 목록
+     * @throws SQLException 데이터베이스 오류 또는 장바구니가 비어있거나 객실 예약 불가 시
      */
     @Override
-    public Reservation getReservationById(Long reservationId) throws SQLException {
-        return reservationDao.getReservationById(reservationId);
+    @Transactional
+    public List<Long> createReservationsFromCart(List<Map<String, Object>> cartItems, Long userId, String specialRequests) throws SQLException {
+        if (cartItems == null || cartItems.isEmpty()) {
+            throw new SQLException("장바구니가 비어있습니다.");
+        }
+
+        List<Long> reservationIds = new ArrayList<>();
+        for (Map<String, Object> item : cartItems) {
+            Reservation reservation = new Reservation();
+            reservation.setUserId(userId);
+            reservation.setRoomId((Long) item.get("roomId"));
+            reservation.setCheckInDate(LocalDate.parse(item.get("checkInDate").toString()));
+            reservation.setCheckOutDate(LocalDate.parse(item.get("checkOutDate").toString()));
+            reservation.setGuestCount((Integer) item.get("guestCount"));
+            reservation.setTotalPrice(new BigDecimal(item.get("price").toString()));
+            reservation.setStatus("PENDING");
+            reservation.setPaymentStatus("UNPAID");
+            reservation.setSpecialRequests(specialRequests);
+            // createdAt 등은 createReservation 메서드 내부에서 설정됨
+
+            Long reservationId = createReservation(reservation, userId); // 내부적으로 가용성 체크 및 업데이트 수행
+            reservationIds.add(reservationId);
+        }
+        // 장바구니 비우기 로직은 CartService에서 호출하도록 변경 필요 (현재는 이 서비스에 없음)
+        // cartService.clearCart(userId);
+        return reservationIds;
     }
 
     /**
-     * 사용자 ID로 예약 목록을 조회합니다.
+     * 예약 ID로 예약을 조회합니다. 예약자 본인 또는 숙소 호스트/관리자만 조회 가능합니다.
+     * 리뷰 정보는 이 메서드에서 직접 반환하지 않습니다.
+     * 필요한 경우, 클라이언트가 ApiReviewController를 통해 별도로 조회해야 합니다.
+     * (예: GET /api/v1/reviews/reservation/{reservationId})
+     *
+     * @param reservationId 예약 ID
+     * @param userId        현재 사용자 ID (권한 확인용)
+     * @param userRole      현재 사용자 역할 (권한 확인용, 예: "USER", "HOST", "ADMIN")
+     * @return 예약 정보를 담은 Map
+     * @throws SQLException 데이터베이스 오류 또는 조회 권한 없음
+     */
+    @Override
+    public Map<String, Object> getReservationDetail(Long reservationId, Long userId, String userRole) throws SQLException {
+        Reservation reservation = reservationDao.getReservationById(reservationId);
+        if (reservation == null) {
+            throw new SQLException("예약 정보를 찾을 수 없습니다.");
+        }
+
+        // 권한 확인
+        boolean isOwner = reservation.getUserId().equals(userId);
+        boolean isHostOrAdmin = false;
+        if ("HOST".equalsIgnoreCase(userRole) || "ADMIN".equalsIgnoreCase(userRole)) {
+            Room room = roomDao.getRoomById(reservation.getRoomId());
+            if (room != null) {
+                Accommodation accommodation = accommodationDao.getAccommodationById(room.getAccommodationId());
+                if (accommodation != null && ("ADMIN".equalsIgnoreCase(userRole) || accommodation.getHostId().equals(userId))) {
+                    isHostOrAdmin = true;
+                }
+            }
+        }
+
+        if (!isOwner && !isHostOrAdmin) {
+            throw new SQLException("예약 정보를 조회할 권한이 없습니다.");
+        }
+
+        // Review review = reviewService.getReviewByReservationId(reservationId); // 리뷰 조회 로직 제거
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("reservation", reservation);
+        // result.put("review", review); // 리뷰 정보 반환 제거
+        return result;
+    }
+
+    /**
+     * 사용자 ID로 해당 사용자의 모든 예약 목록을 조회합니다.
+     *
+     * @param userId 사용자 ID
+     * @return 예약 목록
+     * @throws SQLException 데이터베이스 오류 발생 시
      */
     @Override
     public List<Reservation> getReservationsByUserId(Long userId) throws SQLException {
@@ -100,348 +216,311 @@ public class ReservationServiceImpl implements ReservationService {
     }
 
     /**
-     * 호스트 ID로 예약 목록을 조회합니다.
+     * 호스트 ID로 해당 호스트가 관리하는 숙소의 모든 예약 목록을 조회합니다.
+     * 관리자(ADMIN)도 조회 가능합니다.
+     *
+     * @param hostId   호스트 ID (현재 세션의 사용자 ID)
+     * @param userRole 현재 사용자 역할 (HOST 또는 ADMIN)
+     * @return 예약 목록
+     * @throws SQLException 데이터베이스 오류 또는 권한 없음
      */
     @Override
-    public List<Reservation> getReservationsByHostId(Long hostId) throws SQLException {
+    public List<Reservation> getReservationsByHostId(Long hostId, String userRole) throws SQLException {
+        if (!"HOST".equalsIgnoreCase(userRole) && !"ADMIN".equalsIgnoreCase(userRole)) {
+            throw new SQLException("호스트 예약 목록을 조회할 권한이 없습니다.");
+        }
+        // ADMIN인 경우 모든 호스트의 예약을 볼 수 있게 하려면 hostId 파라미터를 다르게 사용하거나, DAO에서 분기 처리 필요.
+        // 현재는 hostId가 관리하는 숙소의 예약만 조회.
         return reservationDao.getReservationsByHostId(hostId);
     }
 
-    /**
-     * 숙소 ID로 예약 목록을 조회합니다.
-     */
     @Override
     public List<Reservation> getReservationsByAccommodationId(Long accommodationId) throws SQLException {
         return reservationDao.getReservationsByAccommodationId(accommodationId);
     }
 
-    /**
-     * 객실 ID로 예약 목록을 조회합니다.
-     */
     @Override
     public List<Reservation> getReservationsByRoomId(Long roomId) throws SQLException {
         return reservationDao.getReservationsByRoomId(roomId);
     }
 
     /**
-     * 예약 상태를 업데이트합니다.
+     * 예약 상태를 업데이트합니다. 호스트 또는 관리자만 가능합니다.
+     *
+     * @param reservationId 예약 ID
+     * @param status        새로운 예약 상태
+     * @param updaterId     현재 사용자 ID (호스트 ID 또는 관리자 ID)
+     * @param userRole      현재 사용자 역할 (HOST 또는 ADMIN)
+     * @return 업데이트된 행 수 (성공 시 1)
+     * @throws SQLException 데이터베이스 오류 또는 권한 없음
      */
     @Override
     @Transactional
-    public int updateReservationStatus(Long reservationId, String status) throws SQLException {
+    public int updateReservationStatus(Long reservationId, String status, Long updaterId, String userRole) throws SQLException {
+        Reservation reservation = reservationDao.getReservationById(reservationId);
+        if (reservation == null) {
+            throw new SQLException("예약 정보를 찾을 수 없습니다.");
+        }
+
+        if (!"HOST".equalsIgnoreCase(userRole) && !"ADMIN".equalsIgnoreCase(userRole)) {
+            throw new SQLException("예약 상태를 업데이트할 권한이 없습니다.");
+        }
+
+        if ("HOST".equalsIgnoreCase(userRole)) {
+            Room room = roomDao.getRoomById(reservation.getRoomId());
+            if (room == null) throw new SQLException("객실 정보를 찾을 수 없습니다.");
+            Accommodation accommodation = accommodationDao.getAccommodationById(room.getAccommodationId());
+            if (accommodation == null || !accommodation.getHostId().equals(updaterId)) {
+                throw new SQLException("해당 숙소의 예약 상태를 업데이트할 권한이 없습니다.");
+            }
+        }
+        // ADMIN은 모든 예약 상태 변경 가능 (추가 검증 불필요)
+
+        reservation.setStatus(status);
+        reservation.setUpdatedAt(LocalDateTime.now());
         return reservationDao.updateReservationStatus(reservationId, status);
     }
 
     /**
-     * 결제 상태를 업데이트합니다.
+     * 결제 상태를 업데이트합니다. 예약자 본인만 가능합니다.
+     *
+     * @param reservationId 예약 ID
+     * @param paymentStatus 새로운 결제 상태
+     * @param userId        현재 사용자 ID (예약자 ID)
+     * @return 업데이트된 행 수 (성공 시 1)
+     * @throws SQLException 데이터베이스 오류 또는 권한 없음
      */
     @Override
     @Transactional
-    public int updatePaymentStatus(Long reservationId, String paymentStatus) throws SQLException {
+    public int updatePaymentStatus(Long reservationId, String paymentStatus, Long userId) throws SQLException {
+        Reservation reservation = reservationDao.getReservationById(reservationId);
+        if (reservation == null) {
+            throw new SQLException("예약 정보를 찾을 수 없습니다.");
+        }
+        if (!reservation.getUserId().equals(userId)) {
+            throw new SQLException("결제 상태를 업데이트할 권한이 없습니다.");
+        }
+        reservation.setPaymentStatus(paymentStatus);
+        reservation.setUpdatedAt(LocalDateTime.now());
         return reservationDao.updatePaymentStatus(reservationId, paymentStatus);
     }
 
     /**
-     * 예약을 취소합니다.
+     * 예약을 취소합니다. 예약자 본인만 가능합니다.
+     * 예약 취소 시 객실 가용성을 복원합니다.
+     *
+     * @param reservationId 예약 ID
+     * @param userId        현재 사용자 ID (예약자 ID)
+     * @return 업데이트된 행 수 (성공 시 1)
+     * @throws SQLException 데이터베이스 오류 또는 권한 없음
      */
     @Override
     @Transactional
-    public int cancelReservation(Long reservationId) throws SQLException {
-        // 예약 정보 조회
+    public int cancelReservation(Long reservationId, Long userId) throws SQLException {
         Reservation reservation = reservationDao.getReservationById(reservationId);
         if (reservation == null) {
             throw new SQLException("예약 정보를 찾을 수 없습니다.");
         }
-
-        // 예약 상태가 이미 취소된 경우
+        if (!reservation.getUserId().equals(userId)) {
+            throw new SQLException("예약을 취소할 권한이 없습니다.");
+        }
         if ("CANCELLED".equals(reservation.getStatus())) {
-            return 0;
+            return 0; // 이미 취소된 경우
         }
 
         // 객실 가용성 복원
-        LocalDate currentDate = reservation.getCheckInDate();
-        while (!currentDate.isAfter(reservation.getCheckOutDate().minusDays(1))) {
-            RoomAvailability availability = roomAvailabilityDao.getAvailabilityByRoomIdAndDate(reservation.getRoomId(), currentDate);
+        updateRoomAvailabilityForBooking(reservation.getRoomId(), reservation.getCheckInDate(), reservation.getCheckOutDate(), reservation.getGuestCount(), false);
 
-            if (availability != null) {
-                // 가용 객실 수 증가
-                int availableCount = availability.getAvailableCount() + reservation.getGuestCount();
-                roomAvailabilityDao.updateAvailableCount(reservation.getRoomId(), currentDate, availableCount);
-            }
-
-            currentDate = currentDate.plusDays(1);
-        }
-
-        // 예약 상태 변경
-        return reservationDao.cancelReservation(reservationId);
+        reservation.setStatus("CANCELLED");
+        reservation.setUpdatedAt(LocalDateTime.now());
+        // 필요시 환불 로직 등 추가
+        return reservationDao.cancelReservation(reservationId); // DAO에서는 status를 CANCELLED로, updatedAt을 NOW()로 설정
     }
 
     /**
      * 예약을 삭제합니다.
+     * 현재 구현에서는 'CANCELLED' 상태인 예약만 삭제 가능하다고 가정합니다.
+     *
+     * @param reservationId 삭제할 예약 ID
+     * @return 삭제된 행 수
+     * @throws SQLException 데이터베이스 오류 또는 삭제 조건 불충족
      */
     @Override
     @Transactional
     public int deleteReservation(Long reservationId) throws SQLException {
-        // 예약 정보 조회
         Reservation reservation = reservationDao.getReservationById(reservationId);
         if (reservation == null) {
             throw new SQLException("예약 정보를 찾을 수 없습니다.");
         }
-
-        // 예약 상태가 취소된 경우에만 삭제 가능
+        // 비즈니스 규칙: 취소된 예약만 삭제 가능하도록 설정 (예시)
         if (!"CANCELLED".equals(reservation.getStatus())) {
             throw new SQLException("취소된 예약만 삭제할 수 있습니다.");
         }
-
-        // 예약 삭제
         return reservationDao.deleteReservation(reservationId);
     }
 
-    /**
-     * 필터링된 예약 목록을 조회합니다.
-     */
     @Override
     public List<Reservation> getFilteredReservations(Map<String, Object> filters) throws SQLException {
         return reservationDao.getFilteredReservations(filters);
     }
 
     /**
-     * 객실의 가용성을 확인합니다.
+     * 특정 기간 동안 객실의 가용성을 확인합니다.
+     *
+     * @param roomId       객실 ID
+     * @param checkInDate  체크인 날짜
+     * @param checkOutDate 체크아웃 날짜 (예약일 마지막 날이므로 실제 가용성 체크는 checkOutDate - 1일까지)
+     * @param guestCount   투숙객 수
+     * @return 가용 여부 (true: 예약 가능, false: 예약 불가능)
+     * @throws SQLException 데이터베이스 오류 또는 객실 정보 없음
      */
     @Override
     public boolean isRoomAvailable(Long roomId, LocalDate checkInDate, LocalDate checkOutDate, int guestCount) throws SQLException {
-        // 객실 정보 조회
         Room room = roomDao.getRoomById(roomId);
         if (room == null) {
             throw new SQLException("객실 정보를 찾을 수 없습니다.");
         }
-
-        // 객실 상태 확인
-        if (!"AVAILABLE".equals(room.getStatus())) {
+        if (!"AVAILABLE".equals(room.getStatus())) { // 객실 자체가 이용 불가능한 상태일 경우
+            return false;
+        }
+        if (guestCount > room.getCapacity()) { // 객실의 최대 수용 인원을 초과하는 경우
             return false;
         }
 
-        // 날짜별 가용성 확인
         LocalDate currentDate = checkInDate;
+        // 체크아웃 날짜는 숙박하지 않으므로, 그 전날까지만 가용성을 확인
         while (!currentDate.isAfter(checkOutDate.minusDays(1))) {
             RoomAvailability availability = roomAvailabilityDao.getAvailabilityByRoomIdAndDate(roomId, currentDate);
+            int availableCountForDate = (availability != null) ? availability.getAvailableCount() : room.getRoomCount();
 
-            // 가용성 정보가 없는 경우 객실 수로 판단
-            int availableCount = (availability != null) ? availability.getAvailableCount() : room.getRoomCount();
-
-            // 예약 가능 여부 확인
-            if (availableCount < guestCount) {
+            if (availableCountForDate < guestCount) { // 특정 날짜에 필요한 만큼 객실이 없는 경우
                 return false;
             }
-
             currentDate = currentDate.plusDays(1);
         }
-
         return true;
     }
 
-    /**
-     * 날짜 범위에 대한 객실 가용성 정보를 조회합니다.
-     */
     @Override
     public List<RoomAvailability> getRoomAvailabilities(Long roomId, LocalDate startDate, LocalDate endDate) throws SQLException {
         return roomAvailabilityDao.getAvailabilitiesByRoomIdAndDateRange(roomId, startDate, endDate);
     }
 
     /**
-     * 객실 가용성 정보를 업데이트합니다.
+     * 객실 가용성 정보를 업데이트합니다. (주로 관리자가 수동으로 조정 시 사용)
+     * 가격만 업데이트하거나, 가용 객실 수만 업데이트하거나, 둘 다 업데이트하는 경우를 모두 처리합니다.
+     *
+     * @param roomId         객실 ID
+     * @param date           날짜
+     * @param availableCount 가용 객실 수 (null인 경우 가격만 업데이트)
+     * @param price          특별 가격 (null인 경우 기본 가격 적용 또는 가용 객실 수만 업데이트)
+     * @return 업데이트된 행 수
+     * @throws SQLException 데이터베이스 오류 발생 시
      */
     @Override
     @Transactional
     public int updateRoomAvailability(Long roomId, LocalDate date, Integer availableCount, Double price) throws SQLException {
-        // 가격만 업데이트하는 경우
-        if (availableCount == null && price != null) {
-            return roomAvailabilityDao.updatePrice(roomId, date, price);
-        }
-
-        // 가용 객실 수만 업데이트하는 경우
-        if (availableCount != null && price == null) {
-            return roomAvailabilityDao.updateAvailableCount(roomId, date, availableCount);
-        }
-
-        // 둘 다 업데이트하는 경우
         RoomAvailability availability = roomAvailabilityDao.getAvailabilityByRoomIdAndDate(roomId, date);
 
         if (availability != null) {
-            availability.setAvailableCount(availableCount);
-            availability.setPrice(price != null ? new BigDecimal(String.valueOf(price)) : null);
+            if (availableCount != null) {
+                availability.setAvailableCount(availableCount);
+            }
+            if (price != null) {
+                availability.setPrice(BigDecimal.valueOf(price));
+            } else {
+                // 명시적으로 price가 null로 들어오면, 기존 room의 가격을 사용하거나 null로 설정 (정책에 따라 다름)
+                // 여기서는 기존 availability의 가격을 유지하거나, Room의 기본 가격을 조회해서 설정할 수 있음.
+                // 만약 availableCount만 업데이트하고 price는 건드리지 않으려면, 이 부분을 조건 처리해야 함.
+                // 현재는 price가 null이면 업데이트 하지 않도록 로직 구성 (updateAvailability 메서드가 null을 무시하도록)
+                // 하지만, 명시적으로 null로 셋팅하려면 availability.setPrice(null); 필요
+            }
             return roomAvailabilityDao.updateAvailability(availability);
         } else {
-            // 새로 생성
+            // 해당 날짜에 가용성 정보가 없으면 새로 생성
+            Room room = roomDao.getRoomById(roomId);
+            if (room == null) throw new SQLException("객실 정보를 찾을 수 없습니다.");
+
             RoomAvailability newAvailability = RoomAvailability.builder()
                     .roomId(roomId)
                     .date(date)
-                    .availableCount(availableCount)
-                    .price(price != null ? new BigDecimal(String.valueOf(price)) : null)
+                    .availableCount(availableCount != null ? availableCount : room.getRoomCount()) // null이면 기본 객실 수
+                    .price(price != null ? BigDecimal.valueOf(price) : room.getPrice()) // null이면 기본 객실 가격
                     .build();
-
             roomAvailabilityDao.insert(newAvailability);
             return 1;
         }
     }
 
     /**
-     * 예약에 대한 리뷰를 작성합니다.
-     * 
-     * 예약 정보를 확인하고 리뷰를 생성합니다.
-     * 완료된 예약에 대해서만 리뷰를 작성할 수 있습니다.
+     * 예약 또는 취소 시 객실 가용성 정보를 업데이트하는 내부 헬퍼 메서드.
+     *
+     * @param roomId       객실 ID
+     * @param checkInDate  체크인 날짜
+     * @param checkOutDate 체크아웃 날짜 (이 날짜는 가용성 계산에 포함되지 않음)
+     * @param guestCount   투숙객 수 (실제로는 객실 1개를 점유하는 것으로 가정)
+     * @param decrease     true이면 가용성 감소(예약), false이면 가용성 증가(취소)
+     * @throws SQLException 데이터베이스 오류
      */
-    @Override
-    @Transactional
-    public Long createReview(com.ssafy.trip.review.Review review) throws SQLException {
-        // 예약 정보 조회
-        Reservation reservation = reservationDao.getReservationById(review.getReservationId());
-        if (reservation == null) {
-            throw new SQLException("예약 정보를 찾을 수 없습니다.");
+    private void updateRoomAvailabilityForBooking(Long roomId, LocalDate checkInDate, LocalDate checkOutDate, int guestCount, boolean decrease) throws SQLException {
+        Room room = roomDao.getRoomById(roomId);
+        if (room == null) {
+            throw new SQLException("객실 정보를 찾을 수 없습니다.");
         }
 
-        // 예약 상태 확인 (완료된 예약만 리뷰 작성 가능)
-        if (!"COMPLETED".equals(reservation.getStatus())) {
-            throw new SQLException("완료된 예약에 대해서만 리뷰를 작성할 수 있습니다.");
-        }
+        LocalDate currentDate = checkInDate;
+        while (!currentDate.isAfter(checkOutDate.minusDays(1))) { // 체크아웃 전날까지만 처리
+            RoomAvailability availability = roomAvailabilityDao.getAvailabilityByRoomIdAndDate(roomId, currentDate);
+            int changeAmount = 1; // 기본적으로 객실 1개 단위로 가용성 변경 (투숙객 수가 아닌 객실 수 기준)
+                                 // 만약 guestCount가 여러 객실을 의미한다면 이 부분을 수정해야 함.
+                                 // 현재 Room 모델에 roomCount(객실 수)가 있고, Reservation은 특정 Room의 1개를 예약하는 개념으로 보임.
 
-        // 이미 리뷰가 있는지 확인
-        com.ssafy.trip.review.Review existingReview = reviewService.getReviewByReservationId(review.getReservationId());
-        if (existingReview != null) {
-            throw new SQLException("이미 리뷰가 작성되었습니다.");
-        }
+            if (availability != null) {
+                int newAvailableCount = decrease ? availability.getAvailableCount() - changeAmount : availability.getAvailableCount() + changeAmount;
+                // 음수가 되지 않도록, 또한 최대 객실 수를 넘지 않도록 처리 (필요 시)
+                if (newAvailableCount < 0) newAvailableCount = 0;
+                if (!decrease && newAvailableCount > room.getRoomCount()) newAvailableCount = room.getRoomCount(); // 취소 시 최대 객실 수 초과 방지
 
-        // 리뷰 작성 전 필수 필드 설정
-        if (review.getIsVerified() == null) {
-            review.setIsVerified(true); // 예약 정보가 확인되었으므로 true
-        }
-        if (review.getStatus() == null) {
-            review.setStatus("ACTIVE");
-        }
-        if (review.getCreatedAt() == null) {
-            review.setCreatedAt(LocalDateTime.now());
-        }
+                roomAvailabilityDao.updateAvailableCount(roomId, currentDate, newAvailableCount);
+            } else {
+                // 해당 날짜에 가용성 정보가 없는 경우 (최초 예약 등)
+                int initialCount = room.getRoomCount();
+                int newAvailableCount = decrease ? initialCount - changeAmount : initialCount + changeAmount; // 증가 로직은 사실상 발생하기 어려움(취소 시 availability가 있어야 함)
+                if (newAvailableCount < 0) newAvailableCount = 0;
 
-        // 리뷰 작성
-        return reviewService.createReview(review);
+                RoomAvailability newAvailability = RoomAvailability.builder()
+                        .roomId(roomId)
+                        .date(currentDate)
+                        .availableCount(newAvailableCount)
+                        .price(room.getPrice()) // 기본 가격 사용
+                        .build();
+                roomAvailabilityDao.insert(newAvailability);
+            }
+            currentDate = currentDate.plusDays(1);
+        }
     }
 
-    /**
-     * 예약 ID로 리뷰를 조회합니다.
-     * 
-     * 예약 ID를 기반으로 리뷰 정보를 조회합니다.
-     * 해당 예약에 대한 리뷰가 없는 경우 null을 반환합니다.
-     */
-    @Override
-    public Review getReviewByReservationId(Long reservationId) throws SQLException {
-        return reviewService.getReviewByReservationId(reservationId);
-    }
-
-    /**
-     * 숙소 ID로 리뷰 목록을 조회합니다.
-     * 
-     * 특정 숙소에 작성된 모든 리뷰를 조회합니다.
-     * 리뷰는 최신순으로 정렬됩니다.
-     */
-    @Override
-    public List<Review> getReviewsByAccommodationId(Long accommodationId) throws SQLException {
-        return reviewService.getReviewsByAccommodationId(accommodationId);
-    }
-
-    /**
-     * 사용자 ID로 리뷰 목록을 조회합니다.
-     * 
-     * 특정 사용자가 작성한 모든 리뷰를 조회합니다.
-     * 리뷰는 최신순으로 정렬됩니다.
-     */
-    @Override
-    public List<Review> getReviewsByUserId(Long userId) throws SQLException {
-        return reviewService.getReviewsByUserId(userId);
-    }
-
-    /**
-     * 리뷰 ID로 리뷰를 조회합니다.
-     * 
-     * 리뷰 ID를 기반으로 리뷰 정보를 조회합니다.
-     * 해당 ID의 리뷰가 없는 경우 null을 반환합니다.
-     */
-    @Override
-    public Review getReviewById(Long reviewId) throws SQLException {
-        return reviewService.getReviewById(reviewId);
-    }
-
-    /**
-     * 리뷰를 업데이트합니다.
-     * 
-     * 리뷰 작성자만 리뷰를 수정할 수 있습니다.
-     * 리뷰 내용, 평점 등을 업데이트합니다.
-     */
-    @Override
-    @Transactional
-    public int updateReview(Review review) throws SQLException {
-        // 기존 리뷰 조회
-        Review existingReview = reviewService.getReviewById(review.getReviewId());
-        if (existingReview == null) {
-            throw new SQLException("리뷰 정보를 찾을 수 없습니다.");
-        }
-
-        // 리뷰 작성자 확인
-        if (!existingReview.getUserId().equals(review.getUserId())) {
-            throw new SQLException("리뷰 작성자만 수정할 수 있습니다.");
-        }
-
-        // 수정 시간 업데이트
-        review.setUpdatedAt(LocalDateTime.now());
-
-        // 기존 값 유지 (수정되지 않은 필드)
-        if (review.getTitle() == null) {
-            review.setTitle(existingReview.getTitle());
-        }
-        if (review.getIsVerified() == null) {
-            review.setIsVerified(existingReview.getIsVerified());
-        }
-        if (review.getStatus() == null) {
-            review.setStatus(existingReview.getStatus());
-        }
-        if (review.getCreatedAt() == null) {
-            review.setCreatedAt(existingReview.getCreatedAt());
-        }
-
-        // 리뷰 업데이트
-        boolean updated = reviewService.updateReview(review);
-        return updated ? 1 : 0;
-    }
-
-    /**
-     * 리뷰를 삭제합니다.
-     * 
-     * 리뷰 ID를 기반으로 리뷰를 삭제합니다.
-     * 삭제 성공 시 1을 반환하고, 실패 시 0을 반환합니다.
-     */
-    @Override
-    @Transactional
-    public int deleteReview(Long reviewId) throws SQLException {
-        boolean deleted = reviewService.deleteReview(reviewId);
-        return deleted ? 1 : 0;
-    }
-
-    /**
-     * 숙소 ID로 평균 평점을 조회합니다.
-     * 
-     * 특정 숙소에 작성된 모든 리뷰의 평균 평점을 계산합니다.
-     * 리뷰가 없는 경우 0.0을 반환합니다.
-     */
-    @Override
-    public double getAverageRatingByAccommodationId(Long accommodationId) throws SQLException {
-        Double averageRating = reviewService.getAverageRatingByAccommodationId(accommodationId);
-        return averageRating != null ? averageRating : 0.0;
-    }
-
-    /**
-     * 날짜 범위에 대해 가용한 객실 목록을 조회합니다.
-     */
     @Override
     public List<Room> getAvailableRooms(Long accommodationId, LocalDate checkInDate, LocalDate checkOutDate, int guestCount) throws SQLException {
-        return roomDao.getAvailableRooms(accommodationId, checkInDate, checkOutDate);
+        // 1. RoomDao를 통해 기본적인 조건(숙소 ID, 날짜 범위 - Dao에서 처리 가능하면 최선)으로 객실 목록 조회
+        //    여기서는 RoomDao에 getAvailableRoomsByDateRange와 같은 메서드가 있다고 가정합니다.
+        //    또는 accommodationId로 모든 room을 가져온 후 아래에서 필터링합니다.
+        List<Room> rooms = roomDao.getRoomsByAccommodationId(accommodationId); // 예시: 숙소의 모든 객실 일단 로드
+
+        // 2. 각 객실에 대해 guestCount 및 isRoomAvailable 조건을 만족하는지 필터링
+        return rooms.stream()
+                .filter(room -> room.getCapacity() >= guestCount)
+                .filter(room -> {
+                    try {
+                        // isRoomAvailable은 해당 객실이 주어진 기간과 인원수에 대해 예약 가능한지 확인
+                        return isRoomAvailable(room.getRoomId(), checkInDate, checkOutDate, 1); // 1개 객실 기준 가용성 체크
+                    } catch (SQLException e) {
+                        // 예외 발생 시 해당 객실은 사용 불가능한 것으로 간주
+                        // 실제 운영환경에서는 로깅 필요
+                        System.err.println("Error checking availability for room " + room.getRoomId() + ": " + e.getMessage());
+                        return false;
+                    }
+                })
+                .collect(Collectors.toList());
     }
 }

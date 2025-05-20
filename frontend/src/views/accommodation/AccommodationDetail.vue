@@ -555,6 +555,7 @@ import RoomListItem from "../../components/accommodation/RoomListItem.vue";
 import noImage from "@/assets/no-image.jpg";
 import axios from "axios";
 import { ElDialog, ElButton, ElCalendar } from "element-plus";
+import { useCartStore } from "@/store/cartStore";
 
 const KOREAN_DAYS = ["일", "월", "화", "수", "목", "금", "토"];
 const MAX_REVIEWS_IN_CAROUSEL = 10;
@@ -571,10 +572,11 @@ export default {
   props: { id: { type: [String, Number], required: true } },
   setup() {
     const userStore = useUserStore();
+    const cartStore = useCartStore();
     if (!userStore.isAuthenticated) {
       userStore.loadUserFromStorage();
     }
-    return {};
+    return { userStore, cartStore };
   },
   data() {
     const today = new Date();
@@ -1031,10 +1033,37 @@ export default {
       console.log(`Book room: ${roomId}`);
       // Ex: router.push(`/booking/${roomId}`);
     },
-    handleAddToCart(roomId) {
-      // TODO: Implement add to cart logic
-      console.log(`Add to cart: ${roomId}`);
-      // Ex: cartStore.addItem(roomId);
+    async handleAddToCart(room) {
+      if (!this.isLoggedIn) {
+        this.showToast("로그인이 필요한 서비스입니다.");
+        this.$router.push({ name: "Login", query: { redirect: this.$route.fullPath } });
+        return;
+      }
+      if (!this.selectedCheckInDate || !this.selectedCheckOutDate) {
+        this.showToast("체크인 및 체크아웃 날짜를 선택해주세요.");
+        // 날짜 선택 모달을 열거나, 날짜 선택 섹션으로 스크롤 할 수 있습니다.
+        const bookingOptionsSection = document.getElementById("booking-options-section");
+        if (bookingOptionsSection) {
+          bookingOptionsSection.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+        return;
+      }
+
+      const itemDetails = {
+        roomId: room.roomId,
+        checkInDate: this.formatDateForApi(this.selectedCheckInDate),
+        checkOutDate: this.formatDateForApi(this.selectedCheckOutDate),
+        guestCount: this.selectedAdults + this.selectedChildren, // 성인 + 아동 수
+        price: room.price, // RoomListItem에서 전달받은 room 객체의 가격 사용
+      };
+
+      try {
+        const response = await this.cartStore.addToCart(itemDetails);
+        this.showToast(response.message || "객실이 장바구니에 추가되었습니다.");
+      } catch (error) {
+        console.error("AccommodationDetail - Error adding to cart:", error);
+        this.showToast(error || "장바구니 추가 중 오류가 발생했습니다.");
+      }
     },
   },
 };

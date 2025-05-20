@@ -178,17 +178,29 @@ export default {
     async function checkoutHandler() {
       console.log("[Cart.vue] checkoutHandler - START");
       try {
-        await checkoutCart();
+        // payload 객체 생성 (예: 특별 요청 사항)
+        // const payload = { specialRequests: "창가 자리로 부탁드립니다." }; 
+        // 현재는 특별한 payload가 없으므로 빈 객체 또는 필요한 데이터를 담아 전달합니다.
+        const response = await checkoutCart({ specialRequests: '' }); // 빈 payload 또는 실제 데이터 전달
         if (cartStore.error) {
           componentError.value = cartStore.error;
           console.warn("[Cart.vue] checkoutHandler - Error from cartStore after checkoutCart:", cartStore.error);
         } else {
-          router.push("/reservation/cart-checkout");
-          console.log("[Cart.vue] checkoutHandler - Success, redirected");
+          // 예약 성공 후 처리. 예를 들어 예약 완료 페이지로 이동하거나 메시지 표시.
+          // 백엔드 응답(response)에 따라 다른 처리가 가능합니다.
+          // 예시: router.push({ name: 'ReservationComplete', params: { reservationIds: response.reservationIds } });
+          message.value = response.message || "장바구니의 항목들이 예약되었습니다.";
+          console.log("[Cart.vue] checkoutHandler - Success, reservation data:", response);
+          // router.push("/reservation/cart-checkout"); // 이 경로는 예약 정보 확인 페이지일 수 있으므로, 실제 경로로 수정 필요
+          // 예약 ID 목록을 다음 페이지로 전달하거나, 사용자 예약 목록 페이지로 이동할 수 있습니다.
+          router.push({ name: 'MyReservations' }); // 예시: 내 예약 목록 페이지로 이동
         }
       } catch (err) {
         console.error("[Cart.vue] checkoutHandler - CATCH error:", err);
-        componentError.value = "예약 처리에 실패했습니다. 다시 시도해주세요.";
+        // componentError.value는 cartStore.error에 의해 이미 설정되었을 수 있습니다.
+        if (!componentError.value) {
+            componentError.value = "예약 처리에 실패했습니다. 다시 시도해주세요.";
+        }
       }
       console.log("[Cart.vue] checkoutHandler - END");
     }

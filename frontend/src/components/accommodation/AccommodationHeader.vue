@@ -24,8 +24,11 @@
             <button @click="goToHome" class="user-menu-item icon-btn" title="홈">
               <i class="bi bi-house"></i>
             </button>
-            <button @click="goToCart" class="user-menu-item icon-btn" title="장바구니">
+            <button @click="goToCart" class="user-menu-item icon-btn position-relative" title="장바구니">
               <i class="bi bi-cart3"></i>
+              <span v-if="cartItemCount > 0" class="cart-badge">
+                {{ cartItemCount }}
+              </span>
             </button>
           </div>
         </div>
@@ -37,6 +40,9 @@
 <script setup lang="ts">
 import { useRouter, useRoute } from "vue-router";
 import { ref, computed, PropType, watch } from "vue";
+import { useCartStore } from "@/store/cartStore";
+import { storeToRefs } from "pinia";
+import { useUserStore } from "@/store/userStore";
 
 interface AccommodationType {
   label: string;
@@ -67,6 +73,35 @@ const props = defineProps({
 const router = useRouter();
 const route = useRoute();
 const isAccommodation = ref(true);
+
+// Cart store
+const cartStore = useCartStore();
+const { cart } = storeToRefs(cartStore);
+const { fetchCart } = cartStore;
+
+// User store
+const userStore = useUserStore();
+const { isAuthenticated } = storeToRefs(userStore);
+
+// 로그인 상태 변경 감지하여 장바구니 정보 로드
+watch(
+  isAuthenticated,
+  (isUserLoggedIn) => {
+    if (isUserLoggedIn) {
+      console.log("[AccommodationHeader] User is logged in, fetching cart...");
+      fetchCart();
+    } else {
+      console.log("[AccommodationHeader] User is not logged in.");
+      // 로그아웃 시 장바구니 정보 초기화 (선택적)
+      // cartStore.resetCart(); // resetCart와 같은 액션이 cartStore에 필요할 수 있음
+    }
+  },
+  { immediate: true } // 컴포넌트 로드 시 즉시 실행하여 초기 로그인 상태 확인
+);
+
+const cartItemCount = computed(() => {
+  return cart.value ? cart.value.totalItems : 0;
+});
 
 const currentAccommodationLabel = computed(() => {
   if (props.selectedAccommodationType === null || props.selectedAccommodationType === '') {
@@ -265,6 +300,24 @@ function goToCart() {
 }
 .icon-btn {
   font-size: 22px;
+}
+
+/* 장바구니 뱃지 스타일 */
+.cart-badge {
+  position: absolute;
+  top: -2px; /* 아이콘 크기에 맞게 조정 */
+  right: -3px; /* 아이콘 크기에 맞게 조정 */
+  background-color: var(--yanolja-red);
+  color: white;
+  border-radius: 50%;
+  width: 16px; /* 크기 조정 */
+  height: 16px; /* 크기 조정 */
+  font-size: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1; /* 텍스트 수직 정렬 */
+  font-weight: bold;
 }
 
 /* RoomDetail 등에서 고정 타이틀일 경우 스타일 */

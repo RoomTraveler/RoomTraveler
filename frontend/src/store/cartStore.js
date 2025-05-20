@@ -22,14 +22,30 @@ export const useCartStore = defineStore("cart", {
       this.loading = true;
       this.error = null;
       try {
-        // 실제 API 엔드포인트로 변경해야 합니다.
-        const response = await axios.get("/api/cart");
-        this.cart = response.data;
+        const response = await axios.get("/api/cart"); // 장바구니 조회 API
+        this.cart = response.data.cart;
       } catch (error) {
         console.error("Error fetching cart:", error);
         this.error = "장바구니 정보를 불러올 수 없습니다.";
-        // API 호출 실패 시, cart 상태를 초기화하거나 이전 상태를 유지할 수 있습니다.
-        // 여기서는 초기화하지 않고 에러 메시지만 설정합니다.
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    // 장바구니에 아이템 추가
+    async addToCart(itemDetails) {
+      this.loading = true;
+      this.error = null;
+      try {
+        // itemDetails: { roomId, checkInDate, checkOutDate, guestCount, price }
+        // 날짜 형식은 백엔드 API에 맞게 YYYY-MM-DD로 전달해야 합니다.
+        const response = await axios.post("/api/cart/add", itemDetails);
+        await this.fetchCart(); // 장바구니 정보 다시 로드하여 상태 업데이트
+        return response.data; // 성공 메시지 또는 데이터 반환
+      } catch (error) {
+        console.error("Error adding item to cart:", error);
+        this.error = error.response?.data?.error || error.response?.data?.message || "장바구니에 상품을 추가할 수 없습니다.";
+        throw this.error; // 컴포넌트에서 추가적인 에러 처리를 할 수 있도록 throw
       } finally {
         this.loading = false;
       }
@@ -69,20 +85,23 @@ export const useCartStore = defineStore("cart", {
       }
     },
 
-    // 예약하기 (결제)
-    async checkoutCart() {
+    // 장바구니의 모든 항목에 대해 한 번에 예약을 생성합니다.
+    async checkoutCart(payload = {}) { // payload로 specialRequests 등을 받을 수 있도록 수정
       this.loading = true;
       this.error = null;
       try {
-        // 실제 API 엔드포인트로 변경해야 합니다.
-        const response = await axios.post("/api/checkout/cart");
-        // 성공 시 로직 (예: 주문 완료 페이지로 이동, 장바구니 비우기 등)
-        // 여기서는 일단 성공했다고 가정하고, 에러를 발생시키지 않습니다.
-        // this.cart = { items: [], totalItems: 0, totalPrice: 0 }; // 결제 성공 시 장바구니 비우기
-        return response.data; // API 응답 반환 (예: 주문 ID 등)
+        // 백엔드의 /api/reservation/create-from-cart API 호출
+        const response = await axios.post("/api/reservation/create-from-cart", payload);
+        
+        // 성공 시 장바구니를 비우고, 상태를 업데이트합니다.
+        // 백엔드 컨트롤러에서 cartService.clearCart(userId)를 호출하므로,
+        // 최신 장바구니 상태를 가져오기 위해 fetchCart를 호출합니다.
+        await this.fetchCart(); 
+        
+        return response.data; // API 응답 반환 (예: 생성된 예약 ID 목록 등)
       } catch (error) {
-        console.error("Error during checkout:", error);
-        this.error = "예약 처리에 실패했습니다.";
+        console.error("Error during cart checkout:", error);
+        this.error = error.response?.data?.error || "장바구니 예약 처리에 실패했습니다.";
         throw error; // 컴포넌트에서 에러를 처리할 수 있도록 다시 throw
       } finally {
         this.loading = false;

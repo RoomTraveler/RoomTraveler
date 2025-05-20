@@ -3,6 +3,7 @@ package com.ssafy.trip.accommodation.dao;
 import com.ssafy.trip.accommodation.model.Reservation;
 
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 
 import java.sql.SQLException;
 import java.time.LocalDate;
@@ -101,4 +102,13 @@ public interface ReservationDao {
      * @return 필터링된 예약 목록
      */
     List<Reservation> getFilteredReservations(Map<String, Object> filters) throws SQLException;
+
+    /**
+     * 사용자가 특정 숙소에 대해 완료된 예약을 가지고 있는지 확인합니다.
+     * @param userId 사용자 ID
+     * @param accommodationId 숙소 ID
+     * @return 완료된 예약이 있으면 true, 없으면 false
+     * @throws SQLException SQL 예외 발생 시
+     */
+    boolean existsCompletedReservationByUserAndAccommodation(@Param("userId") Long userId, @Param("accommodationId") Long accommodationId) throws SQLException;
 }

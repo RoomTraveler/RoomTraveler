@@ -3,6 +3,7 @@ package com.ssafy.trip.accommodation.service;
 import com.ssafy.trip.accommodation.model.Cart;
 import com.ssafy.trip.accommodation.model.CartItem;
 
+import java.math.BigDecimal;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.List;
@@ -73,4 +74,14 @@ public interface CartService {
      * @throws SQLException SQL 예외
      */
     List<CartItem> getCartItems(Long userId) throws SQLException;
+
+    /**
+     * 사용자의 장바구니 총액을 계산합니다.
+     * 각 아이템의 가격과 숙박 기간을 고려하여 총액을 계산합니다.
+     *
+     * @param userId 사용자 ID
+     * @return 장바구니 총액
+     * @throws SQLException SQL 예외
+     */
+    BigDecimal calculateTotalPrice(Long userId) throws SQLException;
 }
