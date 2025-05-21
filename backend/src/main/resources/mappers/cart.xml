@@ -11,7 +11,7 @@
     </select>
     
     <!-- 장바구니 생성 -->
-    <insert id="createCart" parameterType="long" useGeneratedKeys="true" keyProperty="cartId">
+    <insert id="createCart" parameterType="map" useGeneratedKeys="true" keyProperty="cartId">
         INSERT INTO carts (user_id)
         VALUES (#{userId})
     </insert>

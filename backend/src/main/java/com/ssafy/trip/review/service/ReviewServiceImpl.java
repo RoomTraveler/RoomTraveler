@@ -1,5 +1,8 @@
-package com.ssafy.trip.review;
+package com.ssafy.trip.review.service;
 
+import com.ssafy.trip.review.dao.ReviewDao;
+import com.ssafy.trip.review.model.Review;
+import com.ssafy.trip.review.model.ReviewImage;
 import com.ssafy.trip.s3.AWSS3Service;
 import com.ssafy.trip.accommodation.dao.ReservationDao;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,7 +15,6 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 

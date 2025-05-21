@@ -1,5 +1,7 @@
-package com.ssafy.trip.review;
+package com.ssafy.trip.review.dao;
 
+import com.ssafy.trip.review.model.Review;
+import com.ssafy.trip.review.model.ReviewImage;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 

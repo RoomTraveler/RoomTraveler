@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ssafy.trip.review.dao.ReviewImgDao">
+
+    <!-- 고아 이미지(리뷰와 연결되지 않은 이미지) 찾기 -->
+    <!-- 수정할 시 지우셈 -->
+    <select id="findUnmappedImages" resultType="com.ssafy.trip.review.model.ReviewImage">
+        SELECT i.img_id, i.event_id, i.img_url, i.created_at
+        FROM event_board_img i
+                 LEFT JOIN event_board b ON i.event_id = b.event_id
+        WHERE b.event_id IS NULL
+    </select>
+
+    <!-- 이미지 한 개 삭제 -->
+    <delete id="deleteImageById" parameterType="long">
+        DELETE FROM review_images WHERE image_id = #{imgId}
+    </delete>
+
+</mapper>

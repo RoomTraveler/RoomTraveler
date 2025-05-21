@@ -1,4 +1,4 @@
-package com.ssafy.trip.review;
+package com.ssafy.trip.review.model;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

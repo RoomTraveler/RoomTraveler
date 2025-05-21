@@ -8,8 +8,8 @@ import com.ssafy.trip.accommodation.model.Accommodation;
 import com.ssafy.trip.accommodation.model.Reservation;
 import com.ssafy.trip.accommodation.model.Room;
 import com.ssafy.trip.accommodation.model.RoomAvailability;
-// import com.ssafy.trip.review.Review; // Review 모델은 더 이상 직접 사용하지 않음
-// import com.ssafy.trip.review.ReviewService; // ReviewService 의존성 제거
+// import com.ssafy.trip.review.model.Review; // Review 모델은 더 이상 직접 사용하지 않음
+// import com.ssafy.trip.review.service.ReviewService; // ReviewService 의존성 제거
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

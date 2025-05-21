@@ -20,8 +20,8 @@ import com.ssafy.trip.accommodation.model.Reservation;
 import com.ssafy.trip.accommodation.model.Room;
 import com.ssafy.trip.accommodation.service.AccommodationService;
 import com.ssafy.trip.accommodation.service.ReservationService;
-import com.ssafy.trip.review.Review;
-import com.ssafy.trip.review.ReviewService;
+import com.ssafy.trip.review.model.Review;
+import com.ssafy.trip.review.service.ReviewService;
 
 import lombok.RequiredArgsConstructor;
 

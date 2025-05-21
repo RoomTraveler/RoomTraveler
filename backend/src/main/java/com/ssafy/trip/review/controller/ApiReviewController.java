@@ -1,5 +1,7 @@
-package com.ssafy.trip.review;
+package com.ssafy.trip.review.controller;
 
+import com.ssafy.trip.review.model.Review;
+import com.ssafy.trip.review.service.ReviewService;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;

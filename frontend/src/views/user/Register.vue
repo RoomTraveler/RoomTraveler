@@ -101,6 +101,8 @@
 </template>
 
 <script>
+import api from "@/api"; // api 인스턴스 임포트
+
 export default {
   name: 'RegisterView',
   data() {
@@ -146,19 +148,30 @@ export default {
         return;
       }
       
-      // 실제 API 호출 대신 임시 로직 사용
-      setTimeout(() => {
-        // 이메일 중복 체크 (실제로는 서버에서 처리)
-        if (this.email === 'user@example.com') {
-          this.error = '이미 사용 중인 이메일 주소입니다.';
-          this.loading = false;
-          return;
-        }
-        
+      // API 호출 로직
+      api.api.post("/api/user/auth/register", {
+        username: this.name, // User.java의 username 필드에 매핑
+        email: this.email,
+        password: this.password,
+        phone: this.phone || null // 선택 사항이므로 빈 문자열 대신 null 또는 전송하지 않음
+      })
+      .then(response => {
         // 회원가입 성공
         alert('회원가입이 완료되었습니다. 로그인 페이지로 이동합니다.');
         this.$router.push('/login');
-      }, 1000);
+      })
+      .catch(err => {
+        // API 에러 처리
+        if (err.response && err.response.data && err.response.data.message) {
+          this.error = err.response.data.message;
+        } else {
+          this.error = '회원가입 중 오류가 발생했습니다. 다시 시도해주세요.';
+        }
+        console.error("Registration error:", err.response || err);
+      })
+      .finally(() => {
+        this.loading = false;
+      });
     },
     showTerms() {
       alert('이용약관 내용이 여기에 표시됩니다.');

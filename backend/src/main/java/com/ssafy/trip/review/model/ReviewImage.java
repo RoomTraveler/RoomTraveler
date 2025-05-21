@@ -1,4 +1,4 @@
-package com.ssafy.trip.review;
+package com.ssafy.trip.review.model;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -6,7 +6,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 /**
  * 리뷰 이미지 정보를 담는 클래스

@@ -25,6 +25,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @Tag(name = "장바구니 API", description = "장바구니 관련 REST API")
 @RestController
 @RequiredArgsConstructor
@@ -32,6 +35,7 @@ import java.util.Map;
 public class CartRestController {
 
     private final CartService cartService;
+    private static final Logger log = LoggerFactory.getLogger(CartRestController.class);
 
     /**
      * 세션에서 userId를 추출하는 유틸 메소드.
@@ -54,16 +58,35 @@ public class CartRestController {
     )
     @GetMapping
     public ResponseEntity<?> viewCart() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
-        Long userId = userDetails.getUser().getUserId();
-        if (userId == null) {
-            return unauthorized("로그인 필요");
-        }
         try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication == null || !authentication.isAuthenticated() || !(authentication.getPrincipal() instanceof CustomUserDetails)) {
+                // 인증 정보가 없거나, CustomUserDetails 타입이 아닌 경우 처리
+                return unauthorized("인증 정보가 유효하지 않습니다.");
+            }
+            CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+            
+            if (userDetails.getUser() == null) {
+                 // userDetails 안에 User 객체가 없는 경우
+                return serverError(new RuntimeException("사용자 정보를 가져올 수 없습니다. (User object is null)"));
+            }
+            
+            Long userId = userDetails.getUser().getUserId();
+            if (userId == null) {
+                return unauthorized("로그인한 사용자 ID를 찾을 수 없습니다.");
+            }
+
             Cart cart = cartService.getOrCreateCart(userId);
             return ResponseEntity.ok(Map.of("cart", cart));
         } catch (SQLException e) {
+            // 데이터베이스 관련 예외
+            // 실제 운영 환경에서는 e.getMessage() 대신 좀 더 사용자 친화적인 메시지 또는 에러 코드를 반환하는 것이 좋습니다.
+            // 또한, 민감한 정보가 로그에 남지 않도록 주의해야 합니다.
+            log.error("SQL Exception in viewCart for userId: [확인 필요]", e); // userId 로깅 시 주의
+            return serverError(e); 
+        } catch (Exception e) {
+            // 기타 예외 (NullPointerException, ClassCastException 등)
+            log.error("Unexpected exception in viewCart for userId: [확인 필요]", e); // userId 로깅 시 주의
             return serverError(e);
         }
     }
@@ -205,7 +228,9 @@ public class CartRestController {
     }
 
     private ResponseEntity<Map<String, String>> serverError(Exception e) {
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", e.getMessage()));
+        // 여기에 SLF4J 등의 로거를 사용하여 예외를 로깅하는 코드를 추가할 수 있습니다.
+        // log.error("Server error occurred: ", e); 
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "서버 내부 오류가 발생했습니다: " + e.getMessage()));
     }
 
     /**

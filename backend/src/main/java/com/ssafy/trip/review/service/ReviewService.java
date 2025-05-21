@@ -1,5 +1,6 @@
-package com.ssafy.trip.review;
+package com.ssafy.trip.review.service;
 
+import com.ssafy.trip.review.model.Review;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.sql.SQLException;
