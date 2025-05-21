@@ -36,11 +36,12 @@ CREATE TABLE IF NOT EXISTS rooms (
   discount_rate DECIMAL(5,4) NULL,                -- 할인율 (예: 0.1100은 11%)
   cancellation_policy VARCHAR(255) NULL,          -- 취소 및 환불 정책
   capacity INT,
+  room_count INT DEFAULT 1 NOT NULL, -- 해당 타입의 객실 총 수 (기본값 1, 추가됨)
   room_type VARCHAR(50),
   bed_type VARCHAR(50),
   bathroom_count INT,
   amenities TEXT,
-  status VARCHAR(20),
+  status VARCHAR(20), -- 예: AVAILABLE, UNAVAILABLE, MAINTENANCE
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (room_id),
@@ -49,7 +50,25 @@ CREATE TABLE IF NOT EXISTS rooms (
       ON DELETE CASCADE
 );
 
+ALTER TABLE rooms ADD COLUMN room_count INT NOT NULL DEFAULT 1 COMMENT '해당 타입 객실의 총 보유량';
+UPDATE rooms
+SET room_count = 1
+WHERE room_count IS NULL OR room_count = 0; -- 이미 설정된 값이 있다면 건드리지 않거나, 특정 조건의 객실만 업데이트
 
+ALTER TABLE rooms
+    ADD COLUMN original_price DECIMAL(10,2) NULL COMMENT '원래 가격 (할인 전)',
+    ADD COLUMN discount_rate DECIMAL(5,4) NULL COMMENT '할인율 (예: 0.1100은 11%)',
+    ADD COLUMN cancellation_policy VARCHAR(255) NULL COMMENT '취소 및 환불 정책';
+
+UPDATE rooms
+SET
+    original_price = price_per_night, -- 현재 판매가를 원래 가격으로 우선 설정 (정책에 따라 다를 수 있음)
+    discount_rate = 0.00,             -- 기본 할인율 0%
+    cancellation_policy = '숙소의 기본 취소 정책을 따릅니다. 예약 시 확인해주세요.' -- 기본 문구
+WHERE
+    original_price IS NULL; -- 아직 설정되지 않은 행에 대해서만 실행 (선택적)
+
+UPDATE rooms SET status = 'ACTIVE' WHERE status = 'AVAILABLE';
 -- 이미지 테이블
 CREATE TABLE images (
     image_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -78,8 +97,8 @@ CREATE TABLE reservations (
     check_out_date DATE NOT NULL,
     guest_count INT NOT NULL,
     total_price DECIMAL(10,2) NOT NULL,
-    status ENUM('PENDING', 'CONFIRMED', 'CANCELLED', 'COMPLETED') NOT NULL DEFAULT 'PENDING',
-    payment_status ENUM('UNPAID', 'PAID', 'REFUNDED') NOT NULL DEFAULT 'UNPAID',
+    status ENUM('PENDING', 'CONFIRMED', 'CANCELLED', 'COMPLETED', 'NO_SHOW') NOT NULL DEFAULT 'PENDING',
+    payment_status ENUM('UNPAID', 'PAID', 'REFUNDED', 'PARTIALLY_REFUNDED') NOT NULL DEFAULT 'UNPAID',
     special_requests TEXT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -96,8 +115,8 @@ CREATE TABLE room_availability (
     availability_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     room_id BIGINT UNSIGNED NOT NULL,
     date DATE NOT NULL,
-    available_count INT NOT NULL,
-    price DECIMAL(10,2) NULL,
+    available_count INT NOT NULL, -- 해당 날짜에 예약 가능한 실제 객실 수 (예약에 따라 변동)
+    price DECIMAL(10,2) NULL,     -- 해당 날짜의 특별 가격 (NULL이면 rooms.price_per_night 사용)
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (availability_id),

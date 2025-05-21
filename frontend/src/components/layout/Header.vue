@@ -42,7 +42,12 @@
             </router-link>
 
             <!-- 장바구니 버튼 (로그인 시에만 보이도록) -->
-            <router-link v-if="isLoggedIn" to="/accommodation/cart" class="user-menu-item icon-btn position-relative" title="장바구니">
+            <router-link
+              v-if="isLoggedIn"
+              to="/accommodation/cart"
+              class="user-menu-item icon-btn position-relative"
+              title="장바구니"
+            >
               <i class="bi bi-cart"></i>
               <span v-if="cartItemCount > 0" class="notification-badge cart-badge">
                 {{ cartItemCount }}
@@ -68,16 +73,17 @@
                   <i class="bi bi-person-circle"></i>
                 </button>
                 <div class="user-dropdown-menu">
-                  <router-link to="/user/profile" class="dropdown-item">마이페이지</router-link>
-                  <router-link to="/reservation/my-reservations" class="dropdown-item">예약내역</router-link>
-                  <router-link to="/accommodation/favorites" class="dropdown-item">찜 목록</router-link>
+                  <li><router-link to="/user/profile" class="dropdown-item">마이페이지</router-link></li>
+                  <li><router-link to="/reservation/my-reservations" class="dropdown-item">나의 예약</router-link></li>
+                  <li><router-link to="/accommodation/favorites" class="dropdown-item">찜 목록</router-link></li>
                   <template v-if="isAdmin">
-                    <router-link to="/admin" class="dropdown-item admin-link">관리자</router-link>
+                    <li><router-link to="/admin" class="dropdown-item admin-link">관리자</router-link></li>
                   </template>
                   <template v-if="isHost || isAdmin">
-                    <router-link to="/host" class="dropdown-item host-link">호스트</router-link>
+                    <li><router-link to="/host" class="dropdown-item host-link">호스트</router-link></li>
                   </template>
-                  <a href="#" @click.prevent="logout" class="dropdown-item">로그아웃</a>
+                  <li><hr class="dropdown-divider" /></li>
+                  <li><a href="#" @click.prevent="logout" class="dropdown-item">로그아웃</a></li>
                 </div>
               </div>
             </template>
@@ -562,5 +568,12 @@ export default {
   border-radius: 30px;
   transition: transform 0.3s ease;
   z-index: 0;
+}
+
+/* 드롭다운 메뉴 li 스타일 추가 */
+.user-dropdown-menu > li {
+  list-style-type: none; /* 기본 리스트 스타일(점) 제거 */
+  margin: 0; /* 기본 마진 제거 */
+  padding: 0; /* 기본 패딩 제거 */
 }
 </style>

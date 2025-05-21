@@ -103,6 +103,10 @@ const props = defineProps({
     type: Object as PropType<RoomInfoFromCard>,
     required: true,
   },
+  isBookable: {
+    type: Boolean,
+    default: true,
+  },
 });
 
 const emit = defineEmits(["view-detail", "book-room", "add-to-cart"]);
@@ -126,12 +130,13 @@ const viewDetail = () => {
 };
 
 const bookRoom = () => {
+  if (!props.isBookable) return;
   emit("book-room", props.roomInfo.roomId);
 };
 
 const addToCart = () => {
-  emit("add-to-cart", props.roomInfo.roomId);
-  // 실제 장바구니 추가 로직은 상위 컴포넌트나 store에서 처리
+  if (!props.isBookable) return;
+  emit("add-to-cart", props.roomInfo);
   console.log("Add to cart clicked for room:", props.roomInfo.roomId);
 };
 </script>

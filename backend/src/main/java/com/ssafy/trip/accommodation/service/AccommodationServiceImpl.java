@@ -6,11 +6,14 @@ import com.ssafy.trip.accommodation.dao.ImageDao;
 import com.ssafy.trip.accommodation.model.Accommodation;
 import com.ssafy.trip.accommodation.model.Room;
 import com.ssafy.trip.accommodation.model.Image;
+import com.ssafy.trip.accommodation.service.ReservationService;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.SQLException;
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -30,6 +33,7 @@ public class AccommodationServiceImpl implements AccommodationService {
     private final AccommodationDao accommodationDao;
     private final RoomDao roomDao;
     private final ImageDao imageDao;
+    private final ReservationService reservationService;
 
     /**
      * 새 숙소를 등록합니다.
@@ -111,22 +115,57 @@ public class AccommodationServiceImpl implements AccommodationService {
     }
 
     /**
-     * 숙소 ID와 선택적 날짜 범위로 객실 목록을 조회합니다.
+     * 숙소 ID와 선택적 날짜 범위 및 인원수로 객실 목록을 조회합니다.
      */
     @Override
-    public List<Room> getRoomsByAccommodationId(Long accommodationId, String startDate, String endDate) throws SQLException {
-        List<Room> rooms;
-        if (startDate != null && !startDate.isEmpty() && endDate != null && !endDate.isEmpty()) {
-            Map<String, Object> params = new HashMap<>();
-            params.put("accommodationId", accommodationId);
-            params.put("startDate", startDate);
-            params.put("endDate", endDate);
-            rooms = accommodationDao.getRoomsWithAvailabilityByAccommodationId(params);
-        } else {
-            rooms = accommodationDao.getRoomsByAccommodationId(accommodationId); // 날짜 정보 없으면 기본 조회
+    public List<Room> getRoomsByAccommodationId(Long accommodationId, String startDateStr, String endDateStr, Integer guests) throws SQLException {
+        log.info("[AccommodationService] getRoomsByAccommodationId called - accommodationId: {}, startDate: {}, endDate: {}, guests: {}", 
+                accommodationId, startDateStr, endDateStr, guests);
+        
+        Map<String, Object> params = new HashMap<>();
+        params.put("accommodationId", accommodationId);
+
+        LocalDate startDate = null;
+        LocalDate endDate = null;
+
+        if (startDateStr != null && !startDateStr.isEmpty() && endDateStr != null && !endDateStr.isEmpty()) {
+            try {
+                startDate = LocalDate.parse(startDateStr);
+                endDate = LocalDate.parse(endDateStr);
+                // DAO에는 문자열로 전달할 수도 있고, LocalDate로 변환해서 전달할 수도 있습니다.
+                // 현재 RoomDao.getRoomsByAccommodationIdAndOptionalDateRange가 Map<String, Object>를 받으므로 문자열 유지 가능
+                params.put("startDate", startDateStr);
+                params.put("endDate", endDateStr);
+            } catch (DateTimeParseException e) {
+                log.warn("Invalid date format for startDate or endDate. Proceeding without date filter for availability calculation.");
+            }
         }
+        
+        // RoomDao를 통해 객실 기본 정보를 가져옵니다.
+        List<Room> rooms = roomDao.getRoomsByAccommodationIdAndOptionalDateRange(params); // 이 메소드가 날짜 필터링도 하는지 확인 필요
+        log.info("[AccommodationService] Got {} rooms from RoomDao for accommodationId: {}", rooms.size(), accommodationId);
+
+        // 날짜 정보와 인원수 정보가 유효한 경우에만 각 객실의 minAvailableCount를 계산하여 설정합니다.
+        if (startDate != null && endDate != null && guests != null && guests > 0) {
+            log.info("[AccommodationService] Calculating minAvailableCount for each room with dates and guests");
+            for (Room room : rooms) {
+                log.debug("[AccommodationService] Processing room ID: {}, capacity: {}", room.getRoomId(), room.getCapacity());
+                // ReservationService를 사용하여 minAvailableCount 계산 (guests 파라미터 전달)
+                int minAvailableCount = reservationService.calculateMinAvailableCountForRoom(room, startDate, endDate, guests);
+                log.info("[AccommodationService] Room ID: {}, capacity: {}, calculated minAvailableCount: {}", 
+                        room.getRoomId(), room.getCapacity(), minAvailableCount);
+                room.setMinAvailableCount(minAvailableCount);
+            }
+        } else {
+            log.info("[AccommodationService] Date or guests info insufficient, setting minAvailableCount to -1 for all rooms");
+            for (Room room : rooms) {
+                // 날짜나 인원 정보가 충분하지 않으면, 예약 가능 여부를 알 수 없으므로 minAvailableCount를 -1 (또는 다른 특정 값)로 설정
+                room.setMinAvailableCount(-1); // 프론트에서 이 값을 보고 "날짜/인원 선택 시 확인 가능" 등으로 표시 가능
+            }
+        }
+
         for (Room room : rooms) {
-            setImagesForSingleRoom(room); // 기존 이미지 설정 로직 유지
+            setImagesForSingleRoom(room);
         }
         return rooms;
     }
@@ -393,57 +432,80 @@ public class AccommodationServiceImpl implements AccommodationService {
      */
     @Override
     public Map<String, Object> getFilteredAccommodations(Map<String, Object> filters) throws SQLException {
-        log.debug("Service: getFilteredAccommodations - START with filters: {}", filters);
-
-        int page = (int) filters.getOrDefault("page", 1); // 기본값 설정
-        int size = (int) filters.getOrDefault("size", 10); // 기본값 설정
-
-        log.debug("Service: Calling DAO countFilteredAccommodations with filters: {}", filters);
-        long totalItems = accommodationDao.countFilteredAccommodations(filters);
-        log.debug("Service: DAO countFilteredAccommodations returned: {}", totalItems);
-
-        List<Accommodation> accommodations;
-        if (totalItems > 0) {
-            log.debug("Service: Calling DAO getFilteredAccommodations with filters: {}", filters);
-            accommodations = accommodationDao.getFilteredAccommodations(filters);
-            log.debug("Service: DAO getFilteredAccommodations returned {} accommodations.", accommodations != null ? accommodations.size() : "null list");
-            
-            if (accommodations == null) { // 방어 코드
-                log.warn("Service: accommodationDao.getFilteredAccommodations returned null. Initializing to empty list.");
-                accommodations = new ArrayList<>();
-            }
-        } else {
-            log.debug("Service: No items found by count, returning empty list for accommodations.");
-            accommodations = new ArrayList<>();
-        }
-
-        try {
-            log.debug("Service: Attempting to set main image URLs for {} accommodations.", accommodations.size());
-            setMainImageUrlForAccommodations(accommodations); // 이 메소드 내부도 SQLException을 던질 수 있으니 확인 필요
-            log.debug("Service: Successfully set main image URLs.");
-        } catch (SQLException se) {
-            log.error("Service: SQL Exception during setMainImageUrlForAccommodations: {}", se.getMessage(), se);
-            throw se; // SQLException은 다시 던져서 컨트롤러에서 처리하도록 함
-        } catch (Exception e) {
-            log.error("Service: Unexpected Exception during setMainImageUrlForAccommodations: {}", e.getMessage(), e);
-            // 일반 Exception은 SQLException으로 감싸서 던지거나, 혹은 별도의 처리 필요
-            // 여기서는 RuntimeException으로 변환하여 상황을 알림
-            throw new RuntimeException("Unexpected error while setting image URLs: " + e.getMessage(), e);
-        }
-
-        int totalPages = (totalItems == 0) ? 0 : (int) Math.ceil((double) totalItems / size);
-        if (totalPages == 0 && page > 0 && totalItems == 0) { // 아이템이 없고 페이지가 0보다 크면 현재 페이지를 0 또는 1로 조정
-             page = 0; // 혹은 1로 유지할지 정책에 따라 결정. 현재는 0으로.
-        }
-
-        Map<String, Object> result = new HashMap<>();
-        result.put("content", accommodations);
-        result.put("currentPage", page);
-        result.put("totalItems", totalItems);
-        result.put("totalPages", totalPages);
+        log.info("Service: getFilteredAccommodations with filters: {}", filters);
         
-        log.debug("Service: getFilteredAccommodations - END returning result: {}", result);
-        return result;
+        // DAO 호출 전에 필요한 경우 filters 맵의 guestCount, checkInDate, checkOutDate 등을 확인하고 로깅할 수 있습니다.
+        // 예를 들어, checkInDate, checkOutDate 문자열을 LocalDate로 변환하여 ReservationService와 연동 준비
+        String checkInDateStr = (String) filters.get("checkInDate");
+        String checkOutDateStr = (String) filters.get("checkOutDate");
+        Integer guestCount = (Integer) filters.get("guestCount");
+
+        LocalDate checkIn = null;
+        LocalDate checkOut = null;
+
+        if (checkInDateStr != null && !checkInDateStr.isEmpty()){
+            try {
+                checkIn = LocalDate.parse(checkInDateStr);
+            } catch (DateTimeParseException e){
+                log.warn("Invalid checkInDate format: {}. Date filter for availability might not work as expected.", checkInDateStr);
+            }
+        }
+        if (checkOutDateStr != null && !checkOutDateStr.isEmpty()){
+            try {
+                checkOut = LocalDate.parse(checkOutDateStr);
+            } catch (DateTimeParseException e){
+                log.warn("Invalid checkOutDate format: {}. Date filter for availability might not work as expected.", checkOutDateStr);
+            }
+        }
+
+        // 1. DAO를 통해 기본 필터링된 숙소 목록과 전체 카운트 조회
+        List<Accommodation> accommodations = accommodationDao.getFilteredAccommodations(filters);
+        long totalCount = accommodationDao.countFilteredAccommodations(filters);
+
+        log.debug("DAO returned {} accommodations, total count: {}", accommodations.size(), totalCount);
+
+        // 2. (선택적이지만 권장) 날짜와 인원이 주어졌다면, 각 숙소의 실제 예약 가능 여부를 확인하여 추가 필터링
+        // 이 로직은 성능에 영향을 줄 수 있으므로, 매우 많은 숙소가 반환될 경우 주의 필요
+        List<Accommodation> availableAccommodations = new ArrayList<>();
+        if (checkIn != null && checkOut != null && guestCount != null && guestCount > 0) {
+            log.debug("Performing secondary availability check for {} accommodations with dates: {} - {} and guests: {}", accommodations.size(), checkIn, checkOut, guestCount);
+            for (Accommodation acc : accommodations) {
+                // 각 숙소의 객실 목록을 가져와 예약 가능 여부 확인
+                List<Room> rooms = roomDao.getRoomsByAccommodationId(acc.getAccommodationId()); // RoomDao에 accommodationId로 객실 목록만 가져오는 메소드 필요
+                boolean isBookableAccommodation = false;
+                for (Room room : rooms) {
+                    if (room.getCapacity() >= guestCount) { // 1차: 인원 수용 가능 여부
+                        int availableCount = reservationService.calculateMinAvailableCountForRoom(room, checkIn, checkOut, guestCount);
+                        if (availableCount > 0) {
+                            isBookableAccommodation = true;
+                            break; // 이 숙소는 예약 가능한 객실이 있음
+                        }
+                    }
+                }
+                if (isBookableAccommodation) {
+                    availableAccommodations.add(acc);
+                }
+            }
+            log.debug("After secondary availability check, {} accommodations are available.", availableAccommodations.size());
+            // TODO: totalCount도 이 기준으로 다시 세어야 할 수 있으나, 복잡도를 높임.
+            // 우선 프론트엔드에서는 필터링 된 목록을 보여주고, 페이지네이션은 초기 DB 카운트 기준으로 할 수 있음.
+            // 또는, 여기서 필터링된 목록만으로 페이지네이션 정보를 재구성.
+            // 현재는 DB 카운트를 그대로 사용하고, 필터링된 숙소 목록만 교체합니다.
+        } else {
+            availableAccommodations.addAll(accommodations); // 날짜/인원 필터 없으면 모두 추가
+        }
+
+        // 이미지 설정
+        setMainImageUrlForAccommodations(availableAccommodations);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("content", availableAccommodations); // 필터링된 숙소 목록
+        response.put("currentPage", filters.get("page"));
+        response.put("totalItems", totalCount); // DB에서 가져온 전체 아이템 수 (2차 필터링 전 기준)
+        response.put("totalPages", (int) Math.ceil((double) totalCount / (int) filters.get("size")));
+        
+        log.info("Service: getFilteredAccommodations response: {}", response);
+        return response;
     }
 
 

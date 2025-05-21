@@ -7,6 +7,7 @@ import { notificationRoutes } from "./notification";
 import { commonRoutes } from "./common";
 import { userRoutes } from "./user";
 import { adminRoutes } from "./admin";
+import { reservationRoutes } from "./reservation";
 
 const Plan = () => import("../views/plan/Plan.vue");
 const PlanAlone = () => import("../views/plan/PlanAlone.vue");
@@ -30,6 +31,8 @@ const routes = [
   ...notificationRoutes,
   ...userRoutes,
   ...adminRoutes,
+  ...reservationRoutes,
+
   { path: "/plans/public/:token", component: PlanPublic, meta: { title: "공개 여행 계획 - Room Traveler" } },
   {
     path: "/api-test",

@@ -1,11 +1,10 @@
 const AccommodationHome = () => import("../views/accommodation/AccommodationHome.vue");
 const AccommodationList = () => import("../views/accommodation/AccommodationList.vue");
 const AccommodationDetail = () => import("../views/accommodation/AccommodationDetail.vue");
-const AccommodationReserve = () => import("../views/reservation/ReservationForm.vue");
-const AccommodationReviews = () => import("../views/review/ReviewForm.vue");
 const RoomDetail = () => import("../views/accommodation/RoomDetail.vue");
 const AccommodationCart = () => import("../views/cart/Cart.vue");
 const AccommodationFavorite = () => import("../views/accommodation/AccommodationFavoriteList.vue");
+const AccommodationCartCheckout = () => import("../views/cart/CartCheckout.vue");
 
 export const accommodationRoutes = [
   { path: "/accommodation", name: "AccommodationHome", component: AccommodationHome, meta: { title: "숙소 홈" } },
@@ -35,5 +34,11 @@ export const accommodationRoutes = [
     name: "AccommodationFavorite",
     component: AccommodationFavorite,
     meta: { title: "찜한 숙소" },
+  },
+  {
+    path: "/accommodation/cart/checkout",
+    name: "AccommodationCartCheckout",
+    component: AccommodationCartCheckout,
+    meta: { title: "예약 확인" },
   },
 ];

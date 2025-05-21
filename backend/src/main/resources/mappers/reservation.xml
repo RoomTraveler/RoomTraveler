@@ -46,8 +46,22 @@
     </select>
 
     <!-- 사용자 ID로 예약 목록을 조회합니다. -->
-    <select id="getReservationsByUserId" resultType="com.ssafy.trip.accommodation.model.Reservation">
-        SELECT * FROM reservations WHERE user_id = #{userId}
+    <select id="getReservationsByUserId" resultMap="ReservationMap">
+        SELECT
+            r.*,
+            u.name AS user_name,
+            u.email AS user_email,
+            u.phone AS user_phone,
+            rm.name AS room_name,
+            a.title AS accommodation_title,
+            a.accommodation_id,
+            DATEDIFF(r.check_out_date, r.check_in_date) AS nights
+        FROM reservations r
+        JOIN users u ON r.user_id = u.user_id
+        JOIN rooms rm ON r.room_id = rm.room_id
+        JOIN accommodations a ON rm.accommodation_id = a.accommodation_id
+        WHERE r.user_id = #{userId}
+        ORDER BY r.created_at DESC
     </select>
 
     <!-- 객실 ID로 예약 목록을 조회합니다. -->

@@ -81,15 +81,16 @@ public class ApiAccommodationController {
     public ResponseEntity<?> getAccommodationDetail(
             @PathVariable Long accommodationId,
             @RequestParam(required = false) String checkInDate, 
-            @RequestParam(required = false) String checkOutDate) {
+            @RequestParam(required = false) String checkOutDate,
+            @RequestParam(required = false) Integer guests) {
         try {
             Accommodation accommodation = apiAccommodationService.getAccommodationById(accommodationId);
             if (accommodation == null) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(Map.of("error", "숙소를 찾을 수 없습니다. ID: " + accommodationId));
             }
-            // 날짜 파라미터를 사용하여 객실 정보 조회 (minAvailableCount 포함 가능)
-            List<Room> rooms = apiAccommodationService.getRoomsByAccommodationId(accommodationId, checkInDate, checkOutDate);
+            // 날짜와 인원수 파라미터를 사용하여 객실 정보 조회
+            List<Room> rooms = apiAccommodationService.getRoomsByAccommodationId(accommodationId, checkInDate, checkOutDate, guests);
             
             Map<String, Object> response = new HashMap<>();
             response.put("accommodation", accommodation);
@@ -132,13 +133,14 @@ public class ApiAccommodationController {
             @RequestParam(required = false) Integer gugunCode,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String accommodationType,
-            @RequestParam(required = false) Integer adults,
-            @RequestParam(required = false) Integer children,
+            @RequestParam(required = false) Integer guests,
             @RequestParam(required = false) String sortBy,
+            @RequestParam(required = false) String checkInDate,
+            @RequestParam(required = false) String checkOutDate,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size) {
-        log.debug("Attempting to get filtered accommodations with params - sidoCode: {}, gugunCode: {}, keyword: {}, type: {}, adults: {}, children: {}, sortBy: {}, page: {}, size: {}",
-                sidoCode, gugunCode, keyword, accommodationType, adults, children, sortBy, page, size);
+        log.debug("Attempting to get filtered accommodations with params - sidoCode: {}, gugunCode: {}, keyword: {}, type: {}, guests: {}, sortBy: {}, checkInDate: {}, checkOutDate: {}, page: {}, size: {}",
+                sidoCode, gugunCode, keyword, accommodationType, guests, sortBy, checkInDate, checkOutDate, page, size);
         try {
             Map<String, Object> filters = new HashMap<>();
             if (sidoCode != null) filters.put("sidoCode", sidoCode);
@@ -148,15 +150,15 @@ public class ApiAccommodationController {
                 filters.put("accommodationType", accommodationType.trim());
             }
 
-            int totalGuests = 0;
-            if (adults != null && adults > 0) {
-                totalGuests += adults;
+            if (guests != null && guests > 0) {
+                filters.put("guestCount", guests);
             }
-            if (children != null && children > 0) {
-                totalGuests += children;
+
+            if (checkInDate != null && !checkInDate.trim().isEmpty()) {
+                filters.put("checkInDate", checkInDate.trim());
             }
-            if (totalGuests > 0) {
-                filters.put("guestCount", totalGuests);
+            if (checkOutDate != null && !checkOutDate.trim().isEmpty()) {
+                filters.put("checkOutDate", checkOutDate.trim());
             }
 
             if (sortBy != null && !sortBy.trim().isEmpty()) filters.put("sortBy", sortBy.trim());

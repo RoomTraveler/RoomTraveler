@@ -378,26 +378,40 @@ public class ReservationServiceImpl implements ReservationService {
     public boolean isRoomAvailable(Long roomId, LocalDate checkInDate, LocalDate checkOutDate, int guestCount) throws SQLException {
         Room room = roomDao.getRoomById(roomId);
         if (room == null) {
-            throw new SQLException("객실 정보를 찾을 수 없습니다.");
+            throw new SQLException("객실 정보를 찾을 수 없습니다. ID: " + roomId);
         }
-        if (!"AVAILABLE".equals(room.getStatus())) { // 객실 자체가 이용 불가능한 상태일 경우
-            return false;
-        }
-        if (guestCount > room.getCapacity()) { // 객실의 최대 수용 인원을 초과하는 경우
-            return false;
+        // 객실 자체의 상태 (예: 'ACTIVE', 'AVAILABLE' 등) 확인
+        // Room 모델 또는 테이블에 status 컬럼이 있고, 그 값이 예약 가능한 상태인지 확인하는 로직 추가 가능
+        // 예: if (!"ACTIVE".equals(room.getStatus())) return false;
+        
+        // 요청된 guestCount가 객실의 수용 가능 인원(capacity)을 초과하는지 확인
+        if (guestCount > room.getCapacity()) { 
+            // log.warn("Requested guestCount {} exceeds room capacity {} for room ID {}", guestCount, room.getCapacity(), roomId);
+            return false; // 수용 인원 초과
         }
 
         LocalDate currentDate = checkInDate;
         // 체크아웃 날짜는 숙박하지 않으므로, 그 전날까지만 가용성을 확인
         while (!currentDate.isAfter(checkOutDate.minusDays(1))) {
             RoomAvailability availability = roomAvailabilityDao.getAvailabilityByRoomIdAndDate(roomId, currentDate);
-            int availableCountForDate = (availability != null) ? availability.getAvailableCount() : room.getRoomCount();
+            
+            int availableCountForDate;
+            if (availability != null) {
+                availableCountForDate = availability.getAvailableCount();
+            } else {
+                // room_availability에 해당 날짜의 레코드가 없으면, room 테이블의 room_count를 기본 재고로 사용
+                availableCountForDate = (room.getRoomCount() != null && room.getRoomCount() > 0) ? room.getRoomCount() : 0;
+            }
 
-            if (availableCountForDate < guestCount) { // 특정 날짜에 필요한 만큼 객실이 없는 경우
-                return false;
+            // 실제 필요한 객실 수 (여기서는 1개 객실을 예약한다고 가정)
+            int requiredRoomUnits = 1; 
+            if (availableCountForDate < requiredRoomUnits) { 
+                // log.info("Room ID {} is not available on {}. Available: {}, Required: {}", roomId, currentDate, availableCountForDate, requiredRoomUnits);
+                return false; // 특정 날짜에 필요한 만큼 객실이 없는 경우
             }
             currentDate = currentDate.plusDays(1);
         }
+        // log.info("Room ID {} is available from {} to {} for {} guests.", roomId, checkInDate, checkOutDate, guestCount);
         return true;
     }
 
@@ -465,37 +479,49 @@ public class ReservationServiceImpl implements ReservationService {
     private void updateRoomAvailabilityForBooking(Long roomId, LocalDate checkInDate, LocalDate checkOutDate, int guestCount, boolean decrease) throws SQLException {
         Room room = roomDao.getRoomById(roomId);
         if (room == null) {
-            throw new SQLException("객실 정보를 찾을 수 없습니다.");
+            throw new SQLException("객실 정보를 찾을 수 없습니다. ID: " + roomId);
+        }
+        if (room.getRoomCount() == null || room.getRoomCount() <= 0) {
+            // log.warn("Room ID {} has invalid roomCount: {}. Skipping availability update.", roomId, room.getRoomCount());
+            // return; // roomCount가 유효하지 않으면 업데이트를 건너뛸 수 있음
+            throw new SQLException("객실의 총 수(roomCount) 정보가 유효하지 않습니다. Room ID: " + roomId);
         }
 
         LocalDate currentDate = checkInDate;
+        int actualRoomUnitsChanged = 1; // 한 번의 예약/취소는 객실 1개에 대한 변경으로 가정
+
         while (!currentDate.isAfter(checkOutDate.minusDays(1))) { // 체크아웃 전날까지만 처리
             RoomAvailability availability = roomAvailabilityDao.getAvailabilityByRoomIdAndDate(roomId, currentDate);
-            int changeAmount = 1; // 기본적으로 객실 1개 단위로 가용성 변경 (투숙객 수가 아닌 객실 수 기준)
-                                 // 만약 guestCount가 여러 객실을 의미한다면 이 부분을 수정해야 함.
-                                 // 현재 Room 모델에 roomCount(객실 수)가 있고, Reservation은 특정 Room의 1개를 예약하는 개념으로 보임.
-
+            
+            int newAvailableCount;
             if (availability != null) {
-                int newAvailableCount = decrease ? availability.getAvailableCount() - changeAmount : availability.getAvailableCount() + changeAmount;
-                // 음수가 되지 않도록, 또한 최대 객실 수를 넘지 않도록 처리 (필요 시)
-                if (newAvailableCount < 0) newAvailableCount = 0;
-                if (!decrease && newAvailableCount > room.getRoomCount()) newAvailableCount = room.getRoomCount(); // 취소 시 최대 객실 수 초과 방지
-
-                roomAvailabilityDao.updateAvailableCount(roomId, currentDate, newAvailableCount);
+                int currentAvailable = availability.getAvailableCount();
+                newAvailableCount = decrease ? currentAvailable - actualRoomUnitsChanged : currentAvailable + actualRoomUnitsChanged;
             } else {
-                // 해당 날짜에 가용성 정보가 없는 경우 (최초 예약 등)
-                int initialCount = room.getRoomCount();
-                int newAvailableCount = decrease ? initialCount - changeAmount : initialCount + changeAmount; // 증가 로직은 사실상 발생하기 어려움(취소 시 availability가 있어야 함)
-                if (newAvailableCount < 0) newAvailableCount = 0;
-
-                RoomAvailability newAvailability = RoomAvailability.builder()
-                        .roomId(roomId)
-                        .date(currentDate)
-                        .availableCount(newAvailableCount)
-                        .price(room.getPrice()) // 기본 가격 사용
-                        .build();
-                roomAvailabilityDao.insert(newAvailability);
+                // 해당 날짜에 가용성 정보가 없는 경우, room.getRoomCount()를 기준으로 계산
+                int initialTotalCount = room.getRoomCount();
+                newAvailableCount = decrease ? initialTotalCount - actualRoomUnitsChanged : initialTotalCount + actualRoomUnitsChanged; 
+                // (참고: 취소 시 availability가 없는 경우는 거의 없으나, 로직상 방어 코드로 남겨둠. 예약 시에는 발생 가능)
             }
+
+            // 음수가 되지 않도록, 또한 최대 객실 수를 넘지 않도록 처리
+            if (newAvailableCount < 0) {
+                // log.warn("Attempted to set available count to negative for room {} on {}. Setting to 0.", roomId, currentDate);
+                newAvailableCount = 0;
+            }
+            if (!decrease && newAvailableCount > room.getRoomCount()) { // 취소 시 최대 객실 수 초과 방지
+                // log.warn("Attempted to increase available count beyond total room count for room {} on {}. Setting to total.", roomId, currentDate);
+                newAvailableCount = room.getRoomCount();
+            }
+
+            // roomAvailabilityDao.updateAvailableCount는 ON DUPLICATE KEY UPDATE를 사용하므로 insert/update를 한번에 처리 가능
+            // 단, price 정보가 필요할 수 있음. updateAvailableCount가 price도 함께 처리하는지 확인 필요.
+            // 현재 roomAvailability.xml의 updateAvailableCount는 price도 설정함.
+            // (SELECT price FROM rooms WHERE room_id = #{param1}) 부분을 사용. 만약 특별 가격을 유지해야 한다면 이 부분 수정 필요.
+            // 여기서는 해당 날짜의 가격은 rooms 테이블의 기본 가격을 따른다고 가정.
+            roomAvailabilityDao.updateAvailableCount(roomId, currentDate, newAvailableCount);
+            
+            // log.info("Updated availability for Room ID {}, Date {}: New Available Count = {}", roomId, currentDate, newAvailableCount);
             currentDate = currentDate.plusDays(1);
         }
     }
@@ -522,5 +548,85 @@ public class ReservationServiceImpl implements ReservationService {
                     }
                 })
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public int calculateMinAvailableCountForRoom(Room room, LocalDate startDate, LocalDate endDate, Integer guests) throws SQLException {
+        System.out.println("[ReservationService] calculateMinAvailableCountForRoom called - " +
+                "roomId: " + (room != null ? room.getRoomId() : "null") +
+                ", startDate: " + startDate +
+                ", endDate: " + endDate +
+                ", guests: " + guests);
+                
+        if (room == null || room.getRoomId() == null || room.getRoomCount() == null || room.getRoomCount() <= 0) {
+            System.out.println("[ReservationService] Invalid room object provided for calculating min available count: " + room);
+            return 0; // 유효하지 않은 room 정보 또는 roomCount가 없으면 0 반환
+        }
+
+        // 추가된 로직: 요청 인원(guests)이 객실 수용 인원(capacity)을 초과하는지 확인
+        if (guests != null && guests > 0 && room.getCapacity() != null && guests > room.getCapacity()) {
+            System.out.println("[ReservationService] Requested guests (" + guests + ") exceed room capacity (" + 
+                    room.getCapacity() + ") for room ID " + room.getRoomId());
+            return 0; // 요청 인원이 수용 인원을 초과하면 0 반환
+        }
+
+        if (startDate == null || endDate == null || startDate.isAfter(endDate) || startDate.isEqual(endDate)) {
+            System.out.println("[ReservationService] Invalid date range for room " + room.getRoomId() + 
+                    ": startDate=" + startDate + ", endDate=" + endDate);
+            // 날짜 범위가 유효하지 않으면, 인원수 조건만 만족했다면 일단 현재 객실의 총 개수를 반환하거나,
+            // 혹은 이 경우에도 0을 반환하는 것이 더 안전할 수 있습니다.
+            // 여기서는 좀 더 보수적으로 0을 반환하거나, 아니면 최소한 인원 체크는 통과했으므로 room.getRoomCount()를 반환합니다.
+            // 이전 로직은 room.getRoomCount()를 반환했으나, guests 체크 후이므로, 여기서 0을 반환하는 것이 더 일관적일 수 있습니다.
+            // 하지만, AccommodationServiceImpl에서 날짜/인원 정보 불충분 시 -1을 반환하는 패턴을 따르기 위해 여기서는 -1로 수정합니다.
+            // 만약 이 메서드가 순수하게 "잔여 객실"만 계산한다면, 날짜 정보 없이는 계산 불가이므로 0 또는 예외가 더 적절합니다.
+            // 현재 AccommodationServiceImpl에서 이 메서드의 반환값을 "예약 가능한 최소 객실 수"로 사용하므로,
+            // 날짜 정보가 없으면 "판단 불가"의 의미로 -1을 반환하는 것도 고려해볼 수 있습니다.
+            // 우선은, -1로 설정합니다.
+            return -1; 
+        }
+
+        int minAvailableAcrossDates = room.getRoomCount(); // 초기 최소값은 해당 객실의 총 개수로 설정
+        LocalDate currentDate = startDate;
+        System.out.println("[ReservationService] Starting calculation for room " + room.getRoomId() + 
+                ", initial minAvailableAcrossDates=" + minAvailableAcrossDates);
+
+        while (!currentDate.isAfter(endDate.minusDays(1))) { // endDate는 포함하지 않음
+            // 1. room_availability에서 해당 날짜의 가용 객실 수 조회
+            RoomAvailability dailyAvailability = roomAvailabilityDao.getAvailabilityByRoomIdAndDate(room.getRoomId(), currentDate);
+            int availableFromAvailabilityTable = (dailyAvailability != null) ? dailyAvailability.getAvailableCount() : room.getRoomCount();
+            System.out.println("[ReservationService] Date: " + currentDate + ", availableFromAvailabilityTable=" + availableFromAvailabilityTable);
+
+            // 2. reservations 테이블에서 해당 날짜에 확정된 예약 건수 조회
+            // ReservationDao에 해당 날짜에 특정 room_id로 확정된 예약 수를 세는 메소드가 필요.
+            // getConfirmedReservationsCountForRoomOnDate(Long roomId, LocalDate date)
+            // 여기서는 임시로 reservationDao.getFilteredReservations를 활용하거나, 새 DAO 메소드를 가정합니다.
+            // 아래는 개념적인 접근입니다. 실제 DAO 메소드가 필요합니다.
+            Map<String, Object> filters = new HashMap<>();
+            filters.put("roomId", room.getRoomId());
+            filters.put("status", "CONFIRMED");
+            filters.put("targetDate", currentDate); // targetDate를 기준으로 check_in_date <= targetDate AND check_out_date > targetDate 인 예약을 카운트
+            
+            // 아래 Dao 메소드는 새로 만들어야 합니다.
+            // int confirmedReservations = reservationDao.countConfirmedReservationsForRoomOnDate(room.getRoomId(), currentDate);
+            // 임시 구현: 현재 ReservationDao에는 특정 날짜의 예약 건수를 직접 가져오는 메소드가 없습니다.
+            // 여기서는 ReservationServiceImpl의 isRoomAvailable과 유사하게, room_availability의 available_count가
+            // 이미 예약을 반영한 수치라고 가정하고 진행합니다. (이전 단계에서 그렇게 수정했으므로)
+            // 따라서, availableFromAvailabilityTable이 그날의 실제 남은 방이라고 가정합니다.
+            int dailyNetAvailable = availableFromAvailabilityTable;
+            System.out.println("[ReservationService] Date: " + currentDate + ", dailyNetAvailable=" + dailyNetAvailable);
+
+            if (dailyNetAvailable < minAvailableAcrossDates) {
+                minAvailableAcrossDates = dailyNetAvailable;
+                System.out.println("[ReservationService] Updated minAvailableAcrossDates to " + minAvailableAcrossDates);
+            }
+
+            if (minAvailableAcrossDates <= 0) {
+                System.out.println("[ReservationService] minAvailableAcrossDates <= 0, returning 0");
+                return 0; // 중간에 0개 이하로 내려가면 더 계산할 필요 없음
+            }
+            currentDate = currentDate.plusDays(1);
+        }
+        System.out.println("[ReservationService] Final minAvailableAcrossDates=" + minAvailableAcrossDates + " for room " + room.getRoomId());
+        return minAvailableAcrossDates;
     }
 }

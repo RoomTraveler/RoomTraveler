@@ -126,4 +126,35 @@
         JOIN accommodations a ON r.accommodation_id = a.accommodation_id
         WHERE a.host_id = #{hostId}
     </select>
+
+    <!-- 숙소 ID와 (선택적) 날짜 범위로 객실 목록을 조회합니다. minAvailableCount는 여기서 계산하지 않습니다. -->
+    <select id="getRoomsByAccommodationIdAndOptionalDateRange" parameterType="map" resultMap="roomResultMap">
+        SELECT
+            r.room_id,
+            r.accommodation_id,
+            r.name,
+            r.description,
+            r.price_per_night,
+            r.original_price,
+            r.discount_rate,
+            r.cancellation_policy,
+            r.capacity,
+            r.room_count, -- 객실의 총 보유량
+            r.room_type,
+            r.bed_type,
+            r.bathroom_count,
+            r.amenities,
+            r.status,
+            r.created_at,
+            r.updated_at
+            -- min_available_count 컬럼은 서비스 레이어에서 계산 후 채워짐
+        FROM rooms r
+        WHERE r.accommodation_id = #{accommodationId}
+        <if test="startDate != null and endDate != null">
+            AND r.status = 'ACTIVE' -- 예시: 날짜 범위가 주어졌을 때 활성 객실만 대상 (필요에 따라 조정)
+            -- 참고: 특정 날짜 범위에 운영하지 않는 객실 제외 로직 (예: room_holidays 테이블 사용) 추가 가능.
+            -- 예시: AND r.room_id NOT IN (SELECT rh.room_id FROM room_holidays rh WHERE rh.holiday_date BETWEEN 파라미터_시작일 AND 파라미터_종료일)
+        </if>
+        ORDER BY r.price_per_night ASC, r.name ASC
+    </select>
 </mapper>

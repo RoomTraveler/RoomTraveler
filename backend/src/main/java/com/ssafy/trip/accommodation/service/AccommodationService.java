@@ -51,14 +51,15 @@ public interface AccommodationService {
     List<Accommodation> getAccommodationsByHostId(Long hostId) throws SQLException;
 
     /**
-     * 숙소 ID와 선택적 날짜 범위로 객실 목록을 조회합니다.
-     * 날짜 범위가 제공되면, 해당 기간 동안의 최소 가용 객실 수도 함께 조회합니다.
+     * 숙소 ID와 선택적 날짜 범위 및 인원수로 객실 목록을 조회합니다.
+     * 날짜 범위와 인원수가 제공되면, 해당 기간 동안의 최소 가용 객실 수도 함께 조회합니다.
      * @param accommodationId 숙소 ID
      * @param startDate 조회 시작 날짜 (YYYY-MM-DD 형식, 옵셔널)
      * @param endDate 조회 종료 날짜 (YYYY-MM-DD 형식, 옵셔널)
+     * @param guests 총 인원수 (옵셔널)
      * @return 객실 목록 (minAvailableCount 포함 가능)
      */
-    List<Room> getRoomsByAccommodationId(Long accommodationId, String startDate, String endDate) throws SQLException;
+    List<Room> getRoomsByAccommodationId(Long accommodationId, String startDate, String endDate, Integer guests) throws SQLException;
 
     /**
      * 지역 코드로 숙소 목록을 조회합니다.

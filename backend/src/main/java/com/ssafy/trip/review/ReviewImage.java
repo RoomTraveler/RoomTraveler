@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * 리뷰 이미지 정보를 담는 클래스
@@ -23,4 +24,5 @@ public class ReviewImage {
     private Integer sortOrder;       // 정렬 순서 (선택적)
     private LocalDateTime createdAt; // 생성 시간
     private LocalDateTime updatedAt; // 수정 시간 (추가)
+
 } 

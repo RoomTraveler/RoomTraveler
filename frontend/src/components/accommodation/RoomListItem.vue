@@ -2,6 +2,7 @@
   <div
     class="flex flex-row items-stretch max-w-[768px] mx-auto bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden gap-x-0 pl-4"
     style="min-height: 198px"
+    :class="{ 'disabled-item': !isBookable }"
   >
     <RoomCard :room="room" @view-detail="emitViewDetail" />
     <div class="border-l border-gray-200 flex flex-col flex-1">
@@ -49,28 +50,52 @@ const props = defineProps({
     type: Object as PropType<Room>,
     required: true,
   },
+  isBookable: {
+    type: Boolean,
+    default: true, // 기본적으로 예약 가능하다고 가정
+  },
 });
 
 const emit = defineEmits(["view-detail", "book-room", "add-to-cart"]);
 
 const emitViewDetail = () => {
-  // RoomCard와 RoomInfoDisplay 모두 roomId를 직접 emit하지 않으므로,
-  // 여기서는 props.room.roomId를 사용합니다.
-  // 만약 하위 컴포넌트가 roomId를 payload로 emit한다면, 해당 payload를 그대로 전달합니다.
-  // 현재 RoomCard는 @view-detail 시 roomId를 emit하지 않고, RoomInfoDisplay는 합니다.
-  // 일관성을 위해 RoomListItem에서 roomId를 emit하도록 통일합니다.
+  if (!props.isBookable) {
+    // 선택적으로 사용자에게 알림 (예: 부모 컴포넌트에서 토스트 메시지)
+    console.log("RoomListItem: View detail for non-bookable room blocked.");
+    return;
+  }
   emit("view-detail", props.room.roomId);
 };
 
 const emitBookRoom = () => {
+  if (!props.isBookable) {
+    console.log("RoomListItem: Book room for non-bookable room blocked.");
+    return;
+  }
   emit("book-room", props.room.roomId);
 };
 
 const emitAddToCart = () => {
-  emit("add-to-cart", props.room.roomId);
+  if (!props.isBookable) {
+    console.log("RoomListItem: Add to cart for non-bookable room blocked.");
+    return;
+  }
+  // emit("add-to-cart", props.room.roomId); // RoomInfoDisplay에서 room 객체 전체를 emit하므로 여기서는 주석 처리
+  // AccommodationDetail.vue에서 room 객체 전체를 받도록 수정되었으므로, RoomListItem도 room 객체 전체를 emit하도록 통일합니다.
+  emit("add-to-cart", props.room);
 };
 </script>
 
 <style scoped>
-/* 필요한 경우 여기에 스타일 추가 */
+.disabled-item {
+  opacity: 0.6;
+  cursor: not-allowed;
+  pointer-events: none; /* 하위 요소 클릭도 막음 */
+}
+.disabled-item :deep(button) {
+  /* pointer-events: none; 이미 상위에서 처리 */
+}
+.disabled-item :deep(a) {
+  /* pointer-events: none; 이미 상위에서 처리 */
+}
 </style>

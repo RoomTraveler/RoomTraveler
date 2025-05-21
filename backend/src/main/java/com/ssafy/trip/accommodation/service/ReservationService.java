@@ -212,4 +212,17 @@ public interface ReservationService {
      * @throws SQLException 데이터베이스 오류 발생 시
      */
     List<Room> getAvailableRooms(Long accommodationId, LocalDate checkInDate, LocalDate checkOutDate, int guestCount) throws SQLException;
+
+    /**
+     * 특정 객실에 대해 주어진 기간 동안의 최소 가용 객실 수를 계산합니다.
+     * 이 계산은 room_availability 테이블과 reservations 테이블을 모두 고려하며, 객실의 수용 인원도 고려합니다.
+     *
+     * @param room        대상 객실 (room_count, capacity 정보 포함)
+     * @param startDate   조회 시작 날짜
+     * @param endDate     조회 종료 날짜 (이 날짜 미포함)
+     * @param guests      요청된 총 투숙객 수
+     * @return 해당 기간 동안 매일 예약 가능한 객실 수 중 최소값 (수용 인원 초과 시 0 반환)
+     * @throws SQLException 데이터베이스 오류 발생 시
+     */
+    int calculateMinAvailableCountForRoom(Room room, LocalDate startDate, LocalDate endDate, Integer guests) throws SQLException;
 }

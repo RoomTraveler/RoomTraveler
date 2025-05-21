@@ -142,6 +142,8 @@ import accommodationService from "../../api/accommodationApi.js";
 import FilterHeader from "../../components/accommodation/FilterHeader.vue";
 import AccommodationCardInfo from "../../components/accommodation/AccommodationCardInfo.vue";
 import RoundedImage from "../../components/common/RoundedImage.vue";
+// import router from "@/router"; // 이 줄을 삭제하거나 주석 처리합니다.
+import { ElMessage } from "element-plus";
 
 interface Room {
   price: number;
@@ -173,8 +175,8 @@ interface Accommodation {
 interface FilterValues {
   region: { sidoCode: number | null; gugunCode: number | null; name: string };
   dateRange: [Date, Date] | null;
-  guestInfo: { adults: number; children: number }; // guestCount -> guestInfo
-  accommodationType: string | null; // 새로 추가된 호텔 유형
+  guests: number; // guestInfo -> guests 로 변경
+  accommodationType: string | null;
 }
 
 interface Category {
@@ -190,11 +192,10 @@ interface SortOption {
 interface UrlFilters {
   sidoCode?: number;
   gugunCode?: number;
-  regionName?: string; // URL에 지역 이름도 포함 (복원 시 사용)
+  regionName?: string;
   checkInDate?: string;
   checkOutDate?: string;
-  adults?: number;
-  children?: number;
+  guests?: number; // adults, children -> guests 로 변경
   accommodationType?: string;
   sortBy?: string;
 }
@@ -215,7 +216,7 @@ const totalAccommodationsCount = ref(0);
 const currentFilters = ref<FilterValues>({
   region: { sidoCode: null, gugunCode: null, name: "전체 지역" },
   dateRange: null,
-  guestInfo: { adults: 2, children: 0 },
+  guests: 2, // guestInfo -> guests 로 변경, 기본값 2명
   accommodationType: null,
 });
 
@@ -247,23 +248,19 @@ watch(
 
     if (currentFilters.value.region.sidoCode) query.sidoCode = currentFilters.value.region.sidoCode;
     if (currentFilters.value.region.gugunCode) query.gugunCode = currentFilters.value.region.gugunCode;
-    if (currentFilters.value.region.name && currentFilters.value.region.name !== "전체 지역") {
+    if (currentFilters.value.region.name && currentFilters.value.region.name !== "전체 지역")
       query.regionName = currentFilters.value.region.name;
-    }
     if (currentFilters.value.dateRange && currentFilters.value.dateRange[0] && currentFilters.value.dateRange[1]) {
       query.checkInDate = formatDate(currentFilters.value.dateRange[0]);
       query.checkOutDate = formatDate(currentFilters.value.dateRange[1]);
     }
-    if (currentFilters.value.guestInfo.adults > 0) query.adults = currentFilters.value.guestInfo.adults;
-    if (currentFilters.value.guestInfo.children > 0) query.children = currentFilters.value.guestInfo.children;
+    // guests 값 저장 (0보다 클 경우)
+    if (currentFilters.value.guests > 0) query.guests = currentFilters.value.guests;
+
     if (currentFilters.value.accommodationType) query.accommodationType = currentFilters.value.accommodationType;
     if (currentSort.value) query.sortBy = currentSort.value;
 
-    // 현재 라우트의 쿼리와 다를 경우에만 replace (무한 루프 방지 목적도 있음)
-    // JSON.stringify로 비교하면 객체 순서에 따라 달라질 수 있어, 각 키를 비교하는 것이 더 정확할 수 있으나, 여기서는 단순화
-    if (JSON.stringify(route.query) !== JSON.stringify(query)) {
-      router.replace({ query: query as any }); // UrlFilters 타입이지만 any로 캐스팅
-    }
+    router.replace({ query: query as any }); // 타입 단언
   },
   { deep: true }
 );
@@ -275,7 +272,7 @@ function handleFiltersUpdate(filters: FilterValues & { sortBy?: string }) {
   currentFilters.value = {
     region: filters.region,
     dateRange: filters.dateRange,
-    guestInfo: filters.guestInfo,
+    guests: filters.guests,
     accommodationType: filters.accommodationType,
   };
   if (filters.sortBy) {
@@ -321,8 +318,7 @@ async function fetchAccommodations(loadMore = false) {
     if (currentFilters.value.region.sidoCode) params.sidoCode = currentFilters.value.region.sidoCode;
     if (currentFilters.value.region.gugunCode) params.gugunCode = currentFilters.value.region.gugunCode;
     if (currentFilters.value.accommodationType) params.accommodationType = currentFilters.value.accommodationType;
-    if (currentFilters.value.guestInfo.adults > 0) params.adults = currentFilters.value.guestInfo.adults;
-    if (currentFilters.value.guestInfo.children > 0) params.children = currentFilters.value.guestInfo.children;
+    if (currentFilters.value.guests > 0) params.guests = currentFilters.value.guests;
     if (currentFilters.value.dateRange && currentFilters.value.dateRange[0]) {
       params.checkInDate = formatDate(currentFilters.value.dateRange[0]);
     }
@@ -392,9 +388,27 @@ const handleScroll = () => {
   }
 };
 
+// formatDateForApi 함수 추가
+const formatDateForApi = (date: Date | string): string | null => {
+  if (!date) return null;
+  const d = new Date(date);
+  const year = d.getFullYear();
+  const month = (d.getMonth() + 1).toString().padStart(2, "0");
+  const day = d.getDate().toString().padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
 // 상세 페이지 이동
 const goToDetail = (id: number) => {
-  router.push({ name: "AccommodationDetail", params: { id } });
+  const query: any = {};
+  if (currentFilters.value.dateRange && currentFilters.value.dateRange[0] && currentFilters.value.dateRange[1]) {
+    query.checkInDate = formatDateForApi(currentFilters.value.dateRange[0]);
+    query.checkOutDate = formatDateForApi(currentFilters.value.dateRange[1]);
+  }
+  // guests 정보 전달
+  if (currentFilters.value.guests > 0) query.guests = currentFilters.value.guests;
+
+  router.push({ name: "AccommodationDetail", params: { id }, query });
 };
 
 // 가격 포맷팅 함수
@@ -442,8 +456,7 @@ onMounted(() => {
   if (checkIn && checkOut) {
     currentFilters.value.dateRange = [checkIn, checkOut];
   }
-  if (query.adults) currentFilters.value.guestInfo.adults = Number(query.adults);
-  if (query.children) currentFilters.value.guestInfo.children = Number(query.children);
+  if (query.guests) currentFilters.value.guests = Number(query.guests);
   if (query.accommodationType) currentFilters.value.accommodationType = query.accommodationType;
   if (query.sortBy) currentSort.value = query.sortBy;
 

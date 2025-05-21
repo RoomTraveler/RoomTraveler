@@ -132,9 +132,13 @@ const props = defineProps({
     type: Object as PropType<Room>,
     required: true,
   },
+  isBookable: {
+    type: Boolean,
+    default: true,
+  },
 });
 
-// const emit = defineEmits(["view-detail", "book-room", "add-to-cart"]); // Emit 제거
+const emit = defineEmits(["view-detail", "book-room", "add-to-cart"]);
 
 const currentImageIndex = ref(0);
 
@@ -163,18 +167,29 @@ const nextImage = () => {
   currentImageIndex.value = (currentImageIndex.value + 1) % roomImages.value.length;
 };
 
-// Event handler 제거
-// const handleViewDetail = (roomId: number) => {
-//   emit("view-detail", roomId);
-// };
+const roomInfoForDisplay = computed(() => ({
+  ...props.room,
+  // minAvailableCount: props.room.minAvailableCount || props.room.stock, // 예시: API 응답에 따라 조정
+  // 만약 room 객체에 minAvailableCount가 이미 포함되어 있다면, 이 부분은 필요 없을 수 있습니다.
+  // RoomListItem에서 전달되는 room 객체의 구조를 확인해야 합니다.
+  // 현재는 room 객체에 minAvailableCount가 있다고 가정하고 별도 매핑 안함.
+}));
 
-// const handleBookRoom = (roomId: number) => {
-//   emit("book-room", roomId);
-// };
+const handleViewDetail = (roomId: number) => {
+  // RoomCard에서의 상세보기는 isBookable과 관계없이 항상 가능 (상세 정보 확인 목적)
+  emit("view-detail", roomId);
+};
 
-// const handleAddToCartEvent = (roomId: number) => {
-//   emit("add-to-cart", roomId);
-// };
+const handleBookRoom = (roomId: number) => {
+  if (!props.isBookable) return; // isBookable 체크
+  emit("book-room", roomId);
+};
+
+const handleAddToCart = (room: any) => {
+  // roomInfo 전체를 받도록 수정
+  if (!props.isBookable) return; // isBookable 체크
+  emit("add-to-cart", room);
+};
 </script>
 
 <style scoped>

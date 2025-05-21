@@ -44,6 +44,29 @@
           <h1 class="room-title">{{ room.name }}</h1>
           <p class="text-muted">{{ accommodation.title }}</p>
           <hr />
+
+          <!-- 선택된 예약 정보 표시 섹션 -->
+          <h3 class="section-title">선택된 예약 정보</h3>
+          <div class="selected-reservation-details">
+            <div class="detail-item">
+              <i class="bi bi-calendar-check"></i>
+              <span>체크인: {{ displaySelectedCheckInDate }}</span>
+            </div>
+            <div class="detail-item">
+              <i class="bi bi-calendar-event"></i>
+              <span>체크아웃: {{ displaySelectedCheckOutDate }}</span>
+            </div>
+            <div class="detail-item">
+              <i class="bi bi-people-fill"></i>
+              <span>인원: {{ displaySelectedGuests }}</span>
+            </div>
+            <div class="detail-item" v-if="displayNights > 0">
+              <i class="bi bi-moon-stars-fill"></i>
+              <span>숙박일: {{ displayNights }}박</span>
+            </div>
+          </div>
+          <hr />
+
           <h3 class="section-title">객실 정보</h3>
           <div class="info-item">
             <div class="info-icon"><i class="bi bi-people"></i></div>
@@ -71,15 +94,20 @@
         </div>
 
         <!-- 후기 섹션 (예약하기 섹션 위로 이동) -->
-        <hr class="my-4"> <!-- 객실 정보와 후기 섹션 사이의 구분선 -->
+        <hr class="my-4" />
+        <!-- 객실 정보와 후기 섹션 사이의 구분선 -->
         <div class="tab-content-section reviews-wrapper mt-4">
           <h3 class="section-title">후기</h3>
           <div class="reviews-container">
             <div v-for="review in visibleReviews" :key="review.id" class="review-card">
               <div class="review-header">
                 <div class="review-rating">
-                  <i v-for="star in 5" :key="star" class="bi"
-                     :class="star <= review.rating ? 'bi-star-fill' : 'bi-star'"></i>
+                  <i
+                    v-for="star in 5"
+                    :key="star"
+                    class="bi"
+                    :class="star <= review.rating ? 'bi-star-fill' : 'bi-star'"
+                  ></i>
                 </div>
                 <div class="review-nickname-date">
                   <span class="review-nickname">{{ review.nickname }}</span>
@@ -96,106 +124,16 @@
             </button>
           </div>
           <div v-else-if="totalReviewCount > 0 && totalReviewCount === displayReviewCount" class="text-center mt-3">
-             <button @click="displayReviewCount = 2" class="btn btn-outline-secondary w-100" v-if="totalReviewCount > 2">
+            <button @click="displayReviewCount = 2" class="btn btn-outline-secondary w-100" v-if="totalReviewCount > 2">
               후기 접기
             </button>
           </div>
-           <div v-if="totalReviewCount === 0" class="text-center text-muted mt-3">
+          <div v-if="totalReviewCount === 0" class="text-center text-muted mt-3">
             <p>아직 작성된 후기가 없습니다.</p>
           </div>
         </div>
 
-        <!-- 예약하기 섹션 -->
-        <div class="tab-content-section reservation-form-wrapper mt-4">
-          <div class="reservation-form">
-            <h3 class="section-title">날짜 선택</h3>
-            <div class="d-flex justify-content-between mb-3">
-              <button class="btn btn-outline-secondary" @click="prevMonth">
-                <i class="bi bi-chevron-left"></i> 이전 달
-              </button>
-              <h5 class="mb-0 align-self-center">{{ currentMonthText }}</h5>
-              <button class="btn btn-outline-secondary" @click="nextMonth">
-                다음 달 <i class="bi bi-chevron-right"></i>
-              </button>
-            </div>
-            <div class="calendar-container">
-              <table class="calendar">
-                <thead>
-                  <tr>
-                    <th>일</th>
-                    <th>월</th>
-                    <th>화</th>
-                    <th>수</th>
-                    <th>목</th>
-                    <th>금</th>
-                    <th>토</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="(week, weekIndex) in calendarDays" :key="'week-' + weekIndex">
-                    <td
-                      v-for="(day, dayIndex) in week"
-                      :key="'day-' + dayIndex"
-                      :class="getDayClass(day)"
-                      @click="day.available && selectDate(day.date)"
-                    >
-                      {{ day.day > 0 ? day.day : "" }}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-            <form @submit.prevent="submitReservation" class="mt-4">
-              <div class="row mb-3">
-                <div class="col-md-6">
-                  <label for="checkInDate" class="form-label">체크인 날짜</label>
-                  <input
-                    type="date"
-                    class="form-control"
-                    id="checkInDate"
-                    v-model="reservation.checkInDate"
-                    required
-                    @change="validateDates"
-                  />
-                </div>
-                <div class="col-md-6">
-                  <label for="checkOutDate" class="form-label">체크아웃 날짜</label>
-                  <input
-                    type="date"
-                    class="form-control"
-                    id="checkOutDate"
-                    v-model="reservation.checkOutDate"
-                    required
-                    @change="validateDates"
-                  />
-                </div>
-              </div>
-              <div class="mb-3">
-                <label for="guestCount" class="form-label">인원 수</label>
-                <select class="form-select" id="guestCount" v-model="reservation.guestCount">
-                  <option v-for="i in room.capacity" :key="i" :value="i">{{ i }}명</option>
-                </select>
-              </div>
-              <div class="price-breakdown">
-                <div class="price-item">
-                  <div>객실 요금</div>
-                  <div>{{ formatPrice(roomPrice) }}</div>
-                </div>
-                <div class="price-item">
-                  <div>세금 및 봉사료</div>
-                  <div>{{ formatPrice(taxFee) }}</div>
-                </div>
-                <div class="price-total">
-                  <div>총 결제 금액</div>
-                  <div>{{ formatPrice(totalPrice) }}</div>
-                </div>
-              </div>
-              <!-- <button type="submit" class="btn btn-yanolja w-100 mt-3">예약하기</button> -->
-            </form>
-          </div>
-        </div>
-
-        <hr class="my-4">
+        <hr class="my-4" />
 
         <!-- 상세 정보 섹션 -->
         <div class="tab-content-section details-wrapper mt-4">
@@ -226,7 +164,7 @@
           </div>
         </div>
 
-        <hr class="my-4">
+        <hr class="my-4" />
 
         <!-- 편의시설 섹션 -->
         <div class="tab-content-section amenities-wrapper mt-4">
@@ -303,376 +241,223 @@ export default {
     return { cartStore, userStore };
   },
   data() {
+    const queryParams = this.$route.query;
+    let guestsFromQuery = 1; // 기본값 1명
+    if (queryParams.guests && !isNaN(parseInt(String(queryParams.guests)))) {
+      guestsFromQuery = Math.max(1, parseInt(String(queryParams.guests), 10));
+    }
+
     return {
       loading: true,
       message: "",
       room: {},
       accommodation: {},
+      roomImages: [], // room.images가 배열이 아닐 경우 대비
+      selectedCheckInDateQuery: queryParams.checkIn || "",
+      selectedCheckOutDateQuery: queryParams.checkOut || "",
+      selectedGuestsQuery: guestsFromQuery, // 통합된 인원
       reservation: {
-        checkInDate: "",
-        checkOutDate: "",
-        guestCount: 1,
+        roomId: this.roomId,
+        checkInDate: queryParams.checkIn || "",
+        checkOutDate: queryParams.checkOut || "",
+        guestCount: guestsFromQuery, // 통합된 인원 사용
+        totalPrice: 0,
+        paymentMethod: "credit_card", // 기본값
+        status: "PENDING", // 기본값
       },
-      currentMonth: new Date().getMonth(),
-      currentYear: new Date().getFullYear(),
-      availability: {},
-      selectedCheckInDate: null,
-      selectedCheckOutDate: null,
-      reviews: [
-        {
-          id: 1,
-          rating: 5,
-          nickname: "여행가자**",
-          date: "2025.03.02",
-          roomName: "2 싱글 디럭스 시티뷰",
-          content: "생긴지가 얼마 안 되었다는 후기를 듣고 갔는데 남대문 시장도 바로 앞에 있고 명동도 가까워서 다음에 또 가야겠다는 생각이 드는 숙소 있습니다"
-        },
-        {
-          id: 2,
-          rating: 4,
-          nickname: "너의추억잇******",
-          date: "2025.02.28",
-          roomName: "2 싱글 디럭스 시티뷰",
-          content: "편히 잘 쉬다 갑니다"
-        },
-      ],
-      displayReviewCount: 2,
       activeImageIndex: 0,
-      carouselInstance: null,
-      noImagePlaceholder,
+      reviews: [],
+      displayReviewCount: 2,
+      totalReviewCount: 0,
     };
   },
   computed: {
-    currentMonthText() {
-      const monthNames = ["1월", "2월", "3월", "4월", "5월", "6월", "7월", "8월", "9월", "10월", "11월", "12월"];
-      return `${this.currentYear}년 ${monthNames[this.currentMonth]}`;
-    },
-    calendarDays() {
-      const daysInMonth = new Date(this.currentYear, this.currentMonth + 1, 0).getDate();
-      const firstDay = new Date(this.currentYear, this.currentMonth, 1).getDay();
-      const days = [];
-      let dayCounter = 1;
-      for (let week = 0; week < 6; week++) {
-        const weekDays = [];
-        for (let day = 0; day < 7; day++) {
-          if ((week === 0 && day < firstDay) || dayCounter > daysInMonth) {
-            weekDays.push({ day: 0, date: null, available: false });
-          } else {
-            const date = new Date(this.currentYear, this.currentMonth, dayCounter);
-            const dateString = this.formatDateString(date);
-            const isToday = this.isToday(date);
-            const isPast = this.isPastDate(date);
-            const isAvailable = !isPast && this.checkAvailability(dateString);
-            weekDays.push({
-              day: dayCounter,
-              date,
-              dateString,
-              isToday,
-              isPast,
-              available: isAvailable,
-            });
-            dayCounter++;
-          }
-        }
-        days.push(weekDays);
-        if (dayCounter > daysInMonth) break;
-      }
-      return days;
-    },
-    roomPrice() {
-      if (!this.reservation.checkInDate || !this.reservation.checkOutDate) return 0;
-      const nights = this.calculateNights(this.reservation.checkInDate, this.reservation.checkOutDate);
-      return nights * (this.room.price || 0);
-    },
-    taxFee() {
-      return Math.round(this.roomPrice * 0.1);
-    },
-    totalPrice() {
-      return this.roomPrice + this.taxFee;
-    },
-    amenitiesList() {
-      if (!this.room.amenities) return [];
-      return this.room.amenities.split(",").map((item) => item.trim());
-    },
-    totalReviewCount() {
-      return this.reviews.length;
-    },
-    visibleReviews() {
-      return this.reviews.slice(0, this.displayReviewCount);
-    },
-    allRawImageUrls() {
-      const urls = [];
-      if (this.room && this.room.mainImageUrl) {
-        urls.push(this.room.mainImageUrl);
-      }
-      if (this.room && this.room.imageUrls && Array.isArray(this.room.imageUrls)) {
-        urls.push(...this.room.imageUrls);
-      }
-      return urls;
-    },
-    imagesForCarousel() {
-      if (this.allRawImageUrls.length > 0) {
-        return this.allRawImageUrls;
-      }
-      return [this.noImagePlaceholder];
-    },
-    showCustomCarouselControls() {
-      return this.allRawImageUrls.length > 1;
-    },
-    isLoggedIn() {
-      return this.userStore.isAuthenticated;
+    isHost() {
+      // 호스트 여부 판단 로직 (예시: userStore 활용)
+      return this.userStore.isHost; // 실제 구현에 맞게 수정 필요
     },
     userId() {
       return this.userStore.user?.id;
     },
-    isHost() {
-      return this.userStore.userRole === 'HOST';
+    imagesForCarousel() {
+      if (Array.isArray(this.roomImages) && this.roomImages.length > 0) {
+        return this.roomImages.map((img) => img.imageUrl || noImagePlaceholder);
+      } else if (this.room.mainImageUrl) {
+        return [this.room.mainImageUrl, noImagePlaceholder]; // 메인 이미지와 플레이스홀더
+      } else {
+        return [noImagePlaceholder, noImagePlaceholder]; // 이미지가 전혀 없을 경우
+      }
     },
+    showCustomCarouselControls() {
+      return this.imagesForCarousel.length > 1;
+    },
+    displaySelectedCheckInDate() {
+      return this.formatDisplayDate(this.selectedCheckInDateQuery);
+    },
+    displaySelectedCheckOutDate() {
+      return this.formatDisplayDate(this.selectedCheckOutDateQuery);
+    },
+    displaySelectedGuests() {
+      return `${this.selectedGuestsQuery}명`;
+    },
+    displayNights() {
+      if (this.selectedCheckInDateQuery && this.selectedCheckOutDateQuery) {
+        const checkIn = new Date(this.selectedCheckInDateQuery);
+        const checkOut = new Date(this.selectedCheckOutDateQuery);
+        const diffTime = Math.abs(checkOut.getTime() - checkIn.getTime());
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        return diffDays > 0 ? diffDays : 0;
+      }
+      return 0;
+    },
+    amenitiesList() {
+      if (this.room && this.room.amenities && typeof this.room.amenities === "string") {
+        return this.room.amenities
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean);
+      }
+      return []; // 기본 편의시설 대신 빈 배열 반환 또는 다른 처리
+    },
+    visibleReviews() {
+      return this.reviews.slice(0, this.displayReviewCount);
+    },
+  },
+  async created() {
+    await this.loadRoomDetail();
+    await this.loadReviews();
   },
   methods: {
     async loadRoomDetail() {
       this.loading = true;
-      this.activeImageIndex = 0;
       try {
-        const { data } = await axios.get(`/api/accommodations/room/${this.roomId}`);
-        this.room = data.room || {};
-        this.accommodation = data.accommodation || {};
-        this.$nextTick(() => {
-          this.setupCarousel();
-        });
+        const response = await axios.get(`/api/accommodations/room/${this.roomId}`);
+        this.room = response.data.room;
+        this.accommodation = response.data.accommodation;
+        // room.images가 문자열이면 파싱, 배열이면 그대로 사용, 없으면 빈 배열
+        if (typeof this.room.images === "string") {
+          try {
+            this.roomImages = JSON.parse(this.room.images);
+          } catch (e) {
+            console.error("Error parsing room images string:", e);
+            this.roomImages = [];
+          }
+        } else if (Array.isArray(this.room.images)) {
+          this.roomImages = this.room.images;
+        } else {
+          this.roomImages = [];
+        }
+        // 예약 정보에 객실 가격 반영 (1박 기준)
+        this.reservation.totalPrice = this.room.price;
       } catch (error) {
-        this.message = error.response?.data?.error || error.message || "객실 정보를 불러올 수 없습니다.";
-        console.error("객실 정보를 불러오는 중 오류가 발생했습니다:", error);
+        console.error("Error fetching room details:", error);
+        this.message = "객실 정보를 불러오는 데 실패했습니다.";
       } finally {
         this.loading = false;
       }
     },
-    setupCarousel() {
-      const carouselElement = document.getElementById("roomCarousel");
-      if (carouselElement) {
-        if (this.carouselInstance) {
-          this.carouselInstance.dispose();
-        }
-        this.carouselInstance = new window.bootstrap.Carousel(carouselElement, {
-          interval: false,
-          ride: false,
-          wrap: true
-        });
-        carouselElement.removeEventListener('slide.bs.carousel', this.handleCarouselSlideEvent);
-        carouselElement.addEventListener('slide.bs.carousel', this.handleCarouselSlideEvent);
-      }
-    },
-    handleCarouselSlideEvent(event) {
-      this.activeImageIndex = event.to;
+    async loadReviews() {
+      // 임시 후기 데이터 또는 API 호출
+      // 실제 API에서 accommodationId 또는 roomId를 기반으로 후기를 가져와야 함
+      // this.reviews = await fetchReviewsForRoom(this.roomId);
+      this.reviews = [
+        // ... (샘플 데이터 또는 API 연동)
+      ];
+      this.totalReviewCount = this.reviews.length;
     },
     prevImage() {
-      if (this.carouselInstance) {
-        this.carouselInstance.prev();
-      }
+      this.activeImageIndex =
+        (this.activeImageIndex - 1 + this.imagesForCarousel.length) % this.imagesForCarousel.length;
     },
     nextImage() {
-      if (this.carouselInstance) {
-        this.carouselInstance.next();
-      }
-    },
-    initDates() {
-      const today = new Date();
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      const dayAfterTomorrow = new Date(today);
-      dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2);
-      this.reservation.checkInDate = this.formatDateString(tomorrow);
-      this.reservation.checkOutDate = this.formatDateString(dayAfterTomorrow);
-    },
-    prevMonth() {
-      this.currentMonth--;
-      if (this.currentMonth < 0) {
-        this.currentMonth = 11;
-        this.currentYear--;
-      }
-    },
-    nextMonth() {
-      this.currentMonth++;
-      if (this.currentMonth > 11) {
-        this.currentMonth = 0;
-        this.currentYear++;
-      }
-    },
-    selectDate(date) {
-      if (!date) return;
-      const dateString = this.formatDateString(date);
-      if (!this.selectedCheckInDate || this.selectedCheckOutDate) {
-        this.selectedCheckInDate = dateString;
-        this.selectedCheckOutDate = null;
-        this.reservation.checkInDate = dateString;
-        const nextDay = new Date(date);
-        nextDay.setDate(nextDay.getDate() + 1);
-        this.reservation.checkOutDate = this.formatDateString(nextDay);
-      } else if (this.selectedCheckInDate && !this.selectedCheckOutDate) {
-        if (date < new Date(this.selectedCheckInDate)) {
-          this.selectedCheckInDate = dateString;
-          this.reservation.checkInDate = dateString;
-          const nextDay = new Date(date);
-          nextDay.setDate(nextDay.getDate() + 1);
-          this.reservation.checkOutDate = this.formatDateString(nextDay);
-        } else {
-          this.selectedCheckOutDate = dateString;
-          this.reservation.checkOutDate = dateString;
-        }
-      }
-    },
-    validateDates() {
-      const checkInDate = new Date(this.reservation.checkInDate);
-      const checkOutDate = new Date(this.reservation.checkOutDate);
-      if (checkOutDate <= checkInDate) {
-        const nextDay = new Date(checkInDate);
-        nextDay.setDate(nextDay.getDate() + 1);
-        this.reservation.checkOutDate = this.formatDateString(nextDay);
-      }
-      this.selectedCheckInDate = this.reservation.checkInDate;
-      this.selectedCheckOutDate = this.reservation.checkOutDate;
-    },
-    getDayClass(day) {
-      if (!day.day) return {};
-      const classes = {};
-      if (day.isToday) classes.today = true;
-      if (day.isPast) classes.unavailable = true;
-      else classes.available = true;
-      if (day.dateString === this.selectedCheckInDate) classes.selected = true;
-      if (day.dateString === this.selectedCheckOutDate) classes.selected = true;
-      return classes;
-    },
-    isToday(date) {
-      const today = new Date();
-      return (
-        date.getDate() === today.getDate() &&
-        date.getMonth() === today.getMonth() &&
-        date.getFullYear() === today.getFullYear()
-      );
-    },
-    isPastDate(date) {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      return date < today;
-    },
-    checkAvailability(dateString) {
-      return true;
-    },
-    formatDateString(date) {
-      if (!date) return "";
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, "0");
-      const day = String(date.getDate()).padStart(2, "0");
-      return `${year}-${month}-${day}`;
+      this.activeImageIndex = (this.activeImageIndex + 1) % this.imagesForCarousel.length;
     },
     formatPrice(price) {
-      return new Intl.NumberFormat("ko-KR", { style: "currency", currency: "KRW", maximumFractionDigits: 0 }).format(
-        price || 0
-      );
+      if (price === undefined || price === null) return "N/A";
+      return new Intl.NumberFormat("ko-KR", { style: "currency", currency: "KRW" }).format(price);
     },
-    calculateNights(checkInDate, checkOutDate) {
-      const start = new Date(checkInDate);
-      const end = new Date(checkOutDate);
-      const diffTime = Math.abs(end - start);
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      return diffDays;
+    formatDisplayDate(dateString) {
+      if (!dateString) return "미선택";
+      const date = new Date(dateString);
+      const options = { year: "numeric", month: "long", day: "numeric", weekday: "short" };
+      return date.toLocaleDateString("ko-KR", options);
     },
     async submitReservation() {
-      if (!this.isLoggedIn) {
-        this.$router.push({ path: "/user/login", query: { redirect: this.$route.fullPath } });
+      if (!this.userStore.isAuthenticated) {
+        this.$router.push({ name: "Login", query: { redirect: this.$route.fullPath } });
         return;
       }
+      if (!this.selectedCheckInDateQuery || !this.selectedCheckOutDateQuery || this.selectedGuestsQuery <= 0) {
+        this.message = "체크인, 체크아웃 날짜 및 인원을 모두 선택해주세요.";
+        // 필요시 관련 UI로 스크롤
+        return;
+      }
+
+      const reservationData = {
+        ...this.reservation,
+        roomId: parseInt(String(this.roomId)),
+        checkInDate: this.selectedCheckInDateQuery,
+        checkOutDate: this.selectedCheckOutDateQuery,
+        guestCount: this.selectedGuestsQuery,
+        // totalPrice는 1박 기준 가격이므로, 실제로는 (1박 가격 * 숙박일수)로 계산 필요
+        totalPrice: this.room.price * this.displayNights,
+        userId: this.userStore.user?.id,
+      };
+
       try {
-        const reservationData = {
-          roomId: this.roomId,
-          accommodationId: this.accommodation.accommodationId,
-          userId: this.userId,
-          checkInDate: this.reservation.checkInDate,
-          checkOutDate: this.reservation.checkOutDate,
-          guestCount: this.reservation.guestCount,
-          totalPrice: this.totalPrice,
-        };
-        alert(
-          "예약 기능은 백엔드 API 구현 후 연동 예정입니다.\n선택된 정보:\n" + JSON.stringify(reservationData, null, 2)
-        );
+        const response = await axios.post("/api/reservations", reservationData);
+        this.message = response.data.message || "예약이 성공적으로 완료되었습니다.";
+        // 예약 완료 후 예약 내역 페이지 등으로 이동
+        // this.$router.push({ name: 'MyReservations' });
       } catch (error) {
+        this.message = error.response?.data?.message || "예약 처리 중 오류가 발생했습니다.";
         console.error("Error submitting reservation:", error);
-        alert(error.response?.data?.message || error.message || "예약에 실패했습니다. 다시 시도해주세요.");
       }
     },
     async addToCart() {
-      if (!this.isLoggedIn) {
-        this.$router.push({ path: "/user/login", query: { redirect: this.$route.fullPath } });
+      if (!this.userStore.isAuthenticated) {
+        this.$router.push({ name: "Login", query: { redirect: this.$route.fullPath } });
         return;
       }
-      if (!this.reservation.checkInDate || !this.reservation.checkOutDate) {
-        this.message = "체크인 및 체크아웃 날짜를 선택해주세요.";
-        this.scrollToReservation();
+      if (!this.selectedCheckInDateQuery || !this.selectedCheckOutDateQuery || this.selectedGuestsQuery <= 0) {
+        this.message = "날짜와 인원을 선택해야 장바구니에 담을 수 있습니다.";
         return;
       }
+
       const itemDetails = {
-        roomId: parseInt(this.roomId),
-        checkInDate: this.reservation.checkInDate,
-        checkOutDate: this.reservation.checkOutDate,
-        guestCount: this.reservation.guestCount,
-        price: this.room.price,
+        roomId: parseInt(String(this.roomId)),
+        checkInDate: this.selectedCheckInDateQuery,
+        checkOutDate: this.selectedCheckOutDateQuery,
+        guestCount: this.selectedGuestsQuery,
+        price: this.room.price, // 1박 가격
+        // accommodationTitle과 roomName은 cartStore에서 필요하다면 추가하거나, store에서 roomId로 조회
       };
+
       try {
-        const response = await this.cartStore.addToCart(itemDetails);
-        this.message = response.message || "객실이 장바구니에 추가되었습니다.";
-        setTimeout(() => {
-          this.message = "";
-        }, 3000);
+        await this.cartStore.addToCart(itemDetails);
+        this.message = "객실이 장바구니에 추가되었습니다.";
       } catch (error) {
         console.error("RoomDetail - Error adding to cart:", error);
-        this.message = error || "장바구니 추가 중 오류가 발생했습니다.";
+        this.message = error.response?.data?.message || error.message || "장바구니 추가 중 오류가 발생했습니다.";
       }
     },
     confirmDeleteRoom() {
       if (confirm("정말로 이 객실을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.")) {
-        this.deleteRoomItem();
+        this.deleteRoom();
       }
     },
-    async deleteRoomItem() {
+    async deleteRoom() {
       try {
-        alert("객실이 삭제되었습니다. (API 연동 필요)");
-        this.$router.push({ path: `/accommodation/detail/${this.accommodation.accommodationId}` });
+        await axios.delete(`/api/accommodations/room/${this.roomId}`);
+        this.message = "객실이 성공적으로 삭제되었습니다.";
+        // 호스트의 객실 관리 페이지 또는 숙소 상세 페이지로 리디렉션
+        this.$router.push({ name: "AccommodationDetail", params: { id: this.room.accommodationId } });
       } catch (error) {
-        alert("객실 삭제에 실패했습니다. 다시 시도해주세요.");
-      }
-    },
-    scrollToReservation() {
-      const reservationFormSection = document.querySelector('.reservation-form');
-      if (reservationFormSection) {
-        const headerElement = document.querySelector('.yanolja-header');
-        const headerOffset = headerElement ? headerElement.clientHeight : 70;
-        const elementPosition = reservationFormSection.getBoundingClientRect().top + window.pageYOffset;
-        const offsetPosition = elementPosition - headerOffset - 20;
-
-        window.scrollTo({
-          top: offsetPosition,
-          behavior: "smooth"
-        });
+        console.error("Error deleting room:", error);
+        this.message = error.response?.data?.message || "객실 삭제 중 오류가 발생했습니다.";
       }
     },
   },
-  async created() {
-    if (this.$route.query.message) this.message = this.$route.query.message;
-    await this.loadRoomDetail();
-    this.initDates();
-  },
-  mounted() {
-  },
-  beforeUnmount() {
-    const carouselElement = document.getElementById("roomCarousel");
-    if (carouselElement) {
-      carouselElement.removeEventListener('slide.bs.carousel', this.handleCarouselSlideEvent);
-    }
-    if (this.carouselInstance) {
-      this.carouselInstance.dispose();
-      this.carouselInstance = null;
-    }
-  }
 };
 </script>
 
@@ -909,7 +694,7 @@ export default {
   border: 1px solid #e0e0e0;
   border-radius: 8px;
   padding: 15px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .review-header {
@@ -992,5 +777,32 @@ export default {
 
 .custom-carousel-control.next {
   right: 30px;
+}
+
+/* 선택된 예약 정보 섹션 스타일 */
+.selected-reservation-details {
+  background-color: #f8f9fa; /* 연한 배경색 */
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 20px;
+  border: 1px solid #e9ecef;
+}
+
+.selected-reservation-details .detail-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 0.95rem;
+  color: #343a40;
+}
+
+.selected-reservation-details .detail-item:last-child {
+  margin-bottom: 0;
+}
+
+.selected-reservation-details .detail-item i {
+  margin-right: 10px;
+  color: var(--yanolja-pink); /* 아이콘 색상 */
+  font-size: 1.1rem;
 }
 </style>

@@ -20,7 +20,7 @@
                r.name AS roomName,
                r.accommodation_id AS accommodationId,
                a.title AS accommodationTitle,
-               r.price AS basePrice
+               r.price_per_night AS basePrice
         FROM room_availability ra
         JOIN rooms r ON ra.room_id = r.room_id
         JOIN accommodations a ON r.accommodation_id = a.accommodation_id
@@ -33,7 +33,7 @@
                r.name AS roomName,
                r.accommodation_id AS accommodationId,
                a.title AS accommodationTitle,
-               r.price AS basePrice
+               r.price_per_night AS basePrice
         FROM room_availability ra
         JOIN rooms r ON ra.room_id = r.room_id
         JOIN accommodations a ON r.accommodation_id = a.accommodation_id
@@ -47,7 +47,7 @@
                r.name AS roomName,
                r.accommodation_id AS accommodationId,
                a.title AS accommodationTitle,
-               r.price AS basePrice
+               r.price_per_night AS basePrice
         FROM room_availability ra
         JOIN rooms r ON ra.room_id = r.room_id
         JOIN accommodations a ON r.accommodation_id = a.accommodation_id
@@ -61,7 +61,7 @@
                r.name AS roomName,
                r.accommodation_id AS accommodationId,
                a.title AS accommodationTitle,
-               r.price AS basePrice
+               r.price_per_night AS basePrice
         FROM room_availability ra
         JOIN rooms r ON ra.room_id = r.room_id
         JOIN accommodations a ON r.accommodation_id = a.accommodation_id
@@ -76,7 +76,7 @@
                r.name AS roomName,
                r.accommodation_id AS accommodationId,
                a.title AS accommodationTitle,
-               r.price AS basePrice
+               r.price_per_night AS basePrice
         FROM room_availability ra
         JOIN rooms r ON ra.room_id = r.room_id
         JOIN accommodations a ON r.accommodation_id = a.accommodation_id
@@ -96,7 +96,7 @@
     <!-- 객실 ID와 날짜로 가용 객실 수 업데이트 -->
     <update id="updateAvailableCount">
         INSERT INTO room_availability (room_id, date, available_count, price)
-        VALUES (#{param1}, #{param2}, #{param3}, (SELECT price FROM rooms WHERE room_id = #{param1}))
+        VALUES (#{param1}, #{param2}, #{param3}, (SELECT price_per_night FROM rooms WHERE room_id = #{param1}))
         ON DUPLICATE KEY UPDATE available_count = #{param3}
     </update>
     
@@ -132,7 +132,7 @@
                r.name AS roomName,
                r.accommodation_id AS accommodationId,
                a.title AS accommodationTitle,
-               r.price AS basePrice
+               r.price_per_night AS basePrice
         FROM room_availability ra
         JOIN rooms r ON ra.room_id = r.room_id
         JOIN accommodations a ON r.accommodation_id = a.accommodation_id

@@ -297,19 +297,30 @@
 
         <!-- 객실 목록 (id 추가) -->
         <div class="mt-8" id="room-list-section">
-          <div v-if="rooms && rooms.length > 0" class="space-y-6">
-            <RoomListItem
-              v-for="room in rooms"
-              :key="room.roomId"
-              :room="room"
-              @view-detail="goToRoomDetail"
-              @book-room="handleBookRoom"
-              @add-to-cart="handleAddToCart"
-            />
+          <div v-if="rooms && rooms.length > 0">
+            <!-- 추가: 모든 객실이 예약 불가능할 경우 안내 메시지 -->
+            <div
+              v-if="areAllRoomsUnbookable"
+              class="mb-4 p-4 text-center bg-yellow-50 border border-yellow-300 text-yellow-700 rounded-md"
+            >
+              <i class="bi bi-exclamation-circle mr-2"></i>
+              선택하신 날짜와 인원으로는 현재 예약 가능한 객실이 없습니다. 다른 조건으로 검색해보세요.
+            </div>
+            <div class="space-y-6">
+              <RoomListItem
+                v-for="room in rooms"
+                :key="room.roomId"
+                :room="room"
+                :is-bookable="isRoomBookable(room)"
+                @view-detail="goToRoomDetail(room)"
+                @book-room="handleBookRoom(room)"
+                @add-to-cart="handleAddToCart(room)"
+              />
+            </div>
           </div>
           <div v-else-if="!loading" class="text-center py-10 bg-white p-6 rounded-lg shadow border border-gray-200">
             <i class="bi bi-door-closed text-4xl text-gray-400 mb-3"></i>
-            <p class="text-gray-500">등록된 객실 정보가 없습니다.</p>
+            <p class="text-gray-500">이 숙소에는 현재 등록된 객실 정보가 없습니다.</p>
           </div>
         </div>
 
@@ -392,79 +403,18 @@
       v-model="showGuestModal"
       title="인원 선택"
       width="90%"
-      :max-width="'400px'"
-      top="15vh"
+      max-width="320px"
+      top="20vh"
       custom-class="guest-selection-dialog"
       :center="true"
     >
-      <div class="dialog-content px-2 sm:px-4">
-        <button
-          @click="showGuestModal = false"
-          class="absolute top-4 right-4 text-gray-500 hover:text-gray-700 text-2xl z-10"
-        >
-          <i class="bi bi-x"></i>
-        </button>
-        <div class="py-4">
-          <div class="flex justify-between items-center mb-6">
-            <div class="flex flex-col">
-              <span class="text-lg font-medium text-gray-800">성인</span>
-              <span class="text-xs text-gray-500">만 13세 이상</span>
-            </div>
-            <div class="flex items-center gap-x-3">
-              <button
-                @click="decrementAdults"
-                :disabled="tempSelectedAdults <= 1"
-                class="p-2 w-8 h-8 rounded-full border border-gray-300 text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-              >
-                <i class="bi bi-dash-lg"></i>
-              </button>
-              <span class="text-lg font-medium w-6 text-center">{{ tempSelectedAdults }}</span>
-              <button
-                @click="incrementAdults"
-                :disabled="tempSelectedAdults >= 10"
-                class="p-2 w-8 h-8 rounded-full border border-gray-300 text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-              >
-                <i class="bi bi-plus-lg"></i>
-              </button>
-            </div>
-          </div>
-
-          <div class="flex justify-between items-center">
-            <div class="flex flex-col">
-              <span class="text-lg font-medium text-gray-800">아동</span>
-              <span class="text-xs text-gray-500">만 12세 이하</span>
-            </div>
-            <div class="flex items-center gap-x-3">
-              <button
-                @click="decrementChildren"
-                :disabled="tempSelectedChildren <= 0"
-                class="p-2 w-8 h-8 rounded-full border border-gray-300 text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-              >
-                <i class="bi bi-dash-lg"></i>
-              </button>
-              <span class="text-lg font-medium w-6 text-center">{{ tempSelectedChildren }}</span>
-              <button
-                @click="incrementChildren"
-                :disabled="tempSelectedChildren >= 5"
-                class="p-2 w-8 h-8 rounded-full border border-gray-300 text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-              >
-                <i class="bi bi-plus-lg"></i>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-      <template #footer>
-        <div class="w-full px-2 sm:px-4 pb-6">
-          <el-button
-            type="primary"
-            @click="confirmGuestSelectionAndCloseModal"
-            class="w-full bg-pink-500 hover:bg-pink-600 border-pink-500 py-3 text-base"
-          >
-            확인
-          </el-button>
-        </div>
-      </template>
+      <GuestSelectModal
+        :show="showGuestModal"
+        :initial-guests="tempSelectedGuests"
+        :max-guests="maxCapacityOfAllRooms"
+        @close="showGuestModal = false"
+        @apply="confirmGuestSelectionAndCloseModal"
+      />
     </el-dialog>
 
     <!-- 리뷰 수정 모달 -->
@@ -552,6 +502,7 @@
 import { useUserStore } from "@/store/userStore";
 import AccommodationHeader from "../../components/accommodation/AccommodationHeader.vue";
 import RoomListItem from "../../components/accommodation/RoomListItem.vue";
+import GuestSelectModal from "../../components/modals/GuestSelectModal.vue";
 import noImage from "@/assets/no-image.jpg";
 import axios from "axios";
 import { ElDialog, ElButton, ElCalendar } from "element-plus";
@@ -565,6 +516,7 @@ export default {
   components: {
     AccommodationHeader,
     RoomListItem,
+    GuestSelectModal,
     ElDialog,
     ElButton,
     ElCalendar,
@@ -580,17 +532,39 @@ export default {
   },
   data() {
     const today = new Date();
-    // 기본 체크인 날짜: 오늘
-    // 기본 체크아웃 날짜: 내일
-    // 이 값들은 사용자가 날짜 선택 모달에서 확정하기 전까지 UI 표시 및 초기 API 호출에 사용될 수 있음
     const initialCheckIn = new Date(today);
     const initialCheckOut = new Date(today);
     initialCheckOut.setDate(today.getDate() + 1);
 
+    // URL에서 쿼리 파라미터 읽기
+    const queryParams = this.$route.query;
+    let urlCheckInDate = initialCheckIn;
+    let urlCheckOutDate = initialCheckOut;
+    let urlGuests = 2; // 기본값
+
+    if (queryParams.checkInDate && typeof queryParams.checkInDate === "string") {
+      const parsedCheckIn = new Date(queryParams.checkInDate);
+      if (!isNaN(parsedCheckIn.getTime())) {
+        urlCheckInDate = parsedCheckIn;
+      }
+    }
+    if (queryParams.checkOutDate && typeof queryParams.checkOutDate === "string") {
+      const parsedCheckOut = new Date(queryParams.checkOutDate);
+      if (!isNaN(parsedCheckOut.getTime())) {
+        urlCheckOutDate = parsedCheckOut;
+      }
+    }
+    // adults와 children을 합산하여 selectedGuests로 사용
+    const adultsFromUrl = queryParams.adults ? parseInt(String(queryParams.adults), 10) : 0;
+    const childrenFromUrl = queryParams.children ? parseInt(String(queryParams.children), 10) : 0;
+    if (adultsFromUrl > 0 || childrenFromUrl > 0) {
+      urlGuests = Math.max(1, adultsFromUrl + childrenFromUrl); // 최소 1명
+    }
+
     return {
       accommodation: {},
       rooms: [],
-      reviews: [], // All fetched reviews
+      reviews: [],
       loading: true,
       loadingReviews: false,
       fetchError: null,
@@ -611,18 +585,16 @@ export default {
       averageRating: 0,
       reviewCount: 0,
       toasts: [],
-      selectedCheckInDate: initialCheckIn, // 초기값 설정
-      selectedCheckOutDate: initialCheckOut, // 초기값 설정
-      selectedAdults: 2,
-      selectedChildren: 0,
+      selectedCheckInDate: urlCheckInDate,
+      selectedCheckOutDate: urlCheckOutDate,
+      selectedGuests: urlGuests,
       currentReviewSlideIndex: 0,
       showDateModal: false,
       showGuestModal: false,
       calendarDate: new Date(),
       tempSelectedCheckInDate: null,
       tempSelectedCheckOutDate: null,
-      tempSelectedAdults: 2,
-      tempSelectedChildren: 0,
+      tempSelectedGuests: urlGuests,
     };
   },
   computed: {
@@ -654,11 +626,7 @@ export default {
       return `${checkInStr} ~ ${checkOutStr} • ${nights}박`;
     },
     selectedGuestCountDisplay() {
-      let displayText = `성인 ${this.selectedAdults}`;
-      if (this.selectedChildren > 0) {
-        displayText += `, 아동 ${this.selectedChildren}`;
-      }
-      return displayText;
+      return `인원 ${this.selectedGuests}명`;
     },
     reviewCarouselItems() {
       if (this.loadingReviews || this.fetchReviewsError || this.reviewCount === 0) {
@@ -668,7 +636,6 @@ export default {
         .slice(0, MAX_REVIEWS_IN_CAROUSEL)
         .map((review) => ({ type: "review", review }));
       if (this.reviewCount > 0) {
-        // Always add see-all if there are any reviews
         carouselReviews.push({ type: "see-all" });
       }
       return carouselReviews;
@@ -685,10 +652,30 @@ export default {
       const nights = this.calculateNights(this.tempSelectedCheckInDate, this.tempSelectedCheckOutDate);
       return `지금부터 ~ ${this.formatDateWithDay(this.tempSelectedCheckOutDate)} • ${nights}박`;
     },
+    areAllRoomsUnbookable() {
+      if (!this.rooms || this.rooms.length === 0) {
+        return false;
+      }
+      if (!this.selectedCheckInDate || !this.selectedCheckOutDate || this.selectedGuests === 0) {
+        return false;
+      }
+      return this.rooms.every((room) => !this.isRoomBookable(room));
+    },
+    maxCapacityOfAllRooms() {
+      if (!this.rooms || this.rooms.length === 0) {
+        return 10;
+      }
+      return (
+        this.rooms.reduce((max, room) => {
+          const capacity = parseInt(String(room.capacity || 0), 10);
+          return capacity > max ? capacity : max;
+        }, 0) || 10
+      );
+    },
   },
   watch: {
     reviews() {
-      this.currentReviewSlideIndex = 0; // Reset slide index when reviews change
+      this.currentReviewSlideIndex = 0;
     },
   },
   created() {
@@ -701,7 +688,7 @@ export default {
       this.currentReviewSlideIndex = 0;
       try {
         await this.fetchAccommodationAndRooms();
-        await this.fetchReviewsAndSummary(); // This will set reviews and reviewCount
+        await this.fetchReviewsAndSummary();
         if (this.isLoggedIn) {
           await this.checkUserReviewStatus();
           await this.checkReviewEligibility();
@@ -715,15 +702,19 @@ export default {
     },
     async fetchAccommodationAndRooms() {
       try {
-        const params = {};
+        const params = {
+          guests: this.selectedGuests > 0 ? this.selectedGuests : undefined,
+        };
         if (this.selectedCheckInDate && this.selectedCheckOutDate) {
           params.checkInDate = this.formatDateForApi(this.selectedCheckInDate);
           params.checkOutDate = this.formatDateForApi(this.selectedCheckOutDate);
         }
+        console.log("[AccommodationDetail] API Request Params for Rooms:", JSON.parse(JSON.stringify(params)));
 
         const res = await axios.get(`/api/accommodations/${this.id}`, { params });
         if (res.data && res.data.accommodation) {
           this.accommodation = res.data.accommodation;
+          console.log("[AccommodationDetail] Rooms from API:", JSON.parse(JSON.stringify(res.data.rooms)));
           this.rooms = res.data.rooms || (Array.isArray(this.accommodation.rooms) ? this.accommodation.rooms : []);
         } else {
           throw new Error("숙소 정보를 찾을 수 없습니다.");
@@ -746,7 +737,7 @@ export default {
           axios.get(`/api/reviews/accommodation/${this.id}`),
           axios.get(`/api/reviews/summary/accommodation/${this.id}`),
         ]);
-        this.reviews = reviewsRes.data || []; // This updates the reviews data property
+        this.reviews = reviewsRes.data || [];
         if (summaryRes.data) {
           this.averageRating = summaryRes.data.averageRating || 0;
           this.reviewCount = summaryRes.data.totalReviews || 0;
@@ -847,7 +838,6 @@ export default {
     toggleWishlist() {
       this.isFavorite = !this.isFavorite;
       this.showToast(this.isFavorite ? "찜 목록에 추가되었습니다." : "찜 목록에서 삭제되었습니다.");
-      // TODO: API 연동 (찜 추가/삭제)
     },
     shareAccommodation() {
       if (navigator.share) {
@@ -871,15 +861,47 @@ export default {
     },
     formatDate(dateString) {
       if (!dateString) return "";
-      const options = { year: "numeric", month: "short", day: "numeric" }; // short month for carousel
+      const options = { year: "numeric", month: "short", day: "numeric" };
       return new Date(dateString).toLocaleDateString("ko-KR", options);
     },
     formatPrice(price) {
       if (price === undefined || price === null || isNaN(price)) return "가격 문의";
       return new Intl.NumberFormat("ko-KR").format(price);
     },
-    goToRoomDetail(roomId) {
-      this.$router.push({ name: "RoomDetail", params: { roomId: roomId } });
+    goToRoomDetail(room) {
+      if (!this.isRoomBookable(room)) {
+        this.showToast("선택하신 조건으로 현재 예약이 불가능한 객실입니다.", 3000);
+        return;
+      }
+
+      if (!this.selectedCheckInDate || !this.selectedCheckOutDate) {
+        this.showToast("날짜를 선택해야 객실 상세 정보를 볼 수 있습니다.", 3000);
+        const bookingOptionsSection = document.getElementById("booking-options-section");
+        if (bookingOptionsSection) {
+          bookingOptionsSection.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+        return;
+      }
+      if (this.selectedGuests === 0) {
+        this.showToast("인원을 선택해야 객실 상세 정보를 볼 수 있습니다.", 3000);
+        const bookingOptionsSection = document.getElementById("booking-options-section");
+        if (bookingOptionsSection) {
+          bookingOptionsSection.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+        return;
+      }
+
+      const queryParams = {
+        checkIn: this.formatDateForApi(this.selectedCheckInDate),
+        checkOut: this.formatDateForApi(this.selectedCheckOutDate),
+        guests: this.selectedGuests,
+      };
+
+      this.$router.push({
+        name: "RoomDetail",
+        params: { roomId: room.roomId },
+        query: queryParams,
+      });
     },
     scrollToReviews() {
       const reviewsSection = document.getElementById("reviews-section");
@@ -920,7 +942,7 @@ export default {
     resetDateSelection() {
       this.tempSelectedCheckInDate = null;
       this.tempSelectedCheckOutDate = null;
-      this.calendarDate = new Date(); // 달력 현재 달로 리셋
+      this.calendarDate = new Date();
     },
     async confirmDateSelectionAndCloseModal() {
       if (this.tempSelectedCheckInDate && this.tempSelectedCheckOutDate) {
@@ -929,45 +951,46 @@ export default {
         this.showToast("날짜가 선택되어 객실 정보를 업데이트합니다.");
         this.showDateModal = false;
 
-        this.loading = true; // 로딩 상태 활성화
+        this.loading = true;
         try {
-          await this.fetchAccommodationAndRooms(); // 객실 정보 포함 전체 데이터 다시 로드
+          await this.fetchAccommodationAndRooms();
         } catch (error) {
           console.error("날짜 변경 후 데이터 다시 로드 실패:", error);
           this.showToast("객실 정보 업데이트 중 오류가 발생했습니다.", "error");
         } finally {
-          this.loading = false; // 로딩 상태 비활성화
+          this.loading = false;
         }
       } else if (this.tempSelectedCheckInDate && !this.tempSelectedCheckOutDate) {
         this.showToast("체크아웃 날짜를 선택해주세요.");
         return;
       } else {
-        // 날짜 선택 없이 확인 누를 경우 (예: 초기화 직후) 그냥 닫기
         this.showDateModal = false;
       }
     },
     openGuestSelectionModal() {
-      this.tempSelectedAdults = this.selectedAdults;
-      this.tempSelectedChildren = this.selectedChildren;
+      this.tempSelectedGuests = this.selectedGuests;
       this.showGuestModal = true;
     },
-    incrementAdults() {
-      if (this.tempSelectedAdults < 10) this.tempSelectedAdults++;
-    },
-    decrementAdults() {
-      if (this.tempSelectedAdults > 1) this.tempSelectedAdults--;
-    },
-    incrementChildren() {
-      if (this.tempSelectedChildren < 5) this.tempSelectedChildren++;
-    },
-    decrementChildren() {
-      if (this.tempSelectedChildren > 0) this.tempSelectedChildren--;
-    },
-    confirmGuestSelectionAndCloseModal() {
-      this.selectedAdults = this.tempSelectedAdults;
-      this.selectedChildren = this.tempSelectedChildren;
-      this.showToast("인원이 선택되었습니다.");
-      this.showGuestModal = false;
+    async confirmGuestSelectionAndCloseModal(payload) {
+      if (payload && typeof payload.guests === "number") {
+        this.selectedGuests = payload.guests;
+        this.showToast("인원이 선택되어 객실 정보를 업데이트합니다.");
+        this.showGuestModal = false;
+
+        if (this.selectedCheckInDate && this.selectedCheckOutDate) {
+          this.loading = true;
+          try {
+            await this.fetchAccommodationAndRooms();
+          } catch (error) {
+            console.error("인원 변경 후 데이터 다시 로드 실패:", error);
+            this.showToast("객실 정보 업데이트 중 오류가 발생했습니다.", "error");
+          } finally {
+            this.loading = false;
+          }
+        }
+      } else {
+        this.showGuestModal = false;
+      }
     },
     nextReviewSlide() {
       if (this.canNextReviewSlide) {
@@ -1028,20 +1051,21 @@ export default {
       if (day % 3 === 0) return "13.7";
       return "16.7";
     },
-    handleBookRoom(roomId) {
-      // TODO: Implement booking logic
-      console.log(`Book room: ${roomId}`);
-      // Ex: router.push(`/booking/${roomId}`);
+    handleBookRoom(room) {
+      console.log(`Book room: ${room.roomId}`);
     },
     async handleAddToCart(room) {
+      if (!this.isRoomBookable(room)) {
+        this.showToast("선택하신 조건으로 현재 예약이 불가능하여 장바구니에 담을 수 없습니다.", 3000);
+        return;
+      }
       if (!this.isLoggedIn) {
         this.showToast("로그인이 필요한 서비스입니다.");
         this.$router.push({ name: "Login", query: { redirect: this.$route.fullPath } });
         return;
       }
-      if (!this.selectedCheckInDate || !this.selectedCheckOutDate) {
-        this.showToast("체크인 및 체크아웃 날짜를 선택해주세요.");
-        // 날짜 선택 모달을 열거나, 날짜 선택 섹션으로 스크롤 할 수 있습니다.
+      if (!this.selectedCheckInDate || !this.selectedCheckOutDate || this.selectedGuests <= 0) {
+        this.showToast("날짜와 인원을 모두 선택해야 장바구니에 담을 수 있습니다.");
         const bookingOptionsSection = document.getElementById("booking-options-section");
         if (bookingOptionsSection) {
           bookingOptionsSection.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -1053,8 +1077,8 @@ export default {
         roomId: room.roomId,
         checkInDate: this.formatDateForApi(this.selectedCheckInDate),
         checkOutDate: this.formatDateForApi(this.selectedCheckOutDate),
-        guestCount: this.selectedAdults + this.selectedChildren, // 성인 + 아동 수
-        price: room.price, // RoomListItem에서 전달받은 room 객체의 가격 사용
+        guestCount: this.selectedGuests,
+        price: room.price,
       };
 
       try {
@@ -1062,8 +1086,39 @@ export default {
         this.showToast(response.message || "객실이 장바구니에 추가되었습니다.");
       } catch (error) {
         console.error("AccommodationDetail - Error adding to cart:", error);
-        this.showToast(error || "장바구니 추가 중 오류가 발생했습니다.");
+        this.showToast(error.response?.data?.message || error.message || "장바구니 추가 중 오류가 발생했습니다.");
       }
+    },
+    isRoomBookable(room) {
+      console.log(
+        `[AccommodationDetail] Checking isRoomBookable for Room ID: ${room.roomId}, ` +
+          `Capacity: ${room.capacity}, MinAvailableCount: ${room.minAvailableCount}, ` +
+          `SelectedGuests: ${this.selectedGuests}, SelectedCheckIn: ${this.selectedCheckInDate}, SelectedCheckOut: ${this.selectedCheckOutDate}`
+      );
+
+      if (!this.selectedCheckInDate || !this.selectedCheckOutDate || this.selectedGuests === 0) {
+        console.log("[AccommodationDetail] Date or guests not selected, returning true for UI handling.");
+        return true;
+      }
+
+      const totalGuests = this.selectedGuests;
+
+      const roomCapacity = parseInt(String(room.capacity || 0), 10);
+      if (totalGuests > roomCapacity) {
+        console.log(
+          `[AccommodationDetail] Room ID: ${room.roomId} - Guests (${totalGuests}) > Capacity (${roomCapacity}). Not bookable.`
+        );
+        return false;
+      }
+
+      if (room.minAvailableCount !== undefined && room.minAvailableCount <= 0) {
+        console.log(
+          `[AccommodationDetail] Room ID: ${room.roomId} - MinAvailableCount (${room.minAvailableCount}) <= 0. Not bookable.`
+        );
+        return false;
+      }
+      console.log(`[AccommodationDetail] Room ID: ${room.roomId} - Bookable.`);
+      return true;
     },
   },
 };
@@ -1077,7 +1132,7 @@ export default {
   overflow: hidden;
 }
 .text-xxs {
-  font-size: 0.65rem; /* 10.4px approx */
+  font-size: 0.65rem;
   line-height: 0.9rem;
 }
 
