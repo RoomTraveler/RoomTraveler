@@ -2,7 +2,7 @@
   <Layout>
     <div class="container mt-4">
       <h2 class="mb-4">숙소 관리</h2>
-      
+
       <!-- 검색 및 필터링 -->
       <div class="card mb-4">
         <div class="card-body">
@@ -15,6 +15,7 @@
                   <option value="PENDING">승인 대기</option>
                   <option value="APPROVED">승인됨</option>
                   <option value="REJECTED">거부됨</option>
+                  <option value="SUSPENDED">중지됨</option>
                 </select>
               </div>
               <div class="col-md-3">
@@ -43,7 +44,7 @@
           </form>
         </div>
       </div>
-      
+
       <!-- 로딩 표시 -->
       <div v-if="loading" class="text-center py-5">
         <div class="spinner-border text-primary" role="status">
@@ -51,13 +52,12 @@
         </div>
         <p class="mt-2">숙소 정보를 불러오는 중입니다...</p>
       </div>
-      
+
       <!-- 숙소 목록 -->
       <div v-else>
         <div v-if="accommodations.length === 0" class="alert alert-info">
           검색 결과가 없습니다.
         </div>
-        
         <div v-else class="table-responsive">
           <table class="table table-striped table-hover">
             <thead>
@@ -131,7 +131,6 @@
             </tbody>
           </table>
         </div>
-        
         <!-- 페이지네이션 -->
         <nav v-if="totalPages > 1" aria-label="Page navigation">
           <ul class="pagination justify-content-center">
@@ -156,313 +155,202 @@
   </Layout>
 </template>
 
-<script>
-/**
- * 관리자용 숙소 관리 컴포넌트
- * 
- * 이 컴포넌트는 관리자가 모든 숙소를 관리할 수 있는 페이지입니다.
- * 숙소 목록 조회, 승인/거부, 삭제 등의 기능을 제공합니다.
- */
-import { mapState, mapActions } from 'vuex';
-import Layout from '@/components/layout/Layout.vue';
+<script setup>
+import { ref, computed, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import { useUserStore } from '@/store/userStore'
+import Layout from '@/components/layout/Layout.vue'
 
-export default {
-  name: 'AdminAccommodations',
-  components: {
-    Layout
-  },
-  data() {
-    return {
-      loading: true,
-      accommodations: [],
-      totalItems: 0,
-      totalPages: 0,
-      currentPage: 1,
-      searchParams: {
-        status: '',
-        type: '',
-        keyword: '',
-        page: 1,
-        size: 10
-      }
-    };
-  },
-  computed: {
-    ...mapState({
-      isAdmin: state => state.user.user?.role === 'ADMIN'
-    }),
-    
-    /**
-     * 페이지네이션 아이템 계산
-     * @returns {Array} 페이지네이션 아이템 배열
-     */
-    paginationItems() {
-      const items = [];
-      const maxVisiblePages = 5;
-      
-      if (this.totalPages <= maxVisiblePages) {
-        // 전체 페이지가 최대 표시 페이지 수보다 작거나 같으면 모든 페이지 표시
-        for (let i = 1; i <= this.totalPages; i++) {
-          items.push(i);
-        }
-      } else {
-        // 현재 페이지 주변의 페이지만 표시
-        items.push(1); // 첫 페이지는 항상 표시
-        
-        if (this.currentPage > 3) {
-          items.push('...'); // 현재 페이지가 3보다 크면 '...' 표시
-        }
-        
-        // 현재 페이지 주변 페이지 표시
-        const start = Math.max(2, this.currentPage - 1);
-        const end = Math.min(this.totalPages - 1, this.currentPage + 1);
-        
-        for (let i = start; i <= end; i++) {
-          items.push(i);
-        }
-        
-        if (this.currentPage < this.totalPages - 2) {
-          items.push('...'); // 현재 페이지가 마지막에서 3번째 이전이면 '...' 표시
-        }
-        
-        items.push(this.totalPages); // 마지막 페이지는 항상 표시
-      }
-      
-      return items;
-    }
-  },
-  created() {
-    // 관리자 권한 확인
-    if (!this.isAdmin) {
-      this.$router.push({
-        path: '/error/access-denied',
-        query: { message: '관리자만 접근할 수 있는 페이지입니다.' }
-      });
-      return;
-    }
-    
-    // URL 쿼리 파라미터에서 검색 조건 가져오기
-    const query = this.$route.query;
-    if (query.status) this.searchParams.status = query.status;
-    if (query.type) this.searchParams.type = query.type;
-    if (query.keyword) this.searchParams.keyword = query.keyword;
-    if (query.page) this.searchParams.page = parseInt(query.page);
-    
-    // 숙소 목록 로드
-    this.loadAccommodations();
-  },
-  methods: {
-    ...mapActions('admin', [
-      'fetchAccommodations', 
-      'approveAccommodation', 
-      'rejectAccommodation', 
-      'suspendAccommodation', 
-      'deleteAccommodation'
-    ]),
-    
-    /**
-     * 숙소 목록 로드
-     */
-    async loadAccommodations() {
-      this.loading = true;
-      
-      try {
-        const result = await this.fetchAccommodations(this.searchParams);
-        
-        this.accommodations = result.content;
-        this.totalItems = result.totalElements;
-        this.totalPages = result.totalPages;
-        this.currentPage = result.number + 1;
-        
-        // URL 쿼리 파라미터 업데이트
-        this.updateQueryParams();
-      } catch (error) {
-        console.error('숙소 목록을 불러오는 중 오류가 발생했습니다:', error);
-      } finally {
-        this.loading = false;
-      }
-    },
-    
-    /**
-     * 숙소 검색
-     */
-    searchAccommodations() {
-      this.searchParams.page = 1;
-      this.loadAccommodations();
-    },
-    
-    /**
-     * 페이지 이동
-     * @param {number} page - 이동할 페이지 번호
-     */
-    goToPage(page) {
-      if (page < 1 || page > this.totalPages) return;
-      
-      this.searchParams.page = page;
-      this.loadAccommodations();
-    },
-    
-    /**
-     * URL 쿼리 파라미터 업데이트
-     */
-    updateQueryParams() {
-      const query = {};
-      
-      if (this.searchParams.status) query.status = this.searchParams.status;
-      if (this.searchParams.type) query.type = this.searchParams.type;
-      if (this.searchParams.keyword) query.keyword = this.searchParams.keyword;
-      if (this.searchParams.page > 1) query.page = this.searchParams.page;
-      
-      this.$router.replace({ query });
-    },
-    
-    /**
-     * 숙소 승인
-     * @param {number} accommodationId - 숙소 ID
-     */
-    async approveAccommodation(accommodationId) {
-      if (!confirm('이 숙소를 승인하시겠습니까?')) return;
-      
-      try {
-        await this.approveAccommodation(accommodationId);
-        this.loadAccommodations();
-      } catch (error) {
-        console.error('숙소 승인 중 오류가 발생했습니다:', error);
-        alert('숙소 승인에 실패했습니다. 다시 시도해주세요.');
-      }
-    },
-    
-    /**
-     * 숙소 거부
-     * @param {number} accommodationId - 숙소 ID
-     */
-    async rejectAccommodation(accommodationId) {
-      const reason = prompt('거부 사유를 입력해주세요:');
-      if (reason === null) return; // 취소 버튼 클릭 시
-      
-      try {
-        await this.rejectAccommodation({ accommodationId, reason });
-        this.loadAccommodations();
-      } catch (error) {
-        console.error('숙소 거부 중 오류가 발생했습니다:', error);
-        alert('숙소 거부에 실패했습니다. 다시 시도해주세요.');
-      }
-    },
-    
-    /**
-     * 숙소 중지
-     * @param {number} accommodationId - 숙소 ID
-     */
-    async suspendAccommodation(accommodationId) {
-      const reason = prompt('중지 사유를 입력해주세요:');
-      if (reason === null) return; // 취소 버튼 클릭 시
-      
-      try {
-        await this.suspendAccommodation({ accommodationId, reason });
-        this.loadAccommodations();
-      } catch (error) {
-        console.error('숙소 중지 중 오류가 발생했습니다:', error);
-        alert('숙소 중지에 실패했습니다. 다시 시도해주세요.');
-      }
-    },
-    
-    /**
-     * 숙소 삭제
-     * @param {number} accommodationId - 숙소 ID
-     */
-    async deleteAccommodation(accommodationId) {
-      if (!confirm('이 숙소를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) return;
-      
-      try {
-        await this.deleteAccommodation(accommodationId);
-        this.loadAccommodations();
-      } catch (error) {
-        console.error('숙소 삭제 중 오류가 발생했습니다:', error);
-        alert('숙소 삭제에 실패했습니다. 다시 시도해주세요.');
-      }
-    },
-    
-    /**
-     * 숙소 유형 이름 반환
-     * @param {string} type - 숙소 유형 코드
-     * @returns {string} 숙소 유형 이름
-     */
-    getAccommodationTypeName(type) {
-      const types = {
-        'HOTEL': '호텔',
-        'MOTEL': '모텔',
-        'PENSION': '펜션',
-        'GUEST_HOUSE': '게스트하우스',
-        'RESORT': '리조트',
-        'CONDO': '콘도',
-        'HANOK': '한옥',
-        'CAMPING': '캠핑/글램핑',
-        'OTHER': '기타'
-      };
-      
-      return types[type] || type;
-    },
-    
-    /**
-     * 상태 이름 반환
-     * @param {string} status - 상태 코드
-     * @returns {string} 상태 이름
-     */
-    getStatusName(status) {
-      const statuses = {
-        'PENDING': '승인 대기',
-        'APPROVED': '승인됨',
-        'REJECTED': '거부됨',
-        'SUSPENDED': '중지됨'
-      };
-      
-      return statuses[status] || status;
-    },
-    
-    /**
-     * 상태 배지 클래스 반환
-     * @param {string} status - 상태 코드
-     * @returns {string} 배지 클래스
-     */
-    getStatusBadgeClass(status) {
-      const classes = {
-        'PENDING': 'badge bg-warning',
-        'APPROVED': 'badge bg-success',
-        'REJECTED': 'badge bg-danger',
-        'SUSPENDED': 'badge bg-secondary'
-      };
-      
-      return classes[status] || 'badge bg-secondary';
-    },
-    
-    /**
-     * 날짜 포맷팅
-     * @param {string|Date} date - 포맷팅할 날짜
-     * @returns {string} 포맷팅된 날짜 문자열
-     */
-    formatDate(date) {
-      if (!date) return '';
-      
-      const d = new Date(date);
-      const year = d.getFullYear();
-      const month = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
-      
-      return `${year}-${month}-${day}`;
-    }
+// Pinia store
+// const adminStore = useAdminStore()
+const userStore = useUserStore()
+const router = useRouter()
+const route = useRoute()
+
+// 상태
+const loading = ref(true)
+const accommodations = ref([])
+const totalItems = ref(0)
+const totalPages = ref(0)
+const currentPage = ref(1)
+
+// 검색 파라미터
+const searchParams = ref({
+  status: '',
+  type: '',
+  keyword: '',
+  page: 1,
+  size: 10,
+})
+
+// 관리자 권한 체크
+const isAdmin = computed(() => userStore.userRole === 'ADMIN')
+
+// 페이지네이션 계산
+const paginationItems = computed(() => {
+  const items = []
+  const maxVisiblePages = 5
+  if (totalPages.value <= maxVisiblePages) {
+    for (let i = 1; i <= totalPages.value; i++) items.push(i)
+  } else {
+    items.push(1)
+    if (currentPage.value > 3) items.push('...')
+    const start = Math.max(2, currentPage.value - 1)
+    const end = Math.min(totalPages.value - 1, currentPage.value + 1)
+    for (let i = start; i <= end; i++) items.push(i)
+    if (currentPage.value < totalPages.value - 2) items.push('...')
+    items.push(totalPages.value)
   }
-};
+  return items
+})
+
+// 유틸 함수
+function getAccommodationTypeName(type) {
+  const types = {
+    'HOTEL': '호텔',
+    'MOTEL': '모텔',
+    'PENSION': '펜션',
+    'GUEST_HOUSE': '게스트하우스',
+    'RESORT': '리조트',
+    'CONDO': '콘도',
+    'HANOK': '한옥',
+    'CAMPING': '캠핑/글램핑',
+    'OTHER': '기타'
+  }
+  return types[type] || type
+}
+function getStatusName(status) {
+  const statuses = {
+    'PENDING': '승인 대기',
+    'APPROVED': '승인됨',
+    'REJECTED': '거부됨',
+    'SUSPENDED': '중지됨'
+  }
+  return statuses[status] || status
+}
+function getStatusBadgeClass(status) {
+  const classes = {
+    'PENDING': 'badge bg-warning',
+    'APPROVED': 'badge bg-success',
+    'REJECTED': 'badge bg-danger',
+    'SUSPENDED': 'badge bg-secondary'
+  }
+  return classes[status] || 'badge bg-secondary'
+}
+function formatDate(date) {
+  if (!date) return ''
+  const d = new Date(date)
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+// 숙소 목록 불러오기
+async function loadAccommodations() {
+  loading.value = true
+  try {
+    // const result = await adminStore.fetchAccommodations(searchParams.value)
+    accommodations.value = result.content
+    totalItems.value = result.totalElements
+    totalPages.value = result.totalPages
+    currentPage.value = result.number + 1
+    updateQueryParams()
+  } catch (e) {
+    console.error('숙소 목록을 불러오는 중 오류가 발생했습니다:', e)
+  } finally {
+    loading.value = false
+  }
+}
+
+// URL 쿼리 파라미터 반영
+function updateQueryParams() {
+  const query = {}
+  if (searchParams.value.status) query.status = searchParams.value.status
+  if (searchParams.value.type) query.type = searchParams.value.type
+  if (searchParams.value.keyword) query.keyword = searchParams.value.keyword
+  if (searchParams.value.page > 1) query.page = searchParams.value.page
+  router.replace({ query })
+}
+
+// 검색
+function searchAccommodations() {
+  searchParams.value.page = 1
+  loadAccommodations()
+}
+
+// 페이지 이동
+function goToPage(page) {
+  if (page < 1 || page > totalPages.value) return
+  searchParams.value.page = page
+  loadAccommodations()
+}
+
+// 승인/거부/중지/삭제
+async function approveAccommodation(accommodationId) {
+  if (!window.confirm('이 숙소를 승인하시겠습니까?')) return
+  try {
+    // await adminStore.approveAccommodation(accommodationId)
+    loadAccommodations()
+  } catch (e) {
+    alert('숙소 승인에 실패했습니다. 다시 시도해주세요.')
+  }
+}
+async function rejectAccommodation(accommodationId) {
+  const reason = window.prompt('거부 사유를 입력해주세요:')
+  if (reason === null) return
+  try {
+    // await adminStore.rejectAccommodation({ accommodationId, reason })
+    loadAccommodations()
+  } catch (e) {
+    alert('숙소 거부에 실패했습니다. 다시 시도해주세요.')
+  }
+}
+async function suspendAccommodation(accommodationId) {
+  const reason = window.prompt('중지 사유를 입력해주세요:')
+  if (reason === null) return
+  try {
+    // await adminStore.suspendAccommodation({ accommodationId, reason })
+    loadAccommodations()
+  } catch (e) {
+    alert('숙소 중지에 실패했습니다. 다시 시도해주세요.')
+  }
+}
+async function deleteAccommodation(accommodationId) {
+  if (!window.confirm('이 숙소를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) return
+  try {
+    // await adminStore.deleteAccommodation(accommodationId)
+    loadAccommodations()
+  } catch (e) {
+    alert('숙소 삭제에 실패했습니다. 다시 시도해주세요.')
+  }
+}
+
+// onMounted - 권한체크 & 쿼리 적용 & 데이터 불러오기
+onMounted(() => {
+  if (!isAdmin.value) {
+    router.push({
+      path: '/error/access-denied',
+      query: { message: '관리자만 접근할 수 있는 페이지입니다.' }
+    })
+    return
+  }
+  const query = route.query
+  if (query.status) searchParams.value.status = query.status
+  if (query.type) searchParams.value.type = query.type
+  if (query.keyword) searchParams.value.keyword = query.keyword
+  if (query.page) searchParams.value.page = parseInt(query.page)
+  loadAccommodations()
+})
 </script>
 
 <style scoped>
 .table th {
   background-color: #f8f9fa;
 }
-
 .pagination {
   margin-top: 20px;
 }
-
 .btn-group {
   white-space: nowrap;
 }

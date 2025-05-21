@@ -13,7 +13,7 @@
 
       <!-- 이미지 확대 효과 -->
       <div class="image-wrapper">
-        <img :src="item.imageUrl" :alt="item.title" class="attraction-image" />
+        <img :src="item.imageUrl.length === 0 ? '/src/assets/no-image.jpg': item.imageUrl" :alt="item.title" class="attraction-image" />
       </div>
     </li>
   </ul>

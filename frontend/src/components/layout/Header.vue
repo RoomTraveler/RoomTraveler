@@ -33,13 +33,23 @@
           <div class="user-menu">
             <!-- 찜 목록 버튼 (로그인 시에만 보이도록) -->
             <router-link
-              v-if="isLoggedIn"
+              v-if="isLoggedIn && selected === '숙박'"
               to="/accommodation/favorites"
               class="user-menu-item icon-btn"
               title="찜 목록"
             >
               <i class="bi bi-heart"></i>
             </router-link>
+
+            <div v-if="isLoggedIn && selected !== '숙박'" class="user-dropdown">
+                <button class="user-dropdown-toggle" title="찜 목록">
+                  <i class="bi bi-heart"></i>
+                </button>
+                <div class="user-dropdown-menu">
+                  <li><router-link to="/attractions" class="dropdown-item">관광지</router-link></li>
+                  <li><router-link to="/plans" class="dropdown-item">여행 플랜</router-link></li>
+                </div>
+              </div>
 
             <!-- 장바구니 버튼 (로그인 시에만 보이도록) -->
             <router-link

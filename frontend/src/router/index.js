@@ -65,7 +65,7 @@ router.beforeEach((to, from, next) => {
   if (to.meta.requiresAuth) {
     // 인증 확인 로직
     // const isAuthenticated = store.getters.isAuthenticated;
-    const isAuthenticated = localStorage.getItem("user") !== null;
+    const isAuthenticated = sessionStorage.getItem("user") !== null;
 
     if (!isAuthenticated) {
       next({ name: "Login", query: { redirect: to.fullPath } });
@@ -76,8 +76,8 @@ router.beforeEach((to, from, next) => {
     if (to.meta.requiresAdmin) {
       // 관리자 권한 확인 로직
       // const isAdmin = store.getters.isAdmin;
-      const user = JSON.parse(localStorage.getItem("user") || "{}");
-      const isAdmin = user.role === "ADMIN";
+      const user = JSON.parse(sessionStorage.getItem("user") || "{}");
+      const isAdmin = user.user.role === 'ADMIN';
 
       if (!isAdmin) {
         // 관리자가 아닌 경우 접근 거부 페이지로 리다이렉트

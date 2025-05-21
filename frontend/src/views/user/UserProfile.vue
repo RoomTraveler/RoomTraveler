@@ -193,10 +193,12 @@
 </template>
 
 <script>
+import { useUserStore } from "@/store/userStore";
 export default {
   name: 'UserProfile',
   data() {
     return {
+      loginUser: useUserStore(),
       user: null,
       activeTab: 'info',
       userForm: {
@@ -303,7 +305,7 @@ export default {
     fetchUserData() {
       // 실제 API 호출 대신 임시 데이터 사용
       setTimeout(() => {
-        const userData = JSON.parse(localStorage.getItem('user'));
+        const userData = JSON.parse(sessionStorage.getItem('user'));
         
         if (userData) {
           this.user = {
