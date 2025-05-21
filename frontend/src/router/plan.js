@@ -1,12 +1,37 @@
 import MyPlans from "@/views/plan/MyPlans.vue";
 import SharedPlans from "@/views/plan/SharedPlans.vue";
 import LikedAttractions from "@/views/attraction/LikedAttractions.vue";
+import Plan from "@/views/plan/Plan.vue";
+import PlanAlone from "@/views/plan/PlanAlone.vue";
+import PlanDetail from "@/views/plan/PlanDetail.vue";
+import PlanPublic from "@/views/plan/PlanPublic.vue";
+import Attraction from "@/views/attraction/Attraction.vue";
 
-export default [
+
+export const planRoutes = [
+  { path: "/plans/public/:token", component: PlanPublic, meta: { title: "공개 여행 계획 - Room Traveler" } },
   {
     path: "/plans",
     name: "plans",
     component: MyPlans,
+  },
+  {
+    path: "/plan",
+    name: "Plan",
+    component: Plan,
+    meta: { title: "여행 계획 - Room Traveler" },
+  },
+  { path: "/plan/alone", component: PlanAlone },
+  // { path: '/plan/together', component: PlanTogetherPage },
+  {
+    path: "/attractions/:id",
+    name: "AttractionDetail",
+    component: Attraction,
+  },
+  {
+    path: "/plans/:planId",
+    name: "planDetail",
+    component: PlanDetail,
   },
   {
     path: "/plans/shared",

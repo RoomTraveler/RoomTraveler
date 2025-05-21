@@ -286,9 +286,9 @@ export default axios;
 ```bash
 rmdir /s /q node_modules
 del package-lock.json
+npm install
 npm install vite@5 @vitejs/plugin-vue@5 -D
 npm install tailwindcss@latest @tailwindcss/vite@latest -D
-npm install
 npm install @vuepic/vue-datepicker
 npm install @vuepic/vue-datepicker date-fns
 npm install element-plus

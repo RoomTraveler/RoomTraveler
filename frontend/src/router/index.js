@@ -8,16 +8,10 @@ import { commonRoutes } from "./common";
 import { userRoutes } from "./user";
 import { adminRoutes } from "./admin";
 import { reservationRoutes } from "./reservation";
-
-const Plan = () => import("../views/plan/Plan.vue");
-const PlanAlone = () => import("../views/plan/PlanAlone.vue");
-const PlanDetail = () => import("../views/plan/PlanDetail.vue");
-const PlanPublic = () => import("../views/plan/PlanPublic.vue");
-const Attraction = () => import("../views/attraction/Attraction.vue");
+import { planRoutes } from "./plan";
 
 const NotFound = () => import("../views/NotFound.vue");
 const ApiTest = () => import("../components/ApiTest.vue");
-
 // 에러 페이지 컴포넌트
 const AccessDenied = () => import("../views/error/AccessDenied.vue");
 
@@ -32,31 +26,13 @@ const routes = [
   ...userRoutes,
   ...adminRoutes,
   ...reservationRoutes,
+  ...planRoutes,
 
-  { path: "/plans/public/:token", component: PlanPublic, meta: { title: "공개 여행 계획 - Room Traveler" } },
   {
     path: "/api-test",
     name: "ApiTest",
     component: ApiTest,
     meta: { title: "API 테스트 - Room Traveler" },
-  },
-  {
-    path: "/plan",
-    name: "Plan",
-    component: Plan,
-    meta: { title: "여행 계획 - Room Traveler" },
-  },
-  { path: "/plan/alone", component: PlanAlone },
-  // { path: '/plan/together', component: PlanTogetherPage },
-  {
-    path: "/attractions/:id",
-    name: "AttractionDetail",
-    component: Attraction,
-  },
-  {
-    path: "/plans/:planId",
-    name: "planDetail",
-    component: PlanDetail,
   },
   // 에러 페이지 라우트
   {
