@@ -1,6 +1,6 @@
 /**
  * main.js - 방구석 여행자 프론트엔드 애플리케이션의 진입점
- * 
+ *
  * 이 파일은 Vue 애플리케이션을 초기화하고 필요한 플러그인을 설정합니다.
  * 애플리케이션의 시작점으로, 모든 Vue 관련 설정이 이루어집니다.
  */
@@ -52,3 +52,5 @@ async function initializeApp() {
 }
 
 initializeApp();
+
+export { router }; // router export 추가

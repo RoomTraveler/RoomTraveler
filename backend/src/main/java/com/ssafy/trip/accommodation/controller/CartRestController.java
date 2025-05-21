@@ -2,6 +2,7 @@ package com.ssafy.trip.accommodation.controller;
 
 import com.ssafy.trip.accommodation.model.Cart;
 import com.ssafy.trip.accommodation.service.CartService;
+import com.ssafy.trip.security.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -12,6 +13,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.servlet.http.HttpSession;
@@ -50,8 +53,10 @@ public class CartRestController {
             }
     )
     @GetMapping
-    public ResponseEntity<?> viewCart(HttpSession session) {
-        Long userId = getSessionUserId(session);
+    public ResponseEntity<?> viewCart() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+        Long userId = userDetails.getUser().getUserId();
         if (userId == null) {
             return unauthorized("로그인 필요");
         }

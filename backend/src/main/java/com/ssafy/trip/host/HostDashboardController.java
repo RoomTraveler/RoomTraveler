@@ -31,20 +31,20 @@ public class HostDashboardController {
     /**
      * 호스트 대시보드 메인 통계 조회
      */
-    @GetMapping("/{hostId}")
-    public ResponseEntity<?> getDashboardStats(@PathVariable Long hostId) throws SQLException {
-//        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-//        CustomUserDetails user = (CustomUserDetails) auth.getPrincipal();
-//        Long hostId = user.getUserId();
-//        String role = user.getRole();
-//        if (!"HOST".equals(role) && !"ADMIN".equals(role)) {
-//            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-//                    .body(Map.of("error", "권한이 없습니다."));
-//        }
+    @GetMapping
+    public ResponseEntity<?> getDashboardStats() throws SQLException {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        CustomUserDetails user = (CustomUserDetails) auth.getPrincipal();
+        Long hostId = user.getUser().getUserId();
+        String role = user.getUser().getRole();
+        if (!"HOST".equals(role) && !"ADMIN".equals(role)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "권한이 없습니다."));
+        }
         try {
             Host host = hostService.getHostById(hostId);
             List<Accommodation> accommodations = accommodationService.getAccommodationsByHostId(hostId);
-            List<Reservation> reservations = reservationService.getReservationsByHostId(hostId);
+            List<Reservation> reservations = reservationService.getReservationsByHostId(hostId, null);
 
             // 통계 생성
             DashboardStats stats = new DashboardStats();
@@ -95,20 +95,20 @@ public class HostDashboardController {
      */
     @GetMapping("/accommodation/{accommodationId}")
     public ResponseEntity<?> getAccommodationStats(@PathVariable Long accommodationId) {
-//        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-//        CustomUserDetails user = (CustomUserDetails) auth.getPrincipal();
-//        Long hostId = user.getUserId();
-//        String role = user.getRole();
-//        if (!"HOST".equals(role) && !"ADMIN".equals(role)) {
-//            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-//                    .body(Map.of("error", "권한이 없습니다."));
-//        }
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        CustomUserDetails user = (CustomUserDetails) auth.getPrincipal();
+        Long authHostId = user.getUser().getUserId();
+        String role = user.getUser().getRole();
+        if (!"HOST".equals(role) && !"ADMIN".equals(role)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "권한이 없습니다."));
+        }
         try {
             Accommodation acc = accommodationService.getAccommodationById(accommodationId);
-//            if (!acc.getHostId().equals(hostId) && !"ADMIN".equals(role)) {
-//                return ResponseEntity.status(HttpStatus.FORBIDDEN)
-//                        .body(Map.of("error", "권한이 없습니다."));
-//            }
+            if (!acc.getHostId().equals(authHostId) && !"ADMIN".equals(role)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", "권한이 없습니다."));
+            }
             List<Reservation> reservations = reservationService.getReservationsByAccommodationId(accommodationId);
             AccommodationStats stats = new AccommodationStats();
             stats.setAccommodation(acc);

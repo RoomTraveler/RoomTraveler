@@ -11,14 +11,20 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.*;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.*;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.util.StringUtils;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class JwtVerificationFilter extends OncePerRequestFilter {
@@ -30,34 +36,37 @@ public class JwtVerificationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
 
-        String token = extractToken(request);
+        log.debug("[JwtVerificationFilter] Request URI: {} {}", request.getMethod(), request.getRequestURI());
+        String authorizationHeader = request.getHeader("Authorization");
+        log.debug("[JwtVerificationFilter] Authorization Header: {}", authorizationHeader);
 
-        if (token == null) {
+        if ("/api/user/refresh".equals(request.getRequestURI()) && "POST".equalsIgnoreCase(request.getMethod())) {
+            log.debug("[JwtVerificationFilter] Skipping filter for /api/user/refresh");
             filterChain.doFilter(request, response);
             return;
         }
 
-        Claims claims = jwtUtil.getClaims(token);
-
-        UserDetails userDetails = userDetailsService.loadUserByUsername(claims.get("email").toString());
-
-        UsernamePasswordAuthenticationToken auth =
-                new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-        //auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-        SecurityContextHolder.getContext().setAuthentication(auth);
-
         try {
-            filterChain.doFilter(request, response);
-        } catch (Exception e) {
-            if (e instanceof JwtException) {
+            String token = jwtUtil.resolveToken(request);
+            log.debug("[JwtVerificationFilter] Resolved Token: {}", token);
 
-            } else if (e instanceof BadCredentialsException) {
-
+            if (StringUtils.hasText(token) && jwtUtil.validateToken(token)) {
+                log.debug("[JwtVerificationFilter] Token is valid");
+                Authentication authentication = jwtUtil.getAuthentication(token, userDetailsService);
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+                log.debug("[JwtVerificationFilter] Set Authentication in SecurityContextHolder: {}", authentication);
             } else {
-
+                log.debug("[JwtVerificationFilter] Token is invalid or not present");
             }
+        } catch (JwtException e) {
+            log.error("[JwtVerificationFilter] JWT Error: {}", e.getMessage());
+            SecurityContextHolder.clearContext();
+        } catch (Exception e) {
+            log.error("[JwtVerificationFilter] General Error: {}", e.getMessage(), e);
+            SecurityContextHolder.clearContext();
         }
 
+        filterChain.doFilter(request, response);
     }
 
     private String extractToken(HttpServletRequest request) {

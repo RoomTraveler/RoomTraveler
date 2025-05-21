@@ -87,46 +87,57 @@ public class UserController {
 					content = @Content(mediaType = "application/json"))
 	})
 	@PostMapping("/auth/login")
-	public ResponseEntity<?> login(@RequestBody User loginRequest) {
-		Map<String, Object> res = new HashMap<>();
+	public ResponseEntity<?> login(@RequestBody User loginRequest, HttpServletResponse httpServletResponse) {
+		Map<String, Object> responseBody = new HashMap<>();
 
 		try {
 			User loginUser = userService.login(loginRequest.getEmail(), loginRequest.getPassword());
 
 			if (loginUser == null) {
-				res.put("success", false);
-				res.put("message", "이메일 또는 비밀번호가 올바르지 않습니다.");
-				return new ResponseEntity<>(res, HttpStatus.UNAUTHORIZED);
+				responseBody.put("success", false);
+				responseBody.put("message", "이메일 또는 비밀번호가 올바르지 않습니다.");
+				return new ResponseEntity<>(responseBody, HttpStatus.UNAUTHORIZED);
 			}
 
-			res.put("success", true);
-			res.put("message", "로그인에 성공했습니다.");
+			String accessToken = jwtUtil.generateAccessToken(loginUser);
+			String refreshToken = jwtUtil.generateRefreshToken(loginUser);
 
-			return new ResponseEntity<>(res, HttpStatus.OK);
+			userService.updateUserRefresh(loginUser.getUserId(), refreshToken);
+
+			responseBody.put("success", true);
+			responseBody.put("message", "로그인에 성공했습니다.");
+			responseBody.put("accessToken", accessToken);
+			responseBody.put("refreshToken", refreshToken);
+
+			return new ResponseEntity<>(responseBody, HttpStatus.OK);
 		} catch (SQLException e) {
-			res.put("success", false);
-			res.put("message", "로그인 중 오류가 발생했습니다: " + e.getMessage());
-			return new ResponseEntity<>(res, HttpStatus.INTERNAL_SERVER_ERROR);
+			responseBody.put("success", false);
+			responseBody.put("message", "로그인 중 오류가 발생했습니다: " + e.getMessage());
+			return new ResponseEntity<>(responseBody, HttpStatus.INTERNAL_SERVER_ERROR);
+		} catch (Exception e) {
+			log.error("Login error: ", e);
+			responseBody.put("success", false);
+			responseBody.put("message", "로그인 처리 중 예상치 못한 오류가 발생했습니다.");
+			return new ResponseEntity<>(responseBody, HttpStatus.INTERNAL_SERVER_ERROR);
 		}
 	}
-
 
 	/**
 	 * 현재 로그인한 사용자 정보를 조회합니다.
 	 * @return 사용자 정보 및 상태 코드
 	 */
-    @Operation(summary = "Get current user profile", description = "Retrieves the profile information of the currently logged-in user")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "User profile retrieved successfully",
-                    content = @Content(mediaType = "application/json")),
-        @ApiResponse(responseCode = "401", description = "Not logged in",
-                    content = @Content(mediaType = "application/json")),
-        @ApiResponse(responseCode = "404", description = "User not found",
-                    content = @Content(mediaType = "application/json")),
-        @ApiResponse(responseCode = "500", description = "Internal server error",
-                    content = @Content(mediaType = "application/json"))
-    })
-    @GetMapping("/me")
+	@Operation(summary = "Get current user profile", description = "Retrieves the profile information of the currently logged-in user")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200", description = "User profile retrieved successfully",
+					content = @Content(mediaType = "application/json")),
+			@ApiResponse(responseCode = "401", description = "Not logged in",
+					content = @Content(mediaType = "application/json")),
+			@ApiResponse(responseCode = "404", description = "User not found",
+					content = @Content(mediaType = "application/json")),
+			@ApiResponse(responseCode = "500", description = "Internal server error",
+					content = @Content(mediaType = "application/json"))
+	})
+	@GetMapping("/me")
 	public ResponseEntity<?> getCurrentUser() {
 		Map<String, Object> response = new HashMap<>();
 
@@ -155,7 +166,6 @@ public class UserController {
 		response.put("user", user);
 		return new ResponseEntity<>(response, HttpStatus.OK);
 	}
-
 
 	/**
 	 * 사용자 정보를 수정합니다.

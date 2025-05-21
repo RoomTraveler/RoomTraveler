@@ -61,8 +61,12 @@ public class CustomSecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
         http.authorizeHttpRequests(authorize ->
-                authorize.anyRequest().permitAll());
-                //authorize.requestMatchers("/api/user/auth/**", "/api/map/plans", "/api/map/users/*/plans").permitAll()); // 바로 통과 시킬 경로
+                authorize.requestMatchers("/api/user/auth/**", "/api/user/refresh", "/api/map/**", "/api/attractions/**", "/api/plans/**", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/host/**").hasAnyRole("HOST", "ADMIN")
+                        .requestMatchers("/api/notifications/**", "/api/cart/**").hasAnyRole("USER", "HOST", "ADMIN")
+                        .requestMatchers("/api/**").authenticated()
+                        .anyRequest().permitAll());
 
         http.addFilterBefore(jwtVerificationFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterAt(authFilter, UsernamePasswordAuthenticationFilter.class)
@@ -70,47 +74,6 @@ public class CustomSecurityConfig {
 
         return http.build();
     }
-
-//    @Bean
-//    @Order(2)
-//    SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-//        http.csrf(AbstractHttpConfigurer::disable)
-//                .authorizeHttpRequests(authorize -> authorize
-//                                .anyRequest().permitAll()
-//                .requestMatchers("/", "/login", "/accommodation", "/plan", "/api/user/register", "/api/user/login", "/user/login-form", "/swagger-ui/*").permitAll()
-//                                // 2) Swagger UI & OpenAPI spec
-//                                .requestMatchers("/swagger-ui.html", "/swagger-ui/**").permitAll()
-//                                .requestMatchers("/v3/api-docs/**").permitAll()
-//                                .requestMatchers("/webjars/**").permitAll()
-//
-//                                // 3) 기타 public API
-//                                .requestMatchers("/api/logistics").permitAll()
-//                .requestMatchers("/accommodation/host/**").hasRole("HOST")
-//                .requestMatchers("/accommodation/admin/**").hasRole("ADMIN")
-//                .anyRequest().hasRole("USER")
-//                )
-//
-//                .logout(logout -> logout
-//                        .logoutUrl("/user/logout")
-//                        .deleteCookies("JWT")
-//                        .logoutSuccessHandler((request, response, authentication) -> {
-//                            response.setStatus(HttpServletResponse.SC_OK);
-//                            response.setContentType("application/json;charset=UTF-8");
-//                            log.info("Logged out successfully????");
-//                            String json = "{\"message\": \"로그아웃 성공했습니다!\"}";
-//                            response.getWriter().write(json);
-//                        })
-//                )
-//
-//                .sessionManagement(session -> session
-//                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-//                );
-//
-//        http.addFilterBefore(jwtAuthenticationFilter(),
-//                UsernamePasswordAuthenticationFilter.class);
-//
-//        return http.build();
-//    }
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {

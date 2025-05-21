@@ -1,72 +1,98 @@
 import axios from "axios";
 import { useUserStore } from "@/store/userStore";
+import router from "@/router";
 
-// 기본 설정으로 Axios 인스턴스 생성
-const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL,
-  // 요청 타임아웃 설정 (5초)
+const BASE_URL = "http://localhost:8080";
+
+const instance = axios.create({
+  baseURL: BASE_URL,
   timeout: 5000,
+  headers: {
+    "Content-Type": "application/json",
+  },
 });
 
-// 인증 토큰을 추가하기 위한 요청 인터셉터
-api.interceptors.request.use(
-  async (config) => {
-    console.log("[요청 발신]: ", config.mehtod, config.url, config.data);
-    handleTask(true);
-    const memberStore = useUserStore();
+// 요청 인터셉터
+instance.interceptors.request.use(
+  (config) => {
+    console.log("[API Interceptor - Request] URL:", config.url);
+    const userStore = useUserStore();
+    const accessToken = userStore._tokens.value?.access_token;
 
-    if (memberStore.token?.accessToken) {
-      config.headers["Authorization"] = `Bearer ${memberStore.tokens.accessToken}`;
+    if (accessToken) {
+      console.log("[API Interceptor - Request] Access Token FOUND:", accessToken);
+      config.headers.Authorization = `Bearer ${accessToken}`;
+      console.log("[API Interceptor - Request] Authorization header SET:", config.headers.Authorization);
+    } else {
+      console.warn("[API Interceptor - Request] Access Token NOT FOUND. Headers:", config.headers);
     }
+
+    if (config.url === "/api/user/auth/login" && config.method === "post") {
+      config.headers["Content-Type"] = "application/x-www-form-urlencoded";
+    }
+
     return config;
   },
   (error) => {
-    console.log("[요청 실패]: ", error);
-    handleTask(false);
+    console.error("[요청 오류]:", error);
     return Promise.reject(error);
   }
 );
 
-// 오류 처리를 위한 응답 인터셉터
-api.interceptors.response.use(
+let isRefreshing = false;
+let refreshSubscribers = [];
+
+const onRefreshed = (accessToken) => {
+  refreshSubscribers.map((callback) => callback(accessToken));
+  refreshSubscribers = [];
+};
+
+// 응답 인터셉터
+instance.interceptors.response.use(
   (response) => {
     console.log("[응답 수신 1]: ", response.status, response.data);
-    handleTask(false);
     return response;
   },
   async (error) => {
     console.log("[오류 수신 1]: ", error);
-    handleTask(false);
-    // 401 Unauthorized 오류 처리 (토큰 만료)
-    if (error.status === 401 && error.response?.data.message === "Token_ERROR") {
-      console.log("access tokens 만료");
-      const originalRequest = error.config;
-      const memberStore = useUserStore();
-      try {
-        await memberStore.refresh();
-        return api(originalRequest);
-      } catch (e) {
-        alert("refresh까지 만료!! 로그아웃 합니다.");
-        memberStore.logout();
+    const originalRequest = error.config;
+    const userStore = useUserStore();
+
+    if (
+      error.response?.status === 401 &&
+      originalRequest.url !== "/api/user/auth/login" &&
+      originalRequest.url !== "/api/user/refresh"
+    ) {
+      if (!isRefreshing) {
+        isRefreshing = true;
+        try {
+          console.log("Access token might be expired. Attempting to refresh...");
+          const refreshResult = await userStore.refresh();
+          if (refreshResult.success && userStore._tokens.value?.access_token) {
+            console.log("Token refreshed successfully.");
+            isRefreshing = false;
+            onRefreshed(userStore._tokens.value.access_token);
+            originalRequest.headers.Authorization = `Bearer ${userStore._tokens.value.access_token}`;
+            return instance(originalRequest);
+          } else {
+            throw new Error(refreshResult.error || "Failed to refresh token");
+          }
+        } catch (refreshError) {
+          console.error("Failed to refresh token after 401. Logging out.", refreshError);
+          isRefreshing = false;
+          userStore.logout();
+          router.push("/login").catch(() => {});
+          return Promise.reject(refreshError);
+        }
+      } else {
+        return new Promise((resolve) => {
+          refreshSubscribers.push((accessToken) => {
+            originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+            resolve(instance(originalRequest));
+          });
+        });
       }
-      // 이미 로그인 페이지가 아닌 경우에만 리디렉션
-      if (window.location.pathname !== "/login") {
-        window.location.href = "/login";
-      }
     }
-
-    // 네트워크 오류 처리
-    if (error.message === "Network Error") {
-      console.error("네트워크 오류가 발생했습니다. 백엔드 서버가 실행 중인지 확인하세요.");
-      error.message = "네트워크 오류: 서버에 연결할 수 없습니다. 백엔드 서버가 실행 중인지 확인하세요.";
-    }
-
-    // 타임아웃 오류 처리
-    if (error.code === "ECONNABORTED") {
-      console.error("요청 시간이 초과되었습니다. 서버 응답이 없습니다.");
-      error.message = "요청 시간 초과: 서버 응답이 없습니다. 백엔드 서버 상태를 확인하세요.";
-    }
-
     return Promise.reject(error);
   }
 );
@@ -112,4 +138,7 @@ const handleTask = (add) => {
   }
 };
 
-export default { api, apiNoAuth };
+export default {
+  api: instance,
+  apiNoAuth,
+};

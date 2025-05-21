@@ -9,6 +9,12 @@ import javax.crypto.SecretKey;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.util.StringUtils;
+import com.ssafy.trip.security.CustomUserDetailsService;
 
 @Slf4j
 @Component
@@ -47,6 +53,7 @@ public class JwtUtil {
             parser.parse(token); // 예외 없으면 유효
             return true;
         } catch (JwtException e) {
+            log.warn("Invalid JWT token: {}", e.getMessage());
             return false;
         }
     }
@@ -69,5 +76,28 @@ public class JwtUtil {
         Jws<Claims> jws = parser.parseSignedClaims(token);
 
         return jws.getPayload();
+    }
+
+    public String resolveToken(HttpServletRequest request) {
+        String bearerToken = request.getHeader("Authorization");
+        if (StringUtils.hasText(bearerToken) && bearerToken.startsWith("Bearer ")) {
+            return bearerToken.substring(7);
+        }
+        return null;
+    }
+
+    public boolean validateToken(String token) {
+        return isTokenValid(token);
+    }
+
+    public Authentication getAuthentication(String token, CustomUserDetailsService userDetailsService) {
+        Claims claims = getClaims(token);
+        String email = claims.get("email", String.class);
+        UserDetails userDetails = userDetailsService.loadUserByUsername(email);
+
+        if (userDetails != null) {
+            return new UsernamePasswordAuthenticationToken(userDetails, "", userDetails.getAuthorities());
+        }
+        return null;
     }
 }

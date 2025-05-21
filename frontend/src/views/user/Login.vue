@@ -69,7 +69,7 @@
 </template>
 
 <script>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, nextTick } from "vue";
 import { useUserStore } from "@/store/userStore";
 import { useRouter, useRoute } from "vue-router";
 import api from "@/api/index";
@@ -85,29 +85,46 @@ export default {
     const password = ref("");
     const rememberMe = ref(false);
     const isHostMode = ref(false);
+    const fromTab = ref(null); // Header에서 전달된 탭 정보 저장
 
     const loading = computed(() => userStore.loading);
     const componentError = ref(null); // 스토어의 error와 구분하기 위해 componentError 사용
 
     async function handleLogin() {
       componentError.value = null;
-      // isHostMode 값에 따라 login API를 다르게 호출할 필요는 현재 없음.
-      // 백엔드 /api/user/login 이 역할을 구분하지 않음.
-      // 역할(role)은 로그인 성공 후 userStore.user.role 로 구분 가능.
       const result = await userStore.login(email.value, password.value);
 
       if (result && result.success) {
-        // userStore.user.role을 확인하여 리다이렉트 경로 결정 가능
-        const userRole = userStore.user?.role;
-        let redirectPath = route.query.redirect?.toString() || "/"; // query.redirect가 배열일 수 있으므로 toString()
+        const userRole = result.user?.role;
+        let redirectPath = route.query.redirect?.toString() || "/"; // 기본 리다이렉션 경로
 
+        // fromTab 값과 userRole에 따라 리다이렉션 경로 우선순위 결정
+        if (fromTab.value === "숙박") {
+          redirectPath = "/accommodation"; // AccommodationHome.vue의 라우트 경로로 수정 필요
+        } else if (fromTab.value === "여행") {
+          redirectPath = "/plan"; // Plan.vue의 라우트 경로로 수정 필요
+        }
+
+        // 역할별 우선 리다이렉션 (선택적: 위의 탭 기반 리다이렉션보다 우선할 경우)
         if (userRole === "HOST") {
           redirectPath = route.query.redirect?.toString() || "/host";
         } else if (userRole === "ADMIN") {
           redirectPath = route.query.redirect?.toString() || "/admin";
         }
-        // 일반 USER는 기본 '/' 또는 이전 경로
 
+        console.log(
+          "[Login.vue] Login successful. Preparing to redirect to:",
+          redirectPath,
+          "From Tab:",
+          fromTab.value,
+          "User Role:",
+          userRole
+        );
+
+        // nextTick을 사용하여 상태 업데이트가 DOM 및 다른 시스템에 전파될 시간을 줍니다.
+        await nextTick();
+
+        console.log("[Login.vue] Redirecting now...");
         router.push(redirectPath);
       } else {
         componentError.value = result.error || "이메일 또는 비밀번호가 올바르지 않습니다.";
@@ -126,9 +143,19 @@ export default {
     }
 
     onMounted(() => {
+      // URL 쿼리에서 from 값 읽기
+      if (route.query.from) {
+        fromTab.value = route.query.from;
+        console.log("[Login.vue] Mounted. Received fromTab:", fromTab.value);
+      }
+
       // 예시: URL 경로에 따라 isHostMode 기본값 설정
       if (route.path.toLowerCase().includes("host")) {
         isHostMode.value = true;
+      }
+      // 컴포넌트 마운트 시 userStore의 loading 상태를 false로 초기화
+      if (userStore.loading) {
+        userStore.loading = false;
       }
 
       // 이미 로그인된 경우 리다이렉트 (선택적: UX에 따라 로그인 페이지를 보여줄 수도 있음)

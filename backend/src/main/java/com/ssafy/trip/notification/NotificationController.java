@@ -126,7 +126,7 @@ public class NotificationController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("사용자 ID가 필요합니다.");
         }
         // 현재 로그인한 사용자의 ID를 우선 사용, 없으면 요청 바디의 userId 사용
-        Long currentUserId = (userDetails != null) ? userDetails.getUserId() : notification.getUserId();
+        Long currentUserId = (userDetails != null) ? userDetails.getUser().getUserId() : notification.getUserId();
         notification.setUserId(currentUserId);
 
         try {
@@ -343,7 +343,7 @@ public class NotificationController {
         if (userDetails == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("로그인이 필요합니다.");
         }
-        Long userId = userDetails.getUserId();
+        Long userId = userDetails.getUser().getUserId();
 
         try {
             Sort.Direction direction = Sort.Direction.fromString(sortDir.toUpperCase());
@@ -386,7 +386,7 @@ public class NotificationController {
         if (userDetails == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("로그인이 필요합니다.");
         }
-        Long userId = userDetails.getUserId();
+        Long userId = userDetails.getUser().getUserId();
 
         try {
             long count = notificationService.getUnreadNotificationCountByUserId(userId); // 새로운 서비스 메소드 필요
@@ -408,7 +408,7 @@ public class NotificationController {
         if (userDetails == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("로그인이 필요합니다.");
         }
-        Long userId = userDetails.getUserId();
+        Long userId = userDetails.getUser().getUserId();
         try {
             int count = notificationService.markAllAsRead(userId);
             return ResponseEntity.ok(count + "개의 알림이 읽음 상태로 표시되었습니다.");
@@ -429,7 +429,7 @@ public class NotificationController {
         if (userDetails == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("로그인이 필요합니다.");
         }
-        Long userId = userDetails.getUserId();
+        Long userId = userDetails.getUser().getUserId();
         try {
             int count = notificationService.deleteAllNotificationsByUserId(userId);
             return ResponseEntity.ok(count + "개의 알림이 삭제되었습니다.");

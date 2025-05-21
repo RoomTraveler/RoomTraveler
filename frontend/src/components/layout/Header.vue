@@ -55,7 +55,9 @@
             </router-link>
 
             <template v-if="!isLoggedIn">
-              <router-link to="/login" class="user-menu-item">로그인</router-link>
+              <router-link :to="{ path: '/login', query: { from: selected } }" class="user-menu-item"
+                >로그인</router-link
+              >
               <router-link to="/register" class="user-menu-item">회원가입</router-link>
             </template>
             <template v-else>
@@ -91,9 +93,6 @@
         </div>
       </div>
     </div>
-
-
-
   </div>
 </template>
 
@@ -106,12 +105,12 @@ import api from "@/api/index";
 
 /**
  * 헤더 컴포넌트
- * 
+ *
  * 이 컴포넌트는 웹사이트의 공통 헤더 부분을 담당합니다.
  * 로그인 상태에 따라 다른 메뉴를 표시하며, 알림 기능을 포함합니다.
  */
 export default {
-  name: 'Header',
+  name: "Header",
   setup() {
     // Pinia 스토어 사용
     const userStore = useUserStore();
@@ -166,7 +165,7 @@ export default {
      * @returns {number|null} 사용자 ID 또는 null
      */
     userId() {
-      return this.userStore.user?.id
+      return this.userStore.user?.id;
     },
     /**
      * 사용자가 관리자인지 확인

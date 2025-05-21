@@ -6,6 +6,7 @@ CREATE TABLE users (
                        password        VARCHAR(255)         NOT NULL,    -- 비밀번호
                        phone           VARCHAR(20)          NULL,        -- 휴대폰 번호
                        profile_image   VARCHAR(255)         NULL,        -- 대표 이미지(프로필)
+                       refresh         VARCHAR(500)         NULL,
                        role            ENUM('USER','HOST','ADMIN')
                         NOT NULL DEFAULT 'USER',         -- 권한 구분
                        status          ENUM('ACTIVE','INACTIVE','SUSPENDED')
@@ -18,6 +19,7 @@ CREATE TABLE users (
                        UNIQUE KEY uq_users_username (username)
 );
 
+ALTER TABLE users ADD COLUMN refresh VARCHAR(500) COLLATE utf8mb4_unicode_ci NULL;
 
 ALTER TABLE users ADD COLUMN profile_image VARCHAR(255) NULL AFTER phone;
 

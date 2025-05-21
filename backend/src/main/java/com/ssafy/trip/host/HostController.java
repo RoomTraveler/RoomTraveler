@@ -1,6 +1,7 @@
 package com.ssafy.trip.host;
 
 import com.ssafy.trip.security.CustomUserDetails;
+import com.ssafy.trip.user.UserService;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import java.util.ArrayList;
@@ -33,7 +34,8 @@ import lombok.RequiredArgsConstructor;
 @CrossOrigin(origins = "http://localhost:3000", methods = {RequestMethod.OPTIONS, RequestMethod.DELETE, RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT})
 public class HostController {
     private final HostService hostService;
-    //private final UserService userService;
+    private final UserService userService;
+
     private final AccommodationService accommodationService;
     private final ReservationService reservationService;
     private final ReviewService reviewService;
@@ -96,12 +98,12 @@ public class HostController {
     public ResponseEntity<?> updateHost(
             @PathVariable Long hostId,
             @RequestBody Host hostRequest) {
-//        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-//        CustomUserDetails user = (CustomUserDetails) auth.getPrincipal();
-//        if (!user.getUserId().equals(hostId)) {
-//            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-//                    .body(Map.of("error", "권한이 없습니다."));
-//        }
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        CustomUserDetails user = (CustomUserDetails) auth.getPrincipal();
+        if (!user.getUser().getUserId().equals(hostId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "권한이 없습니다."));
+        }
         try {
             hostRequest.setHostId(hostId);
             hostService.updateHost(hostRequest);
@@ -119,12 +121,12 @@ public class HostController {
     public ResponseEntity<?> updateHostStatus(
             @PathVariable Long hostId,
             @RequestParam String hostStatus) {
-//        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-//        CustomUserDetails user = (CustomUserDetails) auth.getPrincipal();
-//        if (!user.getRole().equals("ADMIN")) {
-//            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-//                    .body(Map.of("error", "관리자만 접근할 수 있습니다."));
-//        }
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        CustomUserDetails user = (CustomUserDetails) auth.getPrincipal();
+        if (!user.getUser().getRole().equals("ADMIN")) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "관리자만 접근할 수 있습니다."));
+        }
         try {
             hostService.updateHostStatus(hostId, hostStatus);
             return ResponseEntity.ok(Map.of("message", "호스트 상태가 업데이트되었습니다."));
@@ -139,15 +141,15 @@ public class HostController {
      */
     @GetMapping("/{hostId}/can-register-accommodation")
     public ResponseEntity<?> canRegisterAccommodation(@PathVariable Long hostId) {
-//        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-//        CustomUserDetails user = (CustomUserDetails) auth.getPrincipal();
-//        if (!user.getRole().equals("HOST") && !user.getRole().equals("HOST")) {
-//            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-//                    .body(Map.of("error", "호스트만 숙소를 등록할 수 있습니다."));
-//        }
-//        if (user.getRole().equals("HOST")) {
-//            return ResponseEntity.ok(Map.of("canRegister", true));
-//        }
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        CustomUserDetails user = (CustomUserDetails) auth.getPrincipal();
+        if (!user.getUser().getRole().equals("HOST") && !user.getUser().getRole().equals("ADMIN")) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "호스트만 숙소를 등록할 수 있습니다."));
+        }
+        if (user.getUser().getRole().equals("HOST")) {
+            return ResponseEntity.ok(Map.of("canRegister", true));
+        }
         try {
             Host host = hostService.getHostById(hostId);
             boolean allowed = host != null && "APPROVED".equals(host.getHostStatus());
@@ -173,7 +175,7 @@ public class HostController {
                     .body(Map.of("error", "권한이 없습니다."));
         }
         try {
-            List<Reservation> reservations = reservationService.getReservationsByHostId(hostId);
+            List<Reservation> reservations = reservationService.getReservationsByHostId(hostId, status);
             // 필터링
             if (status != null) {
                 reservations.removeIf(r -> !status.equals(r.getStatus()));
@@ -203,12 +205,12 @@ public class HostController {
             @PathVariable Long hostId,
             @RequestParam(required = false) Long accommodationId,
             @RequestParam(required = false) Integer rating) {
-//        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-//        CustomUserDetails user = (CustomUserDetails) auth.getPrincipal();
-//        if (!user.getUserId().equals(hostId) && !user.getRole().equals("HOST")) {
-//            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-//                    .body(Map.of("error", "권한이 없습니다."));
-//        }
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        CustomUserDetails user = (CustomUserDetails) auth.getPrincipal();
+        if (!user.getUser().getUserId().equals(hostId) && !user.getUser().getRole().equals("HOST")) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "권한이 없습니다."));
+        }
         try {
             List<Accommodation> accommodations = accommodationService.getAccommodationsByHostId(hostId);
             List<Review> allReviews = new ArrayList<>();
@@ -242,12 +244,12 @@ public class HostController {
      */
     @GetMapping("/{hostId}/accommodations")
     public ResponseEntity<?> getHostAccommodations(@PathVariable Long hostId) {
-//        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-//        CustomUserDetails user = (CustomUserDetails) auth.getPrincipal();
-//        if (!user.getUserId().equals(hostId) && !user.getRole().equals("HOST")) {
-//            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-//                    .body(Map.of("error", "권한이 없습니다."));
-//        }
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        CustomUserDetails user = (CustomUserDetails) auth.getPrincipal();
+        if (!user.getUser().getUserId().equals(hostId) && !user.getUser().getRole().equals("HOST")) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "권한이 없습니다."));
+        }
         try {
             List<Accommodation> accommodations = accommodationService.getAccommodationsByHostId(hostId);
             Map<Long, List<Room>> roomsByAcc = new HashMap<>();
@@ -255,7 +257,7 @@ public class HostController {
             double totalRating = 0;
             int ratedCount = 0;
             for (Accommodation acc : accommodations) {
-                List<Room> rooms = accommodationService.getRoomsByAccommodationId(acc.getAccommodationId());
+                List<Room> rooms = accommodationService.getRoomsByAccommodationId(acc.getAccommodationId(), null, null, null);
                 roomsByAcc.put(acc.getAccommodationId(), rooms);
                 totalRooms += rooms.size();
                 if ("ACTIVE".equals(acc.getStatus())) activeAcc++;

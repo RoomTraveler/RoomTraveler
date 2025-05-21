@@ -1,5 +1,6 @@
 import { defineStore } from "pinia";
-import axios from "axios";
+// import axios from "axios"; // 기존 axios import 주석 처리 또는 삭제
+import api from "@/api/index"; // api/index.js에서 api 객체 가져오기
 import { useUserStore } from "./userStore"; // 사용자 스토어 필요시 사용
 
 export const useNotificationStore = defineStore("notification", {
@@ -27,7 +28,7 @@ export const useNotificationStore = defineStore("notification", {
       this.error = null;
       try {
         // API 엔드포인트는 NotificationController의 @GetMapping에 매칭됨
-        const response = await axios.get("/api/notifications", { params: filter });
+        const response = await api.api.get("/api/notifications", { params: filter });
         this.notifications = response.data.content;
         this.totalItems = response.data.totalElements;
         this.totalPages = response.data.totalPages;
@@ -51,7 +52,7 @@ export const useNotificationStore = defineStore("notification", {
     async fetchUnreadCount() {
       try {
         // API 엔드포인트는 NotificationController의 @GetMapping("/count/unread")에 매칭됨
-        const response = await axios.get("/api/notifications/count/unread");
+        const response = await api.api.get("/api/notifications/count/unread");
         this.unreadCount = response.data;
       } catch (err) {
         console.error("Error fetching unread notification count:", err);
@@ -67,7 +68,7 @@ export const useNotificationStore = defineStore("notification", {
       this.error = null;
       this.message = "";
       try {
-        await axios.patch(`/api/notifications/${notificationId}/read`);
+        await api.api.patch(`/api/notifications/${notificationId}/read`);
         const notification = this.notifications.find((n) => n.notificationId === notificationId);
         if (notification && !notification.read) {
           notification.read = true;
@@ -93,7 +94,7 @@ export const useNotificationStore = defineStore("notification", {
       this.message = "";
       try {
         // API 엔드포인트는 NotificationController의 @PutMapping("/read-all")에 매칭됨
-        await axios.patch("/api/notifications/read-all");
+        await api.api.patch("/api/notifications/read-all");
         this.notifications.forEach((n) => (n.read = true));
         this.unreadCount = 0;
         this.message = "모든 알림을 읽음으로 표시했습니다.";
@@ -112,7 +113,7 @@ export const useNotificationStore = defineStore("notification", {
       this.error = null;
       this.message = "";
       try {
-        await axios.delete(`/api/notifications/${notificationId}`);
+        await api.api.delete(`/api/notifications/${notificationId}`);
         const index = this.notifications.findIndex((n) => n.notificationId === notificationId);
         if (index !== -1) {
           const removedNotification = this.notifications.splice(index, 1)[0];
@@ -137,7 +138,7 @@ export const useNotificationStore = defineStore("notification", {
       this.message = "";
       try {
         // API 엔드포인트는 NotificationController의 @DeleteMapping("/delete-all")에 매칭됨
-        await axios.delete("/api/notifications/delete-all");
+        await api.api.delete("/api/notifications/delete-all");
         this.notifications = [];
         this.unreadCount = 0;
         this.totalItems = 0;

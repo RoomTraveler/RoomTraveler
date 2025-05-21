@@ -29,7 +29,7 @@ public class FavoriteRestController {
     public ResponseEntity<?> getFavorites(HttpSession session) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
-        Long userId = userDetails.getUserId();
+        Long userId = userDetails.getUser().getUserId();
         //Long userId = (Long) session.getAttribute("userId");
         if (userId == null)
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)

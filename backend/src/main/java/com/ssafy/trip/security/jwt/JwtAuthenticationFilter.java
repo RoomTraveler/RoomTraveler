@@ -33,32 +33,6 @@ public class JwtAuthenticationFilter extends UsernamePasswordAuthenticationFilte
         this.setFilterProcessesUrl("/api/user/auth/login");
         this.setUsernameParameter("email");
         this.setPasswordParameter("password");
-
-//        import axios from 'axios';
-//
-//// 로그인 데이터
-//const loginData = {
-//                email: 'test',
-//                password: '1234'
-//};
-//
-//// URLSearchParams를 이용해 form-urlencoded 형식으로 변환
-//const formBody = new URLSearchParams();
-//        formBody.append('email', loginData.email);
-//        formBody.append('password', loginData.password);
-//
-//// axios 요청
-//        axios.post('/api/user/login', formBody, {
-//                headers: {
-//            'Content-Type': 'application/x-www-form-urlencoded'
-//        }
-//})
-//.then(response => {
-//                console.log('로그인 성공:', response.data);
-//})
-//.catch(error => {
-//                console.error('로그인 실패:', error.response?.data || error.message);
-//});
     }
 
     @Override
