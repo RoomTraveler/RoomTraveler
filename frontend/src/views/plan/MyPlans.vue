@@ -21,6 +21,7 @@
         </ul>
 
         <button class="detail-button" @click="goToPlan(plan.planId)">✨ 자세히 보기</button>
+        <button class="delete-button" @click="deletePlan(plan.planId)">🗑️ 삭제</button>
       </div>
     </div>
 
@@ -87,6 +88,19 @@ const goToAttraction = (attractionId) => {
 // Plan 자세히보기 버튼 클릭 시 이동
 const goToPlan = (planId) => {
   router.push(`/plans/${planId}`);
+};
+
+const deletePlan = async (planId) => {
+  if (confirm(`플랜 #${planId}을 삭제하시겠습니까?`)) {
+    try {
+      await axios.delete(`http://localhost:8080/api/map/plans/${planId}`);
+      plans.value = plans.value.filter((plan) => plan.planId !== planId);
+      alert("삭제되었습니다.");
+    } catch (error) {
+      console.error("삭제 실패:", error);
+      alert("삭제 중 오류가 발생했습니다.");
+    }
+  }
 };
 
 // IntersectionObserver로 무한 스크롤 트리거
@@ -189,6 +203,21 @@ onMounted(() => {
 }
 .detail-button:hover {
   background-color: #45a049;
+}
+
+.delete-button {
+  width: 100%;
+  padding: 0.6rem;
+  font-size: 0.95rem;
+  background-color: #f44336;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-top: 0.5rem;
+}
+.delete-button:hover {
+  background-color: #e53935;
 }
 
 .loading {

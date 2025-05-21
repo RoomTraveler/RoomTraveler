@@ -74,4 +74,10 @@
         WHERE user_id = #{userId}
     </update>
 
+    <update id="updateUserRefreshToken">
+        UPDATE users
+        SET refresh = #{refreshToken}
+        WHERE user_id = #{userId}
+    </update>
+
 </mapper>

@@ -27,8 +27,8 @@ public class JwtUtil {
         return create("accessToken", accessExpire, Map.of("email", user.getEmail(), "id", user.getUserId(), "name", user.getUsername(),"role",user.getRole()));
     }
 
-    public String generateRefreshToken(String email, String role) {
-        return create("refreshToken", refreshExpire, Map.of("email", email,"role", role));
+    public String generateRefreshToken(User user) {
+        return create("refreshToken", refreshExpire, Map.of("email", user.getEmail(), "id", user.getUserId(), "name", user.getUsername(),"role",user.getRole()));
     }
 
     private String create(String subject, long expiration, Map<String, Object> claims) {

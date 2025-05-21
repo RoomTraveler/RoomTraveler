@@ -53,6 +53,12 @@ public class MapController {
         return ResponseEntity.ok(mapService.getAttractions(id));
     }
 
+    @GetMapping("/attractions")
+    public ResponseEntity<?> getAttractions(@RequestParam(defaultValue = "0") int page,
+                                      @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(mapService.getPopularAttractions(page, size));
+    }
+
     @GetMapping("/users/{userId}/plans")
     @Operation(summary = "여행 계획 조회", description = "사용자의 여행 계획 조회")
     @ApiResponse(responseCode = "200", description = "여행 계획 조회 성공")
@@ -67,6 +73,12 @@ public class MapController {
         return ResponseEntity.ok(mapService.getPlanByPlanId(planId));
     }
 
+    @GetMapping("/plans")
+    public ResponseEntity<?> getPlans(@RequestParam(defaultValue = "0") int page,
+                                      @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(mapService.getSharedPlans(page, size));
+    }
+
     @PostMapping("/plans")
     @Operation(summary = "여행 계획 저장", description = "사용자의 여행 계획 저장")
     @ApiResponse(responseCode = "200", description = "여행 계획 저장 성공")
@@ -79,12 +91,6 @@ public class MapController {
     public ResponseEntity<?> deletePlan(@PathVariable Long planId) {
         mapService.deletePlan(planId);
         return ResponseEntity.ok("Plan Deleted");
-    }
-
-    @GetMapping("/plans")
-    public ResponseEntity<?> getPlans(@RequestParam(defaultValue = "0") int page,
-                                      @RequestParam(defaultValue = "10") int size) {
-        return ResponseEntity.ok(mapService.getSharedPlans(page, size));
     }
 
     @GetMapping("/likes/attractions")

@@ -59,5 +59,7 @@ public interface UserService {
     /**
      * 이메일로 사용자를 조회합니다.
      */
-    Optional<User> getUserByEmail(String email) throws SQLException;
+    Optional<User> getUserByEmail(String email);
+
+    int updateUserRefresh(Long userId, String refreshToken);
 }

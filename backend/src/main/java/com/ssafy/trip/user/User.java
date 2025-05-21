@@ -20,6 +20,7 @@ public class User {
     private String phone;        // 휴대폰 번호
     private String role;         // 권한 구분 (USER, HOST, ADMIN)
     private String status;       // 계정 상태 (ACTIVE, INACTIVE, SUSPENDED)
+    private String refreshToken;
     private String createdAt;    // 생성 시간
     private String updatedAt;    // 수정 시간
 }

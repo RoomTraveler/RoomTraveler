@@ -53,4 +53,6 @@ public interface UserDao {
      * 이메일로 사용자를 조회합니다.
      */
     Optional<User> getUserByEmail(String email);
+
+    int updateUserRefreshToken(Long userId, String refreshToken);
 }

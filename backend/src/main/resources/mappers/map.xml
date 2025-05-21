@@ -163,6 +163,25 @@
         FROM attractions WHERE no = #{id}
     </select>
 
+    <select id="getPopularAttractions" resultMap="RegionTripResDtoMap">
+        SELECT no,
+            title,
+            first_image1 AS image,
+            first_image2 As image2,
+            addr1,
+            addr2,
+            tel,
+            latitude,
+            longitude,
+            content_type_id,
+            homepage,
+            overview,
+            likes
+        FROM attractions
+        ORDER BY likes DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
     <select id="getSharedPlans" resultMap="PlanWithAttractions">
         SELECT
             p.plan_id        AS plan_id,

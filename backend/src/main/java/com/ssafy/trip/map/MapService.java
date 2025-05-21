@@ -22,6 +22,8 @@ public interface MapService {
     //MapDTO.TotalPage getRegionTripTotalPage(MapDTO.MapBound mapBound, int contentType, String keyword);
     RegionTripResDto getAttractions(Long id);
 
+    List<RegionTripResDto> getPopularAttractions(int page, int size);
+
     List<MapDTO.PlanDTO> getSharedPlans(int page, int size);
 
     // 관광지 좋아요 토글

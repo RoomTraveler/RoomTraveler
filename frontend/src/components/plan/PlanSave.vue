@@ -225,42 +225,21 @@ const setMinDate = () => {
 };
 
 const loadKakaoMapScript = async () => {
-  return new Promise((resolve, reject) => {
-    // console.log(window.kakao);
-    // console.log(window.kakao.maps);
-    // if (window.kakao && window.kakao.maps) {
-    //   resolve();
-    //   return;
-    // }
+  const centerLatLng = { latitude: 35.205432, longitude: 126.811591 };
+  const options = {
+    center: new window.kakao.maps.LatLng(centerLatLng.latitude, centerLatLng.longitude),
+    level: 6,
+  };
+  map = new window.kakao.maps.Map(mapContainer.value, options);
+  imageSize.value = new window.kakao.maps.Size(30, 30);
+  imageOption.value = { offset: new window.kakao.maps.Point(15, 30) };
 
-    const script = document.createElement("script");
-    script.src = "//dapi.kakao.com/v2/maps/sdk.js?appkey=a1b7d43f74e8d7c4fa60d02ce2c13f58&autoload=false";
-    document.head.appendChild(script);
-
-    script.onload = () => {
-      window.kakao.maps.load(() => {
-        console.log(123);
-        const centerLatLng = { latitude: 35.205432, longitude: 126.811591 };
-        const options = {
-          center: new window.kakao.maps.LatLng(centerLatLng.latitude, centerLatLng.longitude),
-          level: 6,
-        };
-        map = new window.kakao.maps.Map(mapContainer.value, options);
-        imageSize.value = new window.kakao.maps.Size(30, 30);
-        imageOption.value = { offset: new window.kakao.maps.Point(15, 30) };
-
-        if (navigator.geolocation) {
-          navigator.geolocation.getCurrentPosition((pos) => {
-            const { latitude, longitude } = pos.coords;
-            map.setCenter(new window.kakao.maps.LatLng(latitude, longitude));
-          });
-        }
-      });
-    };
-    script.onerror = (e) => {
-      reject(e);
-    };
-  });
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition((pos) => {
+      const { latitude, longitude } = pos.coords;
+      map.setCenter(new window.kakao.maps.LatLng(latitude, longitude));
+    });
+  }
 };
 
 const loadContentList = async () => {

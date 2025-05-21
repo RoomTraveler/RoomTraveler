@@ -9,9 +9,20 @@
     <section class="popular-section">
       <h2 class="section-title">인기 있는 관광지</h2>
       <div class="card-list">
-        <div class="place-card" v-for="(place, index) in popularPlaces" :key="index">
-          <img :src="place.image" :alt="place.name" />
-          <h3>{{ place.name }}</h3>
+        <div class="place-card" v-for="(place, index) in popularPlaces" :key="index" @click="goToPlaceDetail(place.no)">
+          <img
+            :src="place.image === '' || place.image === null ? '/src/assets/no-image.jpg' : place.image"
+            :alt="place.title"
+            class="place-image"
+          />
+          <div class="place-info">
+            <h3>{{ place.title }}</h3>
+            <p class="address">
+              {{ place.addr1 }} <span v-if="place.addr2">{{ place.addr2 }}</span>
+            </p>
+            <p v-if="place.tel" class="tel">📞 {{ place.tel }}</p>
+            <span class="likes">❤️ {{ place.likes }}</span>
+          </div>
         </div>
       </div>
     </section>
@@ -67,7 +78,7 @@
 </template>
 
 <script setup>
-import axios from "axios";
+import api from "@/api/index";
 import Layout from "@/components/layout/Layout.vue";
 import { ref, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
@@ -87,18 +98,34 @@ onMounted(() => {
   intervalId = setInterval(() => {
     currentIndex.value = (currentIndex.value + 1) % images.value.length;
   }, 5000);
+  popularFiveAttractions();
   popularFivePlans();
 });
 
+const popularFiveAttractions = async () => {
+  try {
+    const res = await api.api({
+      url: "/api/map/attractions?size=5",
+      method: "GET",
+    });
+    popularPlaces.value = res.data;
+  } catch (error) {
+    console.error("플랜 불러오기 실패:", error);
+  }
+};
+
 const popularFivePlans = async () => {
   try {
-    const res = await axios.get("http://localhost:8080/api/map/plans?size=5");
+    const res = await api.api({
+      url: "/api/map/plans?size=5",
+      method: "GET",
+    });
     popularPlans.value = res.data.map((plan) => {
       const attractions = plan.planAttractions || [];
       const titles = attractions.map((a) => a.title);
       const summary = titles.length > 1 ? `${titles[0]} 외 ${titles.length - 1}곳` : titles[0] || "장소 없음";
 
-      const image = attractions[0]?.imageUrl || "기본이미지경로.jpg";
+      const image = attractions[0]?.imageUrl || "/src/assets/no-image.jpg";
       const title = `여행 플랜 #${plan.planId}`; // 혹은 plan.title 사용
 
       return {
@@ -230,7 +257,8 @@ onUnmounted(() => {
 
 .place-card,
 .plan-card {
-  min-width: 220px;
+  min-width: 218px;
+  width: 218px;
   background: #fff;
   border-radius: 12px;
   overflow: hidden;

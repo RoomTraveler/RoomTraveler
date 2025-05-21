@@ -12,6 +12,7 @@ import App from "./App.vue"; // 루트 컴포넌트
 import router from "./router"; // 라우터 설정
 import "./assets/main.css"; //Tailwind 가져오기
 import "element-plus/dist/index.css"; // Element Plus CSS 추가
+import piniaPersist from "pinia-plugin-persistedstate";
 
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap";
@@ -23,7 +24,11 @@ const app = createApp(App);
 
 // Pinia 상태 관리 스토어 설정
 // 이를 통해 애플리케이션 전체에서 상태를 공유하고 관리할 수 있습니다.
-app.use(createPinia());
+
+const pinia = createPinia();
+pinia.use(piniaPersist);
+
+app.use(pinia);
 
 // Vue Router 설정
 // 이를 통해 SPA(단일 페이지 애플리케이션)에서 페이지 간 네비게이션이 가능합니다.

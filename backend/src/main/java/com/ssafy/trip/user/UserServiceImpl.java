@@ -100,7 +100,12 @@ public class UserServiceImpl implements UserService {
      * 이메일로 사용자를 조회합니다.
      */
     @Override
-    public Optional<User> getUserByEmail(String email) throws SQLException {
+    public Optional<User> getUserByEmail(String email) {
         return dao.getUserByEmail(email);
+    }
+
+    @Override
+    public int updateUserRefresh(Long userId, String refreshToken) {
+        return dao.updateUserRefreshToken(userId, refreshToken);
     }
 }

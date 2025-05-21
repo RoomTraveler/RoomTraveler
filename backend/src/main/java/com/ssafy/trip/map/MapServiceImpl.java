@@ -62,6 +62,12 @@ public class MapServiceImpl implements MapService {
     }
 
     @Override
+    public List<RegionTripResDto> getPopularAttractions(int page, int size) {
+        int offset = page * size;
+        return mapDAO.getPopularAttractions(offset, size);
+    }
+
+    @Override
     public List<MapDTO.PlanDTO> getSharedPlans(int page, int size) {
         int offset = page * size;
         return mapDAO.getSharedPlans(offset, size);

@@ -2,7 +2,7 @@
   <div class="login-container">
     <div class="login-form">
       <!-- 동적 타이틀 -->
-      <h1>{{ isHostMode ? '호스트 회원 로그인' : '로그인' }}</h1>
+      <h1>{{ isHostMode ? "호스트 회원 로그인" : "로그인" }}</h1>
 
       <div v-if="error" class="error-message">
         {{ error }}
@@ -12,23 +12,17 @@
         <div class="form-group">
           <label for="email">이메일</label>
           <input
-              type="email"
-              id="email"
-              v-model="email"
-              required
-              :placeholder="isHostMode ? '호스트 이메일을 입력하세요' : '이메일 주소를 입력하세요'"
+            type="email"
+            id="email"
+            v-model="email"
+            required
+            :placeholder="isHostMode ? '호스트 이메일을 입력하세요' : '이메일 주소를 입력하세요'"
           />
         </div>
 
         <div class="form-group">
           <label for="password">비밀번호</label>
-          <input
-              type="password"
-              id="password"
-              v-model="password"
-              required
-              placeholder="비밀번호를 입력하세요"
-          />
+          <input type="password" id="password" v-model="password" required placeholder="비밀번호를 입력하세요" />
         </div>
 
         <div class="form-options">
@@ -40,7 +34,9 @@
         </div>
 
         <button type="submit" class="login-button" :disabled="loading">
-          {{ loading ? (isHostMode ? '호스트 로그인 중...' : '로그인 중...') : (isHostMode ? '호스트 로그인' : '로그인') }}
+          {{
+            loading ? (isHostMode ? "호스트 로그인 중..." : "로그인 중...") : isHostMode ? "호스트 로그인" : "로그인"
+          }}
         </button>
       </form>
 
@@ -58,14 +54,14 @@
       <div class="register-link">
         계정이 없으신가요?
         <router-link :to="isHostMode ? '/host/register' : '/register'">
-          {{ isHostMode ? '비즈니스 회원가입' : '회원가입' }}
+          {{ isHostMode ? "비즈니스 회원가입" : "회원가입" }}
         </router-link>
       </div>
 
       <!-- 모드 토글 버튼 -->
       <div class="mode-toggle">
         <button type="button" @click="toggleMode">
-          {{ isHostMode ? '일반 로그인/회원가입' : '호스트 로그인/회원가입' }}
+          {{ isHostMode ? "일반 로그인/회원가입" : "호스트 로그인/회원가입" }}
         </button>
       </div>
     </div>
@@ -73,55 +69,45 @@
 </template>
 
 <script>
+import api from "@/api/index";
+import { useUserStore } from "@/store/userStore";
+
 export default {
-  name: 'LoginView',
+  name: "LoginView",
   data() {
     return {
-      email: '',
-      password: '',
+      email: "",
+      password: "",
       rememberMe: false,
       loading: false,
       error: null,
-      isHostMode: false
+      isHostMode: false,
     };
   },
   methods: {
-    login() {
+    async login() {
       this.loading = true;
       this.error = null;
 
-      setTimeout(() => {
-        const validEmail = this.isHostMode ? 'host@example.com' : 'user@example.com';
-        if (this.email === validEmail && this.password === 'password') {
-          const key = this.isHostMode ? 'host' : 'user';
-          const user = {
-            id: 1,
-            email: this.email,
-            name: this.isHostMode ? '호스트 홍길동' : '홍길동',
-            role: this.isHostMode ? 'HOST' : 'USER'
-          };
-          localStorage.setItem(key, JSON.stringify(user));
-          const redirectPath = this.$route.query.redirect || (this.isHostMode ? '/host' : '/');
-          this.$router.push(redirectPath);
-        } else {
-          this.error = '이메일 또는 비밀번호가 올바르지 않습니다.';
-        }
-        this.loading = false;
-      }, 1000);
+      const useStore = useUserStore();
+      useStore.login(this.email, this.password);
+
+      const redirectPath = this.$route.query.redirect || (this.isHostMode ? "/host" : "/");
+      this.$router.push(redirectPath);
     },
     toggleMode() {
       this.isHostMode = !this.isHostMode;
       this.error = null;
-      this.email = '';
-      this.password = '';
-    }
+      this.email = "";
+      this.password = "";
+    },
   },
   created() {
-    const key = this.isHostMode ? 'host' : 'user';
+    const key = this.isHostMode ? "host" : "user";
     if (localStorage.getItem(key)) {
-      this.$router.push(this.isHostMode ? '/host' : '/');
+      this.$router.push(this.isHostMode ? "/host" : "/");
     }
-  }
+  },
 };
 </script>
 

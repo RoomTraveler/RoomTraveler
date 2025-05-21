@@ -12,20 +12,8 @@
 
             <!-- 토글 버튼 영역 -->
             <div class="toggle-wrapper">
-              <div
-                class="toggle-button"
-                :class="{ active: selected === '숙박' }"
-                @click="select('숙박')"
-              >
-                숙박
-              </div>
-              <div
-                class="toggle-button"
-                :class="{ active: selected === '여행' }"
-                @click="select('여행')"
-              >
-                여행
-              </div>
+              <div class="toggle-button" :class="{ active: selected === '숙박' }" @click="select('숙박')">숙박</div>
+              <div class="toggle-button" :class="{ active: selected === '여행' }" @click="select('여행')">여행</div>
               <div class="toggle-indicator" :style="indicatorStyle"></div>
             </div>
           </div>
@@ -33,7 +21,7 @@
           <!-- 검색 영역 -->
           <div class="search-area">
             <div class="search-input-wrapper">
-              <input v-if="selected !== '숙박'" type="text" placeholder="관광지" class="search-input"/>
+              <input v-if="selected !== '숙박'" type="text" placeholder="관광지" class="search-input" />
               <input v-else type="text" placeholder="지역, 숙소명" class="search-input" />
               <button class="search-button">
                 <i class="bi bi-search"></i>
@@ -89,24 +77,21 @@
         </div>
       </div>
     </div>
-
-
-
   </div>
 </template>
 
 <script>
-import { useUserStore } from '@/store/userStore';
-import api from '@/api/index';
+import { useUserStore } from "@/store/userStore";
+import api from "@/api/index";
 
 /**
  * 헤더 컴포넌트
- * 
+ *
  * 이 컴포넌트는 웹사이트의 공통 헤더 부분을 담당합니다.
  * 로그인 상태에 따라 다른 메뉴를 표시하며, 알림 기능을 포함합니다.
  */
 export default {
-  name: 'Header',
+  name: "Header",
   setup() {
     // Pinia 스토어 사용
     const userStore = useUserStore();
@@ -115,8 +100,8 @@ export default {
   data() {
     return {
       unreadNotificationCount: 0,
-      selected: '숙박'
-    }
+      selected: "숙박",
+    };
   },
   computed: {
     /**
@@ -125,49 +110,49 @@ export default {
      */
     indicatorStyle() {
       return {
-        transform: this.selected === '숙박' ? 'translateX(0%)' : 'translateX(100%)',
-      }
+        transform: this.selected === "숙박" ? "translateX(0%)" : "translateX(100%)",
+      };
     },
     /**
      * 사용자 로그인 상태 확인
      * @returns {boolean} 로그인 상태 여부
      */
     isLoggedIn() {
-      return this.userStore.isAuthenticated
+      return this.userStore.isAuthenticated;
     },
     /**
      * 현재 로그인한 사용자 ID
      * @returns {number|null} 사용자 ID 또는 null
      */
     userId() {
-      return this.userStore.user?.id
+      return this.userStore.user?.id;
     },
     /**
      * 사용자가 관리자인지 확인
      * @returns {boolean} 관리자 여부
      */
     isAdmin() {
-      return this.userStore.userRole === 'ADMIN'
-    }
+      return this.userStore.userRole === "ADMIN";
+    },
   },
   mounted() {
     // 로그인 상태일 때만 알림 카운트 로드
     if (this.isLoggedIn) {
-      this.loadNotificationCount()
+      this.loadNotificationCount();
       // 30초마다 알림 카운트 갱신
-      this.notificationInterval = setInterval(this.loadNotificationCount, 30000)
+      this.notificationInterval = setInterval(this.loadNotificationCount, 30000);
     }
 
-    if (this.$route.path.includes('/accommodation')) {
-      this.selected = '숙박';
-    } else if (this.$route.path.includes('/plan')) {
-      this.selected = '여행';
+    if (this.$route.path.includes("/accommodation")) {
+      this.selected = "숙박";
+    } else if (this.$route.path.includes("/plan")) {
+      this.selected = "여행";
     }
   },
   beforeUnmount() {
     // 컴포넌트 제거 시 인터벌 정리
     if (this.notificationInterval) {
-      clearInterval(this.notificationInterval)
+      clearInterval(this.notificationInterval);
     }
   },
   methods: {
@@ -176,36 +161,34 @@ export default {
      * @param {string} value - 선택된 값 ('숙박' 또는 '여행')
      */
     select(value) {
-      this.selected = value
+      this.selected = value;
       // 선택된 값에 따라 다른 페이지로 이동
-      if (value === '숙박') {
-        this.$router.push('/accommodation')
-      } else if (value === '여행') {
-        this.$router.push('/plan')
+      if (value === "숙박") {
+        this.$router.push("/accommodation");
+      } else if (value === "여행") {
+        this.$router.push("/plan");
       }
     },
     /**
      * 알림 카운트 로드 함수
      */
-    loadNotificationCount() {
+    async loadNotificationCount() {
       // API 호출로 알림 카운트 가져오기
-      api.get('/api/notification/count/unread')
-        .then(response => {
-          this.unreadNotificationCount = response.data
-        })
-        .catch(error => {
-          console.error('알림 카운트 로드 중 오류:', error)
-        })
+      const response = await api.api({
+        url: "/api/notification/count/unread",
+        method: "GET",
+      });
+      this.unreadNotificationCount = response.data;
     },
     /**
      * 로그아웃 처리 함수
      */
     logout() {
       this.userStore.logout();
-      this.$router.push('/');
-    }
-  }
-}
+      this.$router.push("/");
+    },
+  },
+};
 </script>
 
 <style scoped>
@@ -409,7 +392,8 @@ export default {
   transition: all 0.2s;
 }
 
-.nav-item:hover, .nav-item.active {
+.nav-item:hover,
+.nav-item.active {
   color: var(--yanolja-red);
 }
 

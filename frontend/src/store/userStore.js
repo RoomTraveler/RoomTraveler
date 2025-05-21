@@ -1,155 +1,168 @@
-import { defineStore } from 'pinia';
+import { defineStore } from "pinia";
+import { ref, computed } from "vue";
+import api from "@/api/index";
+import { jwtDecode } from "jwt-decode";
 
-// 사용자 스토어 정의
-export const useUserStore = defineStore('user', {
-  // 상태(state)
-  state: () => ({
-    user: null,
-    loading: false,
-    error: null
-  }),
+export const useUserStore = defineStore(
+  "user",
+  () => {
+    // state
+    const user = ref(null);
+    const loading = ref(false);
+    const error = ref(null);
+    const _tokens = ref({});
+    const tokens = computed(() => _tokens.value);
 
-  // 게터(getters)
-  getters: {
-    isAuthenticated: (state) => !!state.user,
-    userName: (state) => state.user?.name || '',
-    userEmail: (state) => state.user?.email || '',
-    userRole: (state) => state.user?.role || 'GUEST'
-  },
+    // getters
+    const isAuthenticated = computed(() => !!user.value);
+    const userName = computed(() => user.value?.name || "");
+    const userEmail = computed(() => user.value?.email || "");
+    const userRole = computed(() => user.value?.role || "GUEST");
 
-  // 액션(actions)
-  actions: {
-    // 로컬 스토리지에서 사용자 정보 로드
-    loadUserFromStorage() {
+    // actions
+    function loadUserFromStorage() {
       try {
-        const storedUser = localStorage.getItem('user');
-        if (storedUser) {
-          this.user = JSON.parse(storedUser);
+        const stored = localStorage.getItem("user");
+        if (stored) {
+          user.value = JSON.parse(stored);
         }
-      } catch (error) {
-        console.error('사용자 정보 로드 중 오류 발생:', error);
-        localStorage.removeItem('user');
-      }
-    },
-
-    // 로그인 처리
-    async login(email, password) {
-      this.loading = true;
-      this.error = null;
-
-      try {
-        // 실제 API 호출 대신 임시 로직 사용
-        await new Promise(resolve => setTimeout(resolve, 1000));
-
-        // 간단한 유효성 검사 (실제로는 서버에서 처리)
-        if (email === 'user@example.com' && password === 'password') {
-          // 로그인 성공
-          const user = {
-            id: 1,
-            email: email,
-            name: '홍길동',
-            role: 'USER',
-            createdAt: new Date().toISOString()
-          };
-
-          // 상태 업데이트
-          this.user = user;
-
-          // 로컬 스토리지에 사용자 정보 저장
-          localStorage.setItem('user', JSON.stringify(user));
-
-          return { success: true };
-        } else {
-          // 로그인 실패
-          throw new Error('이메일 또는 비밀번호가 올바르지 않습니다.');
-        }
-      } catch (error) {
-        this.error = error.message;
-        return { success: false, error: error.message };
-      } finally {
-        this.loading = false;
-      }
-    },
-
-    // 회원가입 처리
-    async register(userData) {
-      this.loading = true;
-      this.error = null;
-
-      try {
-        // 실제 API 호출 대신 임시 로직 사용
-        await new Promise(resolve => setTimeout(resolve, 1000));
-
-        // 이메일 중복 체크 (실제로는 서버에서 처리)
-        if (userData.email === 'user@example.com') {
-          throw new Error('이미 사용 중인 이메일 주소입니다.');
-        }
-
-        // 회원가입 성공 (실제로는 서버에서 처리)
-        return { success: true };
-      } catch (error) {
-        this.error = error.message;
-        return { success: false, error: error.message };
-      } finally {
-        this.loading = false;
-      }
-    },
-
-    // 로그아웃 처리
-    logout() {
-      this.user = null;
-      localStorage.removeItem('user');
-    },
-
-    // 사용자 정보 업데이트
-    async updateProfile(profileData) {
-      this.loading = true;
-      this.error = null;
-
-      try {
-        // 실제 API 호출 대신 임시 로직 사용
-        await new Promise(resolve => setTimeout(resolve, 1000));
-
-        // 사용자 정보 업데이트
-        this.user = {
-          ...this.user,
-          ...profileData
-        };
-
-        // 로컬 스토리지 업데이트
-        localStorage.setItem('user', JSON.stringify(this.user));
-
-        return { success: true };
-      } catch (error) {
-        this.error = error.message;
-        return { success: false, error: error.message };
-      } finally {
-        this.loading = false;
-      }
-    },
-
-    // 비밀번호 변경
-    async changePassword(currentPassword, newPassword) {
-      this.loading = true;
-      this.error = null;
-
-      try {
-        // 실제 API 호출 대신 임시 로직 사용
-        await new Promise(resolve => setTimeout(resolve, 1000));
-
-        // 현재 비밀번호 확인 (실제로는 서버에서 처리)
-        if (currentPassword !== 'password') {
-          throw new Error('현재 비밀번호가 올바르지 않습니다.');
-        }
-
-        // 비밀번호 변경 성공 (실제로는 서버에서 처리)
-        return { success: true };
-      } catch (error) {
-        this.error = error.message;
-        return { success: false, error: error.message };
-      } finally {
-        this.loading = false;
+      } catch (err) {
+        console.error("사용자 정보 로드 중 오류 발생:", err);
+        localStorage.removeItem("user");
       }
     }
+
+    async function login(email, password) {
+      loading.value = true;
+      error.value = null;
+
+      const response = await api.api({
+        url: "/api/user/auth/login",
+        method: "post",
+        data: {
+          email,
+          password,
+        },
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+      });
+      _tokens.value = response.data;
+      const decoded = jwtDecode(_tokens.value.access_token);
+      user.value = { name: decoded.name, email: decoded.email, role: decoded.role };
+    }
+
+    async function register(userData) {
+      loading.value = true;
+      error.value = null;
+
+      try {
+        await new Promise((r) => setTimeout(r, 1000));
+
+        if (userData.email === "user@example.com") {
+          throw new Error("이미 사용 중인 이메일 주소입니다.");
+        }
+
+        return { success: true };
+      } catch (err) {
+        error.value = err.message;
+        return { success: false, error: err.message };
+      } finally {
+        loading.value = false;
+      }
+    }
+
+    async function logout() {
+      try {
+        _tokens.value.accessToken = null;
+        await api.api.post("/api/user/auth/logout", {
+          headers: {
+            "Refresh-Token": _tokens.value.refreshToken,
+          },
+        });
+      } finally {
+        user.value = null;
+        _tokens.value = {};
+        localStorage.removeItem("user");
+      }
+    }
+
+    async function updateProfile(profileData) {
+      loading.value = true;
+      error.value = null;
+
+      try {
+        await new Promise((r) => setTimeout(r, 1000));
+
+        user.value = { ...user.value, ...profileData };
+        localStorage.setItem("user", JSON.stringify(user.value));
+        return { success: true };
+      } catch (err) {
+        error.value = err.message;
+        return { success: false, error: err.message };
+      } finally {
+        loading.value = false;
+      }
+    }
+
+    async function changePassword(currentPassword, newPassword) {
+      loading.value = true;
+      error.value = null;
+
+      try {
+        await new Promise((r) => setTimeout(r, 1000));
+
+        if (currentPassword !== "password") {
+          throw new Error("현재 비밀번호가 올바르지 않습니다.");
+        }
+
+        return { success: true };
+      } catch (err) {
+        error.value = err.message;
+        return { success: false, error: err.message };
+      } finally {
+        loading.value = false;
+      }
+    }
+
+    const refresh = async () => {
+      _tokens.value.accessToken = null;
+      const response = await api.api.post("/api/user/auth/refresh", {
+        headers: {
+          "Refresh-Token": _tokens.value.refreshToken,
+        },
+      });
+      _tokens.value = response.data.data;
+    };
+
+    return {
+      // state
+      user,
+      loading,
+      error,
+      tokens,
+      _tokens,
+
+      // getters
+      isAuthenticated,
+      userName,
+      userEmail,
+      userRole,
+
+      // actions
+      loadUserFromStorage,
+      login,
+      register,
+      logout,
+      updateProfile,
+      changePassword,
+      refresh,
+    };
+  },
+  {
+    persist: {
+      storage: sessionStorage,
+      paths: ["user", "_tokens"],
+    },
   }
-});
+);

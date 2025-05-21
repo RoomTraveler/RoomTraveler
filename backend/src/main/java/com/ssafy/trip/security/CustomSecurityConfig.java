@@ -61,7 +61,8 @@ public class CustomSecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
         http.authorizeHttpRequests(authorize ->
-                authorize.requestMatchers("/api/user/auth/**", "/api/map/plans").permitAll()); // 바로 통과 시킬 경로
+                authorize.anyRequest().permitAll());
+                //authorize.requestMatchers("/api/user/auth/**", "/api/map/plans", "/api/map/users/*/plans").permitAll()); // 바로 통과 시킬 경로
 
         http.addFilterBefore(jwtVerificationFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterAt(authFilter, UsernamePasswordAuthenticationFilter.class)

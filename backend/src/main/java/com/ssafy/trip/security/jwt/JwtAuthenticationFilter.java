@@ -3,6 +3,7 @@ package com.ssafy.trip.security.jwt;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.trip.security.CustomUserDetails;
+import com.ssafy.trip.user.User;
 import com.ssafy.trip.user.UserService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -29,7 +30,7 @@ public class JwtAuthenticationFilter extends UsernamePasswordAuthenticationFilte
         super(authenticationManager);
         this.userService = userService;
         this.jwtUtil = jwtUtil;
-        this.setFilterProcessesUrl("/api/user/login");
+        this.setFilterProcessesUrl("/api/user/auth/login");
         this.setUsernameParameter("email");
         this.setPasswordParameter("password");
 
@@ -63,8 +64,13 @@ public class JwtAuthenticationFilter extends UsernamePasswordAuthenticationFilte
     @Override
     protected void successfulAuthentication(HttpServletRequest request, HttpServletResponse response, FilterChain chain, Authentication authResult) throws IOException, ServletException {
         CustomUserDetails userDetails = (CustomUserDetails) authResult.getPrincipal();
-        String accessToken = jwtUtil.generateAccessToken(userDetails.getUser());
-        Map<String, String> result = Map.of("status", "SUCCESS","access_token", accessToken);
+        User user = userDetails.getUser();
+        String accessToken = jwtUtil.generateAccessToken(user);
+
+        String refreshToken = jwtUtil.generateRefreshToken(user);
+        userService.updateUserRefresh(user.getUserId(), refreshToken);
+
+        Map<String, String> result = Map.of("status", "SUCCESS","access_token", accessToken, "refreshToken", refreshToken);
         handleResult(response, result, HttpStatus.OK);
     }
 

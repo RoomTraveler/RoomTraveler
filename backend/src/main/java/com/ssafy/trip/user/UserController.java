@@ -1,6 +1,7 @@
 package com.ssafy.trip.user;
 
 import com.ssafy.trip.security.jwt.JwtUtil;
+import io.jsonwebtoken.JwtException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -19,12 +20,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * 사용자 RESTful API 컨트롤러
@@ -144,26 +140,20 @@ public class UserController {
 
 		String email = ((UserDetails) authentication.getPrincipal()).getUsername();
 
-		try {
-			Optional<User> OptionalUser = userService.getUserByEmail(email);
-			if (OptionalUser.isEmpty()) {
-				response.put("success", false);
-				response.put("message", "사용자 정보를 찾을 수 없습니다.");
-				return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
-			}
-
-			// 비밀번호는 응답에서 제외
-			User user = OptionalUser.get();
-			user.setPassword(null);
-
-			response.put("success", true);
-			response.put("user", user);
-			return new ResponseEntity<>(response, HttpStatus.OK);
-		} catch (SQLException e) {
+		Optional<User> OptionalUser = userService.getUserByEmail(email);
+		if (OptionalUser.isEmpty()) {
 			response.put("success", false);
-			response.put("message", "사용자 정보 조회 중 오류가 발생했습니다: " + e.getMessage());
-			return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+			response.put("message", "사용자 정보를 찾을 수 없습니다.");
+			return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
 		}
+
+		// 비밀번호는 응답에서 제외
+		User user = OptionalUser.get();
+		user.setPassword(null);
+
+		response.put("success", true);
+		response.put("user", user);
+		return new ResponseEntity<>(response, HttpStatus.OK);
 	}
 
 
@@ -297,4 +287,46 @@ public class UserController {
 		}
 	}
 
+	@PostMapping("/refresh")
+	public ResponseEntity<?> refreshAccessToken(@RequestHeader("Refresh-Token") String token) {
+		if (token == null || token.trim().isEmpty()) {
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", "Refresh token is required"));
+		}
+		Map<String, Object> claims = jwtUtil.getClaims(token);
+		String email = (String) claims.get("email");
+		if (email == null || email.trim().isEmpty()) {
+			throw new JwtException("Invalid refresh token: email claim missing");
+		}
+
+		Optional<User> Ouser = userService.getUserByEmail(email);
+		if (Ouser.isEmpty()) {
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Invalid refresh token"));
+		}
+		User user = Ouser.get();
+		if (user.getRefreshToken() == null || !user.getRefreshToken().equals(token)) {
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Invalid refresh token"));
+		}
+		String newAccessToken = jwtUtil.generateAccessToken(user);
+		String newRefreshToken = jwtUtil.generateRefreshToken(user);
+		userService.updateUserRefresh(user.getUserId(), newRefreshToken);
+		return ResponseEntity.status(HttpStatus.OK).body(Map.of("accessToken", newAccessToken, "refreshToken", newRefreshToken));
+	}
+
+	@PostMapping("/logout")
+	public ResponseEntity<?> logout(@RequestHeader("Refresh-Token") String token) {
+		if (token == null || token.trim().isEmpty()) {
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", "Refresh token is required"));
+		}
+
+		Map<String, Object> claims = jwtUtil.getClaims(token);
+		String email = (String) claims.get("email");
+		if (email == null) {
+			throw new JwtException("Invalid refresh token: email claim missing");
+		}
+
+		User user = userService.getUserByEmail(email).get();
+		user.setRefreshToken(null);
+
+		return ResponseEntity.status(HttpStatus.OK).body(Map.of("accessToken", jwtUtil.generateAccessToken(user)));
+	}
 }
