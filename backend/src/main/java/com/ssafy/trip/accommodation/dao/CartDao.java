@@ -7,6 +7,7 @@ import org.apache.ibatis.annotations.Mapper;
 
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 장바구니 데이터 액세스 인터페이스
@@ -30,7 +31,7 @@ public interface CartDao {
      * @return 생성된 장바구니 ID
      * @throws SQLException SQL 예외
      */
-    Long createCart(Long userId) throws SQLException;
+    Long createCart(Map<String, Object> params) throws SQLException;
 
     /**
      * 장바구니에 아이템을 추가합니다.

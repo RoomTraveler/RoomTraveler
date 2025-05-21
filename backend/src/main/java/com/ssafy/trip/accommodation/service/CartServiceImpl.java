@@ -10,7 +10,9 @@ import java.math.BigDecimal;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import lombok.RequiredArgsConstructor;
 
@@ -30,7 +32,10 @@ public class CartServiceImpl implements CartService {
     public Cart getOrCreateCart(Long userId) throws SQLException {
         Cart cart = cartDao.getCartByUserId(userId);
         if (cart == null) {
-            Long cartId = cartDao.createCart(userId);
+            Map<String, Object> params = new HashMap<>();
+            params.put("userId", userId);
+            cartDao.createCart(params);
+            Long cartId = (Long) params.get("cartId");
             cart = new Cart();
             cart.setCartId(cartId);
             cart.setUserId(userId);

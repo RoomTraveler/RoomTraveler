@@ -17,7 +17,7 @@ instance.interceptors.request.use(
   (config) => {
     console.log("[API Interceptor - Request] URL:", config.url);
     const userStore = useUserStore();
-    const accessToken = userStore._tokens.value?.access_token;
+    const accessToken = userStore._tokens?.access_token;
 
     if (accessToken) {
       console.log("[API Interceptor - Request] Access Token FOUND:", accessToken);
