@@ -14,20 +14,20 @@
 <script>
 /**
  * 레이아웃 컴포넌트
- * 
+ *
  * 이 컴포넌트는 웹사이트의 전체 레이아웃을 담당합니다.
  * Header와 Footer 컴포넌트를 포함하며, 메인 콘텐츠는 slot을 통해 주입됩니다.
  */
-import Header from './Header.vue'
-import Footer from './Footer.vue'
+import Header from "./Header.vue";
+import Footer from "./Footer.vue";
 
 export default {
-  name: 'Layout',
+  name: "Layout",
   components: {
     Header,
-    Footer
-  }
-}
+    Footer,
+  },
+};
 </script>
 
 <style scoped>
@@ -42,12 +42,13 @@ export default {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background-color: #f9f9f9;
+  background-color: #ffffff;
 }
 
 .main-content {
   flex: 1;
   padding: 20px 0;
+  background-color: #ffffff;
 }
 
 /* 모바일 최적화 */
@@ -65,7 +66,12 @@ export default {
 }
 
 /* 공통 스타일 */
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   margin-top: 0;
   font-weight: 700;
 }
@@ -109,13 +115,15 @@ button {
   background-color: white;
   border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease;
 }
 
 .yanolja-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
 }
 
 .yanolja-card-image {

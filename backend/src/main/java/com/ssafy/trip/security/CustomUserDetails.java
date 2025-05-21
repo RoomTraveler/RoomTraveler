@@ -1,10 +1,14 @@
 package com.ssafy.trip.security;
 
 import com.ssafy.trip.user.User;
+
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
+
 import lombok.Data;
+import lombok.Getter;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.GrantedAuthority;

@@ -1,7 +1,8 @@
 <template>
   <div class="bg-gray-50 min-h-screen">
-    <div class="max-w-[768px] mx-auto"> <!-- MOVED MAIN WRAPPER TO INCLUDE HEADER -->
-      <AccommodationHeader :title="headerTitle" />
+    <div class="max-w-[768px] mx-auto">
+      <!-- MOVED MAIN WRAPPER TO INCLUDE HEADER -->
+      <AccommodationHeader :accommodationTitle="accommodation.title" />
 
       <!-- 로딩 상태 표시 -->
       <div v-if="loading && !fetchError" class="py-20 flex flex-col items-center justify-center">
@@ -14,18 +15,21 @@
         <i class="bi bi-exclamation-triangle-fill text-5xl text-red-400 mb-4"></i>
         <p class="text-xl text-red-600 mb-2">숙소 정보를 불러오지 못했습니다</p>
         <p class="text-gray-600 mb-4">{{ fetchError }}</p>
-        <button @click="fetchData" class="mt-6 px-6 py-2 bg-pink-500 text-white rounded-md hover:bg-pink-600 transition">
+        <button
+          @click="fetchData"
+          class="mt-6 px-6 py-2 bg-pink-500 text-white rounded-md hover:bg-pink-600 transition"
+        >
           다시 시도
         </button>
       </div>
 
       <!-- 콘텐츠 영역 (이제 max-w는 상위에서 처리) -->
-      <div v-else class="pb-16">
+      <div v-else>
         <!-- 메인 이미지 -->
         <div class="mt-4">
-          <img 
-            :src="accommodation.mainImageUrl || noImage" 
-            alt="숙소 메인 이미지" 
+          <img
+            :src="accommodation.mainImageUrl || noImage"
+            alt="숙소 메인 이미지"
             class="w-full h-[507px] object-cover rounded-lg shadow-md"
           />
         </div>
@@ -33,7 +37,9 @@
         <!-- 숙소 정보 (제목, 찜/공유, 위치, 리뷰 요약 캐러셀) -->
         <div class="mt-6 bg-white p-6 rounded-lg shadow">
           <div class="flex justify-between items-start mb-3">
-            <h1 class="text-3xl font-bold text-gray-800 flex-1 mr-4 leading-tight">{{ accommodation.title || "숙소명 없음" }}</h1>
+            <h1 class="text-3xl font-bold text-gray-800 flex-1 mr-4 leading-tight">
+              {{ accommodation.title || "숙소명 없음" }}
+            </h1>
             <div class="flex items-center gap-x-3 flex-shrink-0">
               <button @click="toggleWishlist" class="text-gray-500 hover:text-pink-500 transition">
                 <i class="bi text-2xl" :class="isFavorite ? 'bi-heart-fill text-pink-500' : 'bi-heart'"></i>
@@ -45,52 +51,76 @@
           </div>
           <div class="text-gray-600 mb-1 flex items-center">
             <i class="bi bi-geo-alt-fill mr-2 text-gray-500"></i>
-            <span>{{ accommodation.address || accommodation.sidoName || "위치 정보 없음" }} {{ accommodation.gugunName || "" }}</span>
+            <span
+              >{{ accommodation.address || accommodation.sidoName || "위치 정보 없음" }}
+              {{ accommodation.gugunName || "" }}</span
+            >
           </div>
-          <div v-if="reviewCount > 0 && !loadingReviews && !fetchReviewsError" class="flex items-center text-sm text-gray-600 mb-1">
+          <div
+            v-if="reviewCount > 0 && !loadingReviews && !fetchReviewsError"
+            class="flex items-center text-sm text-gray-600 mb-1"
+          >
             <i class="bi bi-star-fill text-yellow-400 mr-1"></i>
             <span class="font-semibold">{{ averageRating.toFixed(1) }}</span>
             <span class="ml-1">({{ reviewCount }}개의 리뷰)</span>
           </div>
-          <p v-else-if="!loadingReviews && !fetchReviewsError && reviewCount === 0" class="text-sm text-gray-500 mb-1">첫 리뷰를 작성해주세요!</p>
+          <p v-else-if="!loadingReviews && !fetchReviewsError && reviewCount === 0" class="text-sm text-gray-500 mb-1">
+            첫 리뷰를 작성해주세요!
+          </p>
           <p v-else-if="loadingReviews" class="text-sm text-gray-500 mb-1">리뷰를 불러오는 중...</p>
           <p v-else-if="fetchReviewsError" class="text-sm text-red-500 mb-1">리뷰를 불러오는데 실패했습니다.</p>
-          
-          <hr class="my-4">
+
+          <hr class="my-4" />
         </div>
 
         <!-- 리뷰 전체 섹션 -->
         <div class="mt-8 bg-white p-6 rounded-lg shadow border border-gray-200" id="reviews-section">
           <h2 class="text-2xl font-bold text-gray-800 mb-4">방문자 리뷰 (총 {{ reviewCount }}개)</h2>
-          
+
           <!-- New Review Carousel Section - STARTS HERE -->
           <template v-if="reviewCarouselItems.length > 0">
-            <div class="w-full md:w-[728px] mx-auto relative mb-6" style="height: 174.5px;"> 
+            <div class="w-full md:w-[728px] mx-auto relative mb-6" style="height: 174.5px">
               <div class="overflow-hidden h-full rounded-md border border-gray-200">
-                <div class="flex transition-transform duration-300 ease-in-out h-full"
-                    :style="{ transform: `translateX(-${currentReviewSlideIndex * 100}%)` }"
+                <div
+                  class="flex transition-transform duration-300 ease-in-out h-full"
+                  :style="{ transform: `translateX(-${currentReviewSlideIndex * 100}%)` }"
                 >
-                  <div v-for="(item, index) in reviewCarouselItems" :key="item.type === 'review' ? item.review.reviewId : 'see-all'" 
-                       class="w-full flex-shrink-0 h-full p-4 box-border bg-white flex flex-col justify-between"
+                  <div
+                    v-for="(item, index) in reviewCarouselItems"
+                    :key="item.type === 'review' ? item.review.reviewId : 'see-all'"
+                    class="w-full flex-shrink-0 h-full p-4 box-border bg-white flex flex-col justify-between"
                   >
                     <template v-if="item.type === 'review'">
                       <div>
                         <div class="flex justify-between items-center mb-1">
-                          <span class="font-semibold text-sm text-gray-800">{{ item.review.userNickname || '익명' }}</span>
+                          <span class="font-semibold text-sm text-gray-800">{{
+                            item.review.userNickname || "익명"
+                          }}</span>
                           <div class="flex items-center">
-                            <span v-for="n in 5" :key="n + 'crs_star'" class="mr-0.5 text-xs" :class="n <= item.review.rating ? 'text-yellow-400' : 'text-gray-300'">★</span>
+                            <span
+                              v-for="n in 5"
+                              :key="n + 'crs_star'"
+                              class="mr-0.5 text-xs"
+                              :class="n <= item.review.rating ? 'text-yellow-400' : 'text-gray-300'"
+                              >★</span
+                            >
                           </div>
                         </div>
                         <p class="text-xs text-gray-600 leading-relaxed line-clamp-3 mb-1">{{ item.review.content }}</p>
                       </div>
-                      <span class="text-xxs text-gray-400 mt-auto self-start">{{ formatDate(item.review.createdAt) }}</span>
+                      <span class="text-xxs text-gray-400 mt-auto self-start">{{
+                        formatDate(item.review.createdAt)
+                      }}</span>
                     </template>
                     <template v-else-if="item.type === 'see-all'">
                       <div class="flex flex-col items-center justify-center h-full text-center">
                         <i class="bi bi-card-text text-3xl text-pink-500 mb-2"></i>
                         <p class="font-semibold text-pink-600 mb-1">모든 리뷰 보기</p>
                         <p class="text-xs text-gray-500">총 {{ reviewCount }}개의 리뷰를 확인하세요.</p>
-                        <button @click="scrollToReviews" class="mt-3 px-4 py-1.5 text-xs bg-pink-500 text-white rounded-md hover:bg-pink-600 transition">
+                        <button
+                          @click="scrollToReviews"
+                          class="mt-3 px-4 py-1.5 text-xs bg-pink-500 text-white rounded-md hover:bg-pink-600 transition"
+                        >
                           전체 리뷰 보기
                         </button>
                       </div>
@@ -98,23 +128,36 @@
                   </div>
                 </div>
               </div>
-              <button v-if="canPrevReviewSlide" @click="prevReviewSlide" 
-                      class="absolute top-1/2 left-1 transform -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-1.5 shadow-md z-10 focus:outline-none focus:ring-2 focus:ring-pink-300">
+              <button
+                v-if="canPrevReviewSlide"
+                @click="prevReviewSlide"
+                class="absolute top-1/2 left-1 transform -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-1.5 shadow-md z-10 focus:outline-none focus:ring-2 focus:ring-pink-300"
+              >
                 <i class="bi bi-chevron-left text-gray-700 text-lg"></i>
               </button>
-              <button v-if="canNextReviewSlide" @click="nextReviewSlide" 
-                      class="absolute top-1/2 right-1 transform -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-1.5 shadow-md z-10 focus:outline-none focus:ring-2 focus:ring-pink-300">
+              <button
+                v-if="canNextReviewSlide"
+                @click="nextReviewSlide"
+                class="absolute top-1/2 right-1 transform -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-1.5 shadow-md z-10 focus:outline-none focus:ring-2 focus:ring-pink-300"
+              >
                 <i class="bi bi-chevron-right text-gray-700 text-lg"></i>
               </button>
             </div>
           </template>
           <!-- New Review Carousel Section - ENDS HERE -->
 
-          <div v-if="isLoggedIn && !userHasReviewed && canUserReview" class="mb-6 p-4 border border-gray-200 rounded-lg bg-gray-50">
+          <div
+            v-if="isLoggedIn && !userHasReviewed && canUserReview"
+            class="mb-6 p-4 border border-gray-200 rounded-lg bg-gray-50"
+          >
             <h5 class="text-lg font-semibold text-gray-700 mb-3">리뷰 작성하기</h5>
             <div class="mb-3">
               <label for="rating" class="block text-sm font-medium text-gray-700 mb-1">별점:</label>
-              <select v-model="newReview.rating" id="rating" class="block w-full sm:w-auto p-2 border border-gray-300 rounded-md shadow-sm focus:ring-pink-500 focus:border-pink-500 text-sm">
+              <select
+                v-model="newReview.rating"
+                id="rating"
+                class="block w-full sm:w-auto p-2 border border-gray-300 rounded-md shadow-sm focus:ring-pink-500 focus:border-pink-500 text-sm"
+              >
                 <option value="5">★★★★★ (5점)</option>
                 <option value="4">★★★★☆ (4점)</option>
                 <option value="3">★★★☆☆ (3점)</option>
@@ -124,124 +167,169 @@
             </div>
             <div class="mb-3">
               <label for="reviewContent" class="block text-sm font-medium text-gray-700 mb-1">내용:</label>
-              <textarea v-model="newReview.content" id="reviewContent" class="block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-pink-500 focus:border-pink-500 text-sm" rows="4" placeholder="숙소에서의 경험을 공유해주세요."></textarea>
+              <textarea
+                v-model="newReview.content"
+                id="reviewContent"
+                class="block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-pink-500 focus:border-pink-500 text-sm"
+                rows="4"
+                placeholder="숙소에서의 경험을 공유해주세요."
+              ></textarea>
             </div>
-            <button @click="submitReview" class="w-full sm:w-auto px-4 py-2 bg-pink-500 text-white rounded-md hover:bg-pink-600 transition font-medium text-sm" :disabled="isSubmittingReview">
-              <span v-if="isSubmittingReview" class="spinner-border spinner-border-sm mr-1" role="status" aria-hidden="true"></span>
+            <button
+              @click="submitReview"
+              class="w-full sm:w-auto px-4 py-2 bg-pink-500 text-white rounded-md hover:bg-pink-600 transition font-medium text-sm"
+              :disabled="isSubmittingReview"
+            >
+              <span
+                v-if="isSubmittingReview"
+                class="spinner-border spinner-border-sm mr-1"
+                role="status"
+                aria-hidden="true"
+              ></span>
               리뷰 등록
             </button>
             <p v-if="reviewError" class="text-red-500 text-sm mt-2">{{ reviewError }}</p>
           </div>
 
           <div v-if="reviewCount > 0 && reviews.length > 0" class="space-y-4">
-            <div v-for="review in reviews" :key="review.reviewId + '-full'" class="border border-gray-200 p-4 rounded-lg bg-white hover:shadow-md transition-shadow">
+            <div
+              v-for="review in reviews"
+              :key="review.reviewId + '-full'"
+              class="border border-gray-200 p-4 rounded-lg bg-white hover:shadow-md transition-shadow"
+            >
               <div class="flex justify-between items-start mb-1">
                 <div>
                   <strong class="text-gray-800 font-semibold">{{ review.userNickname || "익명 사용자" }}</strong>
                   <div class="flex items-center mt-0.5">
-                    <span v-for="n in 5" :key="n + 'star_full_list'" class="mr-0.5 text-sm" :class="n <= review.rating ? 'text-yellow-400' : 'text-gray-300'">★</span>
+                    <span
+                      v-for="n in 5"
+                      :key="n + 'star_full_list'"
+                      class="mr-0.5 text-sm"
+                      :class="n <= review.rating ? 'text-yellow-400' : 'text-gray-300'"
+                      >★</span
+                    >
                   </div>
                 </div>
                 <small class="text-gray-500 text-xs">{{ formatDate(review.createdAt) }}</small>
               </div>
               <p class="text-gray-700 text-sm leading-relaxed mt-1 mb-2">{{ review.content }}</p>
               <div v-if="review.imageUrl" class="my-2">
-                <img :src="review.imageUrl" alt="리뷰 이미지" class="max-w-xs max-h-48 rounded-md border border-gray-200"/>
+                <img
+                  :src="review.imageUrl"
+                  alt="리뷰 이미지"
+                  class="max-w-xs max-h-48 rounded-md border border-gray-200"
+                />
               </div>
               <div v-if="isLoggedIn && review.userId === userId" class="mt-2 flex gap-x-2">
-                <button @click="openEditReviewModal(review)" class="px-3 py-1 text-xs font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md border border-gray-300 transition">수정</button>
-                <button @click="deleteReview(review.reviewId)" class="px-3 py-1 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-md border border-red-200 transition" :disabled="isDeletingReview === review.reviewId">
-                  <span v-if="isDeletingReview === review.reviewId" class="spinner-border spinner-border-sm mr-1" role="status" aria-hidden="true"></span>
+                <button
+                  @click="openEditReviewModal(review)"
+                  class="px-3 py-1 text-xs font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md border border-gray-300 transition"
+                >
+                  수정
+                </button>
+                <button
+                  @click="deleteReview(review.reviewId)"
+                  class="px-3 py-1 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-md border border-red-200 transition"
+                  :disabled="isDeletingReview === review.reviewId"
+                >
+                  <span
+                    v-if="isDeletingReview === review.reviewId"
+                    class="spinner-border spinner-border-sm mr-1"
+                    role="status"
+                    aria-hidden="true"
+                  ></span>
                   삭제
                 </button>
               </div>
             </div>
           </div>
-          <div v-else class="w-full min-h-[100px] flex flex-col items-center justify-center text-center p-4 border-t border-gray-100 mt-4">
-              <template v-if="loadingReviews">
-                  <i class="bi bi-arrow-clockwise text-3xl text-pink-500 mb-3 animate-spin"></i>
-                  <p class="text-gray-600 font-medium">리뷰를 불러오는 중...</p>
-              </template>
-              <template v-else-if="fetchReviewsError">
-                   <i class="bi bi-exclamation-circle text-3xl text-red-500 mb-3"></i>
-                   <p class="text-gray-600 font-medium">리뷰를 불러오지 못했습니다.</p>
-                   <button @click="fetchReviewsAndSummary" class="mt-3 px-4 py-1.5 text-sm bg-pink-500 text-white rounded-md hover:bg-pink-600 transition">다시 시도</button>
-              </template>
-              <template v-else-if="!loadingReviews && reviewCount === 0">
-                  <i class="bi bi-chat-square-text text-3xl text-gray-400 mb-3"></i>
-                  <p class="text-gray-600 font-medium">아직 등록된 리뷰가 없습니다.</p>
-              </template>
+          <div
+            v-else
+            class="w-full min-h-[100px] flex flex-col items-center justify-center text-center p-4 border-t border-gray-100 mt-4"
+          >
+            <template v-if="loadingReviews">
+              <i class="bi bi-arrow-clockwise text-3xl text-pink-500 mb-3 animate-spin"></i>
+              <p class="text-gray-600 font-medium">리뷰를 불러오는 중...</p>
+            </template>
+            <template v-else-if="fetchReviewsError">
+              <i class="bi bi-exclamation-circle text-3xl text-red-500 mb-3"></i>
+              <p class="text-gray-600 font-medium">리뷰를 불러오지 못했습니다.</p>
+              <button
+                @click="fetchReviewsAndSummary"
+                class="mt-3 px-4 py-1.5 text-sm bg-pink-500 text-white rounded-md hover:bg-pink-600 transition"
+              >
+                다시 시도
+              </button>
+            </template>
+            <template v-else-if="!loadingReviews && reviewCount === 0">
+              <i class="bi bi-chat-square-text text-3xl text-gray-400 mb-3"></i>
+              <p class="text-gray-600 font-medium">아직 등록된 리뷰가 없습니다.</p>
+            </template>
           </div>
         </div>
 
         <!-- 객실 선택 UI (id 추가) -->
         <div class="mt-8 bg-white p-6 rounded-lg shadow border border-gray-200" id="booking-options-section">
-  <h2 class="text-2xl font-bold text-gray-800 mb-5">객실 선택</h2>
-  <div class="w-full flex justify-center mb-2">
-    <div class="flex w-full max-w-lg justify-between gap-8">
-      <!-- 날짜 선택 버튼 -->
-      <button
-        @click="openDateSelectionModal"
-        class="flex-1 p-4 border border-gray-300 rounded-md cursor-pointer hover:border-pink-500 transition focus:outline-none focus:ring-2 focus:ring-pink-300 text-left min-w-[140px] max-w-[230px]"
-        aria-label="날짜 선택하기"
-      >
-        <p class="text-xs text-gray-500 mb-0.5">체크인 - 체크아웃</p>
-        <p class="font-semibold text-gray-700">{{ selectedDateRangeDisplay }}</p>
-      </button>
-      <!-- 인원 선택 버튼 -->
-      <button
-        @click="openGuestSelectionModal"
-        class="flex-1 p-4 border border-gray-300 rounded-md cursor-pointer hover:border-pink-500 transition focus:outline-none focus:ring-2 focus:ring-pink-300 text-left min-w-[90px] max-w-[150px]"
-        aria-label="인원 선택하기"
-      >
-        <p class="text-xs text-gray-500 mb-0.5">인원</p>
-        <p class="font-semibold text-gray-700">{{ selectedGuestCountDisplay }}</p>
-      </button>
-    </div>
-  </div>
-</div>
-
-
+          <h2 class="text-2xl font-bold text-gray-800 mb-5">객실 선택</h2>
+          <div class="w-full flex justify-center mb-2">
+            <div class="flex w-full max-w-lg justify-between gap-8">
+              <!-- 날짜 선택 버튼 -->
+              <button
+                @click="openDateSelectionModal"
+                class="flex-1 p-4 border border-gray-300 rounded-md cursor-pointer hover:border-pink-500 transition focus:outline-none focus:ring-2 focus:ring-pink-300 text-left min-w-[140px] max-w-[230px]"
+                aria-label="날짜 선택하기"
+              >
+                <p class="text-xs text-gray-500 mb-0.5">체크인 - 체크아웃</p>
+                <p class="font-semibold text-gray-700">{{ selectedDateRangeDisplay }}</p>
+              </button>
+              <!-- 인원 선택 버튼 -->
+              <button
+                @click="openGuestSelectionModal"
+                class="flex-1 p-4 border border-gray-300 rounded-md cursor-pointer hover:border-pink-500 transition focus:outline-none focus:ring-2 focus:ring-pink-300 text-left min-w-[90px] max-w-[150px]"
+                aria-label="인원 선택하기"
+              >
+                <p class="text-xs text-gray-500 mb-0.5">인원</p>
+                <p class="font-semibold text-gray-700">{{ selectedGuestCountDisplay }}</p>
+              </button>
+            </div>
+          </div>
+        </div>
 
         <!-- 객실 목록 (id 추가) -->
         <div class="mt-8" id="room-list-section">
-          <div v-if="rooms && rooms.length > 0" class="space-y-6">
-            <div 
-              v-for="room in rooms" 
-              :key="room.roomId" 
-              class="w-full bg-white p-0 rounded-lg shadow flex flex-col sm:flex-row overflow-hidden min-h-[301px] border border-gray-200 hover:shadow-lg transition-shadow duration-300"
+          <div v-if="rooms && rooms.length > 0">
+            <!-- 추가: 모든 객실이 예약 불가능할 경우 안내 메시지 -->
+            <div
+              v-if="areAllRoomsUnbookable"
+              class="mb-4 p-4 text-center bg-yellow-50 border border-yellow-300 text-yellow-700 rounded-md"
             >
-               <div class="w-full sm:w-1/2 h-48 sm:h-full flex-shrink-0">
-                <img :src="room.mainImageUrl || noImage" :alt="room.name || '객실 이미지'" class="w-full h-full object-cover"/>
-              </div>
-              <div class="w-full sm:w-1/2 p-5 flex flex-col justify-between">
-                <div>
-                  <h3 class="text-xl font-semibold text-gray-800 mb-2">{{ room.name || "객실명 없음" }}</h3>
-                  <p class="text-sm text-gray-600 mb-1"><i class="bi bi-people-fill mr-1.5"></i>수용 인원: {{ room.capacity || '정보 없음' }}명</p>
-                  <p class="text-sm text-gray-600 mb-3"><i class="bi bi-aspect-ratio-fill mr-1.5"></i>침대 종류: {{ room.bedType || '정보 없음' }}</p>
-                </div>
-                <div class="mt-auto">
-                  <p class="text-lg font-bold text-pink-600 mb-2">{{ formatPrice(room.price) }} / 박</p>
-                  <p class="text-xs text-gray-500 mb-1">체크인: {{ room.checkInTime || "15:00" }}</p>
-                  <p class="text-xs text-gray-500 mb-3">체크아웃: {{ room.checkOutTime || "11:00" }}</p>
-                  <button 
-                    @click="goToRoomDetail(room.roomId)" 
-                    class="w-full bg-pink-500 text-white py-2.5 rounded-md hover:bg-pink-600 transition font-medium"
-                  >
-                    객실 상세보기
-                  </button>
-                </div>
-              </div>
+              <i class="bi bi-exclamation-circle mr-2"></i>
+              선택하신 날짜와 인원으로는 현재 예약 가능한 객실이 없습니다. 다른 조건으로 검색해보세요.
+            </div>
+            <div class="space-y-6">
+              <RoomListItem
+                v-for="room in rooms"
+                :key="room.roomId"
+                :room="room"
+                :is-bookable="isRoomBookable(room)"
+                @view-detail="goToRoomDetail(room)"
+                @book-room="handleBookRoom(room)"
+                @add-to-cart="handleAddToCart(room)"
+              />
             </div>
           </div>
           <div v-else-if="!loading" class="text-center py-10 bg-white p-6 rounded-lg shadow border border-gray-200">
             <i class="bi bi-door-closed text-4xl text-gray-400 mb-3"></i>
-            <p class="text-gray-500">등록된 객실 정보가 없습니다.</p>
+            <p class="text-gray-500">이 숙소에는 현재 등록된 객실 정보가 없습니다.</p>
           </div>
         </div>
-        
+
         <!-- 호텔(숙소) 소개 -->
-        <div class="mt-8 bg-white p-6 rounded-lg shadow border border-gray-200" id="accommodation-description-section">
+        <div
+          class="mt-8 bg-white p-6 rounded-lg shadow border border-gray-200"
+          id="accommodation-description-section"
+          style="margin-bottom: 6rem"
+        >
           <h2 class="text-2xl font-bold text-gray-800 mb-4">숙소 소개</h2>
           <p class="text-gray-700 leading-relaxed whitespace-pre-line mb-6">
             {{ accommodation.description || "등록된 숙소 설명이 없습니다." }}
@@ -255,20 +343,23 @@
           </ul>
           <p v-else class="text-gray-500">등록된 편의시설 정보가 없습니다.</p>
         </div>
-
-      </div> <!-- END OF MOVED MAIN WRAPPER CONTENT -->
+      </div>
+      <!-- END OF MOVED MAIN WRAPPER CONTENT -->
     </div>
 
     <!-- 날짜 선택 모달 -->
     <el-dialog v-model="showDateModal" title="날짜 선택" width="90%" top="5vh" custom-class="date-selection-dialog">
       <div class="dialog-content px-2 sm:px-4">
-        <button @click="showDateModal = false" class="absolute top-4 right-4 text-gray-500 hover:text-gray-700 text-2xl z-10">
+        <button
+          @click="showDateModal = false"
+          class="absolute top-4 right-4 text-gray-500 hover:text-gray-700 text-2xl z-10"
+        >
           <i class="bi bi-x"></i>
         </button>
         <p class="text-sm text-gray-600 bg-gray-100 p-3 rounded-md mb-4">
           <i class="bi bi-info-circle-fill mr-1.5"></i>이 숙소는 최대 9박까지 예약할 수 있어요.
         </p>
-        
+
         <el-calendar v-model="calendarDate">
           <template #header="{ date }">
             <div class="flex justify-between items-center w-full">
@@ -278,11 +369,13 @@
             </div>
           </template>
           <template #date-cell="{ data }">
-            <div class="date-cell-content w-full h-full flex flex-col items-center justify-center" 
-                 :class="{ 'is-selected': isDateSelected(data.day), 'is-disabled': isDateDisabled(data.day) }"
-                 @click="handleDateClick(data.day)">
-              <p class="day-number" :class="{'text-red-500': [0,6].includes(new Date(data.day).getDay())}">
-                {{ data.day.split('-').slice(2).join('') }}
+            <div
+              class="date-cell-content w-full h-full flex flex-col items-center justify-center"
+              :class="{ 'is-selected': isDateSelected(data.day), 'is-disabled': isDateDisabled(data.day) }"
+              @click="handleDateClick(data.day)"
+            >
+              <p class="day-number" :class="{ 'text-red-500': [0, 6].includes(new Date(data.day).getDay()) }">
+                {{ data.day.split("-").slice(2).join("") }}
               </p>
               <p v-if="getDatePrice(data.day)" class="text-xs text-gray-500 mt-1">{{ getDatePrice(data.day) }}</p>
             </div>
@@ -292,9 +385,13 @@
         <p class="text-xs text-gray-500 mt-4 text-center">가격: 1박 기준 (단위: 만원)</p>
       </div>
       <template #footer>
-        <div class="flex justify-between items-center w-full px-2 sm:px-4 pb-2">
+        <div class="flex justify-between items-center w-full px-2 sm:px-4 pb-6">
           <el-button @click="resetDateSelection" link class="text-gray-600 hover:text-pink-500">초기화</el-button>
-          <el-button type="primary" @click="confirmDateSelectionAndCloseModal" class="bg-pink-500 hover:bg-pink-600 border-pink-500 flex-grow sm:flex-grow-0 min-w-[150px]">
+          <el-button
+            type="primary"
+            @click="confirmDateSelectionAndCloseModal"
+            class="bg-pink-500 hover:bg-pink-600 border-pink-500 flex-grow sm:flex-grow-0 min-w-[150px]"
+          >
             {{ selectedRangeFooterDisplay }}
           </el-button>
         </div>
@@ -302,57 +399,33 @@
     </el-dialog>
 
     <!-- 인원 선택 모달 -->
-    <el-dialog v-model="showGuestModal" title="인원 선택" width="90%" :max-width="'400px'" top="15vh" custom-class="guest-selection-dialog" :center="true">
-      <div class="dialog-content px-2 sm:px-4">
-        <button @click="showGuestModal = false" class="absolute top-4 right-4 text-gray-500 hover:text-gray-700 text-2xl z-10">
-          <i class="bi bi-x"></i>
-        </button>
-        <div class="py-4">
-          <div class="flex justify-between items-center mb-6">
-            <div class="flex flex-col">
-              <span class="text-lg font-medium text-gray-800">성인</span>
-              <span class="text-xs text-gray-500">만 13세 이상</span>
-            </div>
-            <div class="flex items-center gap-x-3">
-              <button @click="decrementAdults" :disabled="tempSelectedAdults <= 1" class="p-2 w-8 h-8 rounded-full border border-gray-300 text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center">
-                <i class="bi bi-dash-lg"></i>
-              </button>
-              <span class="text-lg font-medium w-6 text-center">{{ tempSelectedAdults }}</span>
-              <button @click="incrementAdults" :disabled="tempSelectedAdults >= 10" class="p-2 w-8 h-8 rounded-full border border-gray-300 text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center">
-                <i class="bi bi-plus-lg"></i>
-              </button>
-            </div>
-          </div>
-
-          <div class="flex justify-between items-center">
-            <div class="flex flex-col">
-              <span class="text-lg font-medium text-gray-800">아동</span>
-              <span class="text-xs text-gray-500">만 12세 이하</span>
-            </div>
-            <div class="flex items-center gap-x-3">
-              <button @click="decrementChildren" :disabled="tempSelectedChildren <= 0" class="p-2 w-8 h-8 rounded-full border border-gray-300 text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center">
-                <i class="bi bi-dash-lg"></i>
-              </button>
-              <span class="text-lg font-medium w-6 text-center">{{ tempSelectedChildren }}</span>
-              <button @click="incrementChildren" :disabled="tempSelectedChildren >= 5" class="p-2 w-8 h-8 rounded-full border border-gray-300 text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center">
-                <i class="bi bi-plus-lg"></i>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-      <template #footer>
-        <div class="w-full px-2 sm:px-4 pb-2">
-          <el-button type="primary" @click="confirmGuestSelectionAndCloseModal" class="w-full bg-pink-500 hover:bg-pink-600 border-pink-500 py-3 text-base">
-            확인
-          </el-button>
-        </div>
-      </template>
+    <el-dialog
+      v-model="showGuestModal"
+      title="인원 선택"
+      width="90%"
+      max-width="320px"
+      top="20vh"
+      custom-class="guest-selection-dialog"
+      :center="true"
+    >
+      <GuestSelectModal
+        :show="showGuestModal"
+        :initial-guests="tempSelectedGuests"
+        :max-guests="maxCapacityOfAllRooms"
+        @close="showGuestModal = false"
+        @apply="confirmGuestSelectionAndCloseModal"
+      />
     </el-dialog>
 
     <!-- 리뷰 수정 모달 -->
-    <div v-if="showEditReviewModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-[100]" @click.self="showEditReviewModal = false">
-      <div class="relative top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
+    <div
+      v-if="showEditReviewModal"
+      class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-[100]"
+      @click.self="showEditReviewModal = false"
+    >
+      <div
+        class="relative top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 p-5 border w-full max-w-md shadow-lg rounded-md bg-white"
+      >
         <div class="flex justify-between items-center pb-3 border-b">
           <h5 class="text-lg font-semibold text-gray-900">리뷰 수정</h5>
           <button @click="showEditReviewModal = false" class="text-gray-400 hover:text-gray-600 p-1 rounded-full">
@@ -362,7 +435,11 @@
         <div class="mt-3">
           <div class="mb-4">
             <label for="editRating" class="block text-sm font-medium text-gray-700 mb-1">별점:</label>
-            <select v-model="editableReview.rating" id="editRating" class="block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-pink-500 focus:border-pink-500 text-sm">
+            <select
+              v-model="editableReview.rating"
+              id="editRating"
+              class="block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-pink-500 focus:border-pink-500 text-sm"
+            >
               <option value="5">★★★★★ (5점)</option>
               <option value="4">★★★★☆ (4점)</option>
               <option value="3">★★★☆☆ (3점)</option>
@@ -372,14 +449,35 @@
           </div>
           <div class="mb-4">
             <label for="editReviewContent" class="block text-sm font-medium text-gray-700 mb-1">내용:</label>
-            <textarea v-model="editableReview.content" id="editReviewContent" class="block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-pink-500 focus:border-pink-500 text-sm" rows="4"></textarea>
+            <textarea
+              v-model="editableReview.content"
+              id="editReviewContent"
+              class="block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-pink-500 focus:border-pink-500 text-sm"
+              rows="4"
+            ></textarea>
           </div>
           <p v-if="editReviewError" class="text-red-500 text-sm mt-2">{{ editReviewError }}</p>
         </div>
         <div class="mt-4 pt-3 border-t flex justify-end gap-x-2">
-          <button type="button" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 text-sm font-medium transition" @click="showEditReviewModal = false">취소</button>
-          <button type="button" class="px-4 py-2 bg-pink-500 text-white rounded-md hover:bg-pink-600 text-sm font-medium transition" @click="submitEditReview" :disabled="isSubmittingEditReview">
-            <span v-if="isSubmittingEditReview" class="spinner-border spinner-border-sm mr-1" role="status" aria-hidden="true"></span>
+          <button
+            type="button"
+            class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 text-sm font-medium transition"
+            @click="showEditReviewModal = false"
+          >
+            취소
+          </button>
+          <button
+            type="button"
+            class="px-4 py-2 bg-pink-500 text-white rounded-md hover:bg-pink-600 text-sm font-medium transition"
+            @click="submitEditReview"
+            :disabled="isSubmittingEditReview"
+          >
+            <span
+              v-if="isSubmittingEditReview"
+              class="spinner-border spinner-border-sm mr-1"
+              role="status"
+              aria-hidden="true"
+            ></span>
             수정 완료
           </button>
         </div>
@@ -388,31 +486,37 @@
 
     <!-- Toast Messages -->
     <div v-if="toasts.length > 0" class="fixed bottom-5 right-5 space-y-3 z-[200] md:max-w-xs w-11/12">
-        <div 
-            v-for="toast in toasts" :key="toast.id"
-            class="bg-gray-800 text-white text-sm px-4 py-3 rounded-md shadow-lg animate-toast-in-out w-full"
-            role="alert"
-        >
-            {{ toast.message }}
-        </div>
+      <div
+        v-for="toast in toasts"
+        :key="toast.id"
+        class="bg-gray-800 text-white text-sm px-4 py-3 rounded-md shadow-lg animate-toast-in-out w-full"
+        role="alert"
+      >
+        {{ toast.message }}
+      </div>
     </div>
   </div>
 </template>
 
 <script>
-import { useUserStore } from '@/store/userStore';
-import AccommodationHeader from './AccommodationHeader.vue';
+import { useUserStore } from "@/store/userStore";
+import AccommodationHeader from "../../components/accommodation/AccommodationHeader.vue";
+import RoomListItem from "../../components/accommodation/RoomListItem.vue";
+import GuestSelectModal from "../../components/modals/GuestSelectModal.vue";
 import noImage from "@/assets/no-image.jpg";
 import axios from "axios";
-import { ElDialog, ElButton, ElCalendar } from 'element-plus';
+import { ElDialog, ElButton, ElCalendar } from "element-plus";
+import { useCartStore } from "@/store/cartStore";
 
-const KOREAN_DAYS = ['일', '월', '화', '수', '목', '금', '토'];
+const KOREAN_DAYS = ["일", "월", "화", "수", "목", "금", "토"];
 const MAX_REVIEWS_IN_CAROUSEL = 10;
 
 export default {
   name: "AccommodationDetail",
-  components: { 
+  components: {
     AccommodationHeader,
+    RoomListItem,
+    GuestSelectModal,
     ElDialog,
     ElButton,
     ElCalendar,
@@ -420,57 +524,82 @@ export default {
   props: { id: { type: [String, Number], required: true } },
   setup() {
     const userStore = useUserStore();
+    const cartStore = useCartStore();
     if (!userStore.isAuthenticated) {
       userStore.loadUserFromStorage();
     }
-    return {}; 
+    return { userStore, cartStore };
   },
   data() {
     const today = new Date();
-    const tomorrow = new Date(today);
-    tomorrow.setDate(today.getDate() + 1);
+    const initialCheckIn = new Date(today);
+    const initialCheckOut = new Date(today);
+    initialCheckOut.setDate(today.getDate() + 1);
+
+    // URL에서 쿼리 파라미터 읽기
+    const queryParams = this.$route.query;
+    let urlCheckInDate = initialCheckIn;
+    let urlCheckOutDate = initialCheckOut;
+    let urlGuests = 2; // 기본값
+
+    if (queryParams.checkInDate && typeof queryParams.checkInDate === "string") {
+      const parsedCheckIn = new Date(queryParams.checkInDate);
+      if (!isNaN(parsedCheckIn.getTime())) {
+        urlCheckInDate = parsedCheckIn;
+      }
+    }
+    if (queryParams.checkOutDate && typeof queryParams.checkOutDate === "string") {
+      const parsedCheckOut = new Date(queryParams.checkOutDate);
+      if (!isNaN(parsedCheckOut.getTime())) {
+        urlCheckOutDate = parsedCheckOut;
+      }
+    }
+    // adults와 children을 합산하여 selectedGuests로 사용
+    const adultsFromUrl = queryParams.adults ? parseInt(String(queryParams.adults), 10) : 0;
+    const childrenFromUrl = queryParams.children ? parseInt(String(queryParams.children), 10) : 0;
+    if (adultsFromUrl > 0 || childrenFromUrl > 0) {
+      urlGuests = Math.max(1, adultsFromUrl + childrenFromUrl); // 최소 1명
+    }
 
     return {
       accommodation: {},
-      rooms: [], 
-      reviews: [], // All fetched reviews
+      rooms: [],
+      reviews: [],
       loading: true,
       loadingReviews: false,
       fetchError: null,
-      fetchReviewsError: null, 
+      fetchReviewsError: null,
       isFavorite: false,
       noImage,
-      newReview: { rating: 5, content: "", },
+      newReview: { rating: 5, content: "" },
       isSubmittingReview: false,
       reviewError: "",
       userHasReviewed: false,
       canUserReview: false,
       fetchReviewEligibilityAttempted: false,
       showEditReviewModal: false,
-      editableReview: { reviewId: null, rating: 0, content: "", },
+      editableReview: { reviewId: null, rating: 0, content: "" },
       isSubmittingEditReview: false,
       editReviewError: "",
       isDeletingReview: null,
       averageRating: 0,
       reviewCount: 0,
       toasts: [],
-      selectedCheckInDate: today,
-      selectedCheckOutDate: tomorrow,
-      selectedAdults: 2,
-      selectedChildren: 0,
+      selectedCheckInDate: urlCheckInDate,
+      selectedCheckOutDate: urlCheckOutDate,
+      selectedGuests: urlGuests,
       currentReviewSlideIndex: 0,
       showDateModal: false,
       showGuestModal: false,
       calendarDate: new Date(),
       tempSelectedCheckInDate: null,
       tempSelectedCheckOutDate: null,
-      tempSelectedAdults: 2,
-      tempSelectedChildren: 0,
+      tempSelectedGuests: urlGuests,
     };
   },
   computed: {
     headerTitle() {
-      return this.accommodation.title || '숙소 상세정보';
+      return this.accommodation.title || "숙소 상세정보";
     },
     isLoggedIn() {
       const userStore = useUserStore();
@@ -481,10 +610,13 @@ export default {
       return userStore.user?.id;
     },
     amenitiesArray() {
-        if (this.accommodation && typeof this.accommodation.amenities === 'string') {
-            return this.accommodation.amenities.split(',').map(amenity => amenity.trim()).filter(Boolean);
-        }
-        return [];
+      if (this.accommodation && typeof this.accommodation.amenities === "string") {
+        return this.accommodation.amenities
+          .split(",")
+          .map((amenity) => amenity.trim())
+          .filter(Boolean);
+      }
+      return [];
     },
     selectedDateRangeDisplay() {
       if (!this.selectedCheckInDate || !this.selectedCheckOutDate) return "날짜를 선택하세요";
@@ -494,19 +626,17 @@ export default {
       return `${checkInStr} ~ ${checkOutStr} • ${nights}박`;
     },
     selectedGuestCountDisplay() {
-      let displayText = `성인 ${this.selectedAdults}`;
-      if (this.selectedChildren > 0) {
-        displayText += `, 아동 ${this.selectedChildren}`;
-      }
-      return displayText;
+      return `인원 ${this.selectedGuests}명`;
     },
     reviewCarouselItems() {
       if (this.loadingReviews || this.fetchReviewsError || this.reviewCount === 0) {
         return [];
       }
-      const carouselReviews = this.reviews.slice(0, MAX_REVIEWS_IN_CAROUSEL).map(review => ({ type: 'review', review }));
-      if (this.reviewCount > 0) { // Always add see-all if there are any reviews
-        carouselReviews.push({ type: 'see-all' });
+      const carouselReviews = this.reviews
+        .slice(0, MAX_REVIEWS_IN_CAROUSEL)
+        .map((review) => ({ type: "review", review }));
+      if (this.reviewCount > 0) {
+        carouselReviews.push({ type: "see-all" });
       }
       return carouselReviews;
     },
@@ -517,16 +647,36 @@ export default {
       return this.currentReviewSlideIndex < this.reviewCarouselItems.length - 1;
     },
     selectedRangeFooterDisplay() {
-      if (!this.tempSelectedCheckInDate) return '날짜를 선택해주세요';
+      if (!this.tempSelectedCheckInDate) return "날짜를 선택해주세요";
       if (!this.tempSelectedCheckOutDate) return `${this.formatDateWithDay(this.tempSelectedCheckInDate)} 선택됨`;
       const nights = this.calculateNights(this.tempSelectedCheckInDate, this.tempSelectedCheckOutDate);
       return `지금부터 ~ ${this.formatDateWithDay(this.tempSelectedCheckOutDate)} • ${nights}박`;
     },
+    areAllRoomsUnbookable() {
+      if (!this.rooms || this.rooms.length === 0) {
+        return false;
+      }
+      if (!this.selectedCheckInDate || !this.selectedCheckOutDate || this.selectedGuests === 0) {
+        return false;
+      }
+      return this.rooms.every((room) => !this.isRoomBookable(room));
+    },
+    maxCapacityOfAllRooms() {
+      if (!this.rooms || this.rooms.length === 0) {
+        return 10;
+      }
+      return (
+        this.rooms.reduce((max, room) => {
+          const capacity = parseInt(String(room.capacity || 0), 10);
+          return capacity > max ? capacity : max;
+        }, 0) || 10
+      );
+    },
   },
   watch: {
     reviews() {
-      this.currentReviewSlideIndex = 0; // Reset slide index when reviews change
-    }
+      this.currentReviewSlideIndex = 0;
+    },
   },
   created() {
     this.fetchData();
@@ -538,7 +688,7 @@ export default {
       this.currentReviewSlideIndex = 0;
       try {
         await this.fetchAccommodationAndRooms();
-        await this.fetchReviewsAndSummary(); // This will set reviews and reviewCount
+        await this.fetchReviewsAndSummary();
         if (this.isLoggedIn) {
           await this.checkUserReviewStatus();
           await this.checkReviewEligibility();
@@ -552,9 +702,19 @@ export default {
     },
     async fetchAccommodationAndRooms() {
       try {
-        const res = await axios.get(`/api/accommodations/${this.id}`);
+        const params = {
+          guests: this.selectedGuests > 0 ? this.selectedGuests : undefined,
+        };
+        if (this.selectedCheckInDate && this.selectedCheckOutDate) {
+          params.checkInDate = this.formatDateForApi(this.selectedCheckInDate);
+          params.checkOutDate = this.formatDateForApi(this.selectedCheckOutDate);
+        }
+        console.log("[AccommodationDetail] API Request Params for Rooms:", JSON.parse(JSON.stringify(params)));
+
+        const res = await axios.get(`/api/accommodations/${this.id}`, { params });
         if (res.data && res.data.accommodation) {
           this.accommodation = res.data.accommodation;
+          console.log("[AccommodationDetail] Rooms from API:", JSON.parse(JSON.stringify(res.data.rooms)));
           this.rooms = res.data.rooms || (Array.isArray(this.accommodation.rooms) ? this.accommodation.rooms : []);
         } else {
           throw new Error("숙소 정보를 찾을 수 없습니다.");
@@ -563,10 +723,10 @@ export default {
         console.error("Error fetching accommodation details:", err);
         this.fetchError = err.response?.data?.message || err.message || "숙소 정보를 가져오는데 실패했습니다.";
         if (!this.accommodation.accommodationId) {
-            this.accommodation = {}; 
-            this.rooms = [];
+          this.accommodation = {};
+          this.rooms = [];
         }
-        throw err; 
+        throw err;
       }
     },
     async fetchReviewsAndSummary() {
@@ -575,9 +735,9 @@ export default {
       try {
         const [reviewsRes, summaryRes] = await Promise.all([
           axios.get(`/api/reviews/accommodation/${this.id}`),
-          axios.get(`/api/reviews/summary/accommodation/${this.id}`)
+          axios.get(`/api/reviews/summary/accommodation/${this.id}`),
         ]);
-        this.reviews = reviewsRes.data || []; // This updates the reviews data property
+        this.reviews = reviewsRes.data || [];
         if (summaryRes.data) {
           this.averageRating = summaryRes.data.averageRating || 0;
           this.reviewCount = summaryRes.data.totalReviews || 0;
@@ -592,7 +752,7 @@ export default {
         this.averageRating = 0;
         this.reviewCount = 0;
       } finally {
-          this.loadingReviews = false;
+        this.loadingReviews = false;
       }
     },
     checkUserReviewStatus() {
@@ -620,7 +780,7 @@ export default {
         this.newReview.rating = 5;
         this.newReview.content = "";
         await this.fetchReviewsAndSummary();
-        this.userHasReviewed = true; 
+        this.userHasReviewed = true;
         this.canUserReview = false;
       } catch (error) {
         console.error("Error submitting review:", error);
@@ -664,7 +824,7 @@ export default {
         await axios.delete(`/api/reviews/${reviewId}`);
         this.showToast("리뷰가 성공적으로 삭제되었습니다.");
         await this.fetchReviewsAndSummary();
-        this.userHasReviewed = this.reviews.some(r => r.userId === this.userId && r.reviewId !== reviewId);
+        this.userHasReviewed = this.reviews.some((r) => r.userId === this.userId && r.reviewId !== reviewId);
         if (!this.userHasReviewed) {
           this.canUserReview = true;
         }
@@ -677,57 +837,96 @@ export default {
     },
     toggleWishlist() {
       this.isFavorite = !this.isFavorite;
-      this.showToast(this.isFavorite ? '찜 목록에 추가되었습니다.' : '찜 목록에서 삭제되었습니다.');
-      // TODO: API 연동 (찜 추가/삭제)
+      this.showToast(this.isFavorite ? "찜 목록에 추가되었습니다." : "찜 목록에서 삭제되었습니다.");
     },
     shareAccommodation() {
       if (navigator.share) {
-        navigator.share({
-          title: this.accommodation.title,
-          text: `${this.accommodation.title} 숙소 정보를 확인해보세요!`,
-          url: window.location.href,
-        })
-        .then(() => console.log('Successful share'))
-        .catch((error) => {
-            console.log('Error sharing', error)
-            this.showToast('공유에 실패했습니다. 링크를 복사해주세요.');
-        });
+        navigator
+          .share({
+            title: this.accommodation.title,
+            text: `${this.accommodation.title} 숙소 정보를 확인해보세요!`,
+            url: window.location.href,
+          })
+          .then(() => console.log("Successful share"))
+          .catch((error) => {
+            console.log("Error sharing", error);
+            this.showToast("공유에 실패했습니다. 링크를 복사해주세요.");
+          });
       } else {
-        navigator.clipboard.writeText(window.location.href)
-            .then(() => this.showToast('링크가 클립보드에 복사되었습니다.'))
-            .catch(() => this.showToast('링크 복사에 실패했습니다.'));
+        navigator.clipboard
+          .writeText(window.location.href)
+          .then(() => this.showToast("링크가 클립보드에 복사되었습니다."))
+          .catch(() => this.showToast("링크 복사에 실패했습니다."));
       }
     },
     formatDate(dateString) {
       if (!dateString) return "";
-      const options = { year: 'numeric', month: 'short', day: 'numeric' }; // short month for carousel
+      const options = { year: "numeric", month: "short", day: "numeric" };
       return new Date(dateString).toLocaleDateString("ko-KR", options);
     },
     formatPrice(price) {
       if (price === undefined || price === null || isNaN(price)) return "가격 문의";
       return new Intl.NumberFormat("ko-KR").format(price);
     },
-    goToRoomDetail(roomId) {
-      // this.showToast(`객실 ID ${roomId} 상세 페이지로 이동합니다. (구현 필요)`); // 기존 코드 주석 처리
-      this.$router.push({ name: 'RoomDetail', params: { roomId: roomId } });
+    goToRoomDetail(room) {
+      if (!this.isRoomBookable(room)) {
+        this.showToast("선택하신 조건으로 현재 예약이 불가능한 객실입니다.", 3000);
+        return;
+      }
+
+      if (!this.selectedCheckInDate || !this.selectedCheckOutDate) {
+        this.showToast("날짜를 선택해야 객실 상세 정보를 볼 수 있습니다.", 3000);
+        const bookingOptionsSection = document.getElementById("booking-options-section");
+        if (bookingOptionsSection) {
+          bookingOptionsSection.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+        return;
+      }
+      if (this.selectedGuests === 0) {
+        this.showToast("인원을 선택해야 객실 상세 정보를 볼 수 있습니다.", 3000);
+        const bookingOptionsSection = document.getElementById("booking-options-section");
+        if (bookingOptionsSection) {
+          bookingOptionsSection.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+        return;
+      }
+
+      const queryParams = {
+        checkIn: this.formatDateForApi(this.selectedCheckInDate),
+        checkOut: this.formatDateForApi(this.selectedCheckOutDate),
+        guests: this.selectedGuests,
+      };
+
+      this.$router.push({
+        name: "RoomDetail",
+        params: { roomId: room.roomId },
+        query: queryParams,
+      });
     },
     scrollToReviews() {
-        const reviewsSection = document.getElementById('reviews-section');
-        if (reviewsSection) {
-            reviewsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
+      const reviewsSection = document.getElementById("reviews-section");
+      if (reviewsSection) {
+        reviewsSection.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
     },
-    showToast(msg, duration = 3000) { 
-      const toastId = Date.now(); 
+    showToast(msg, duration = 3000) {
+      const toastId = Date.now();
       this.toasts.push({ id: toastId, message: msg });
       setTimeout(() => {
-        this.toasts = this.toasts.filter(t => t.id !== toastId); 
+        this.toasts = this.toasts.filter((t) => t.id !== toastId);
       }, duration);
+    },
+    formatDateForApi(date) {
+      if (!date) return null;
+      const year = date.getFullYear();
+      const month = (date.getMonth() + 1).toString().padStart(2, "0");
+      const day = date.getDate().toString().padStart(2, "0");
+      return `${year}-${month}-${day}`;
     },
     formatDateWithDay(date) {
       if (!date) return "";
-      const month = (date.getMonth() + 1).toString().padStart(2, '0');
-      const day = date.getDate().toString().padStart(2, '0');
+      const month = (date.getMonth() + 1).toString().padStart(2, "0");
+      const day = date.getDate().toString().padStart(2, "0");
       const dayOfWeek = KOREAN_DAYS[date.getDay()];
       return `${month}.${day}(${dayOfWeek})`;
     },
@@ -735,36 +934,63 @@ export default {
       if (!startDate || !endDate) return 0;
       const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      return diffDays > 0 ? diffDays : 0; 
+      return diffDays > 0 ? diffDays : 0;
     },
     openDateSelectionModal() {
       this.showDateModal = true;
     },
-    confirmDateSelection() {
-      this.showToast('날짜가 선택되었습니다. (구현 필요)');
+    resetDateSelection() {
+      this.tempSelectedCheckInDate = null;
+      this.tempSelectedCheckOutDate = null;
+      this.calendarDate = new Date();
+    },
+    async confirmDateSelectionAndCloseModal() {
+      if (this.tempSelectedCheckInDate && this.tempSelectedCheckOutDate) {
+        this.selectedCheckInDate = new Date(this.tempSelectedCheckInDate);
+        this.selectedCheckOutDate = new Date(this.tempSelectedCheckOutDate);
+        this.showToast("날짜가 선택되어 객실 정보를 업데이트합니다.");
+        this.showDateModal = false;
+
+        this.loading = true;
+        try {
+          await this.fetchAccommodationAndRooms();
+        } catch (error) {
+          console.error("날짜 변경 후 데이터 다시 로드 실패:", error);
+          this.showToast("객실 정보 업데이트 중 오류가 발생했습니다.", "error");
+        } finally {
+          this.loading = false;
+        }
+      } else if (this.tempSelectedCheckInDate && !this.tempSelectedCheckOutDate) {
+        this.showToast("체크아웃 날짜를 선택해주세요.");
+        return;
+      } else {
+        this.showDateModal = false;
+      }
     },
     openGuestSelectionModal() {
-      this.tempSelectedAdults = this.selectedAdults;
-      this.tempSelectedChildren = this.selectedChildren;
+      this.tempSelectedGuests = this.selectedGuests;
       this.showGuestModal = true;
     },
-    incrementAdults() {
-      if (this.tempSelectedAdults < 10) this.tempSelectedAdults++;
-    },
-    decrementAdults() {
-      if (this.tempSelectedAdults > 1) this.tempSelectedAdults--;
-    },
-    incrementChildren() {
-      if (this.tempSelectedChildren < 5) this.tempSelectedChildren++;
-    },
-    decrementChildren() {
-      if (this.tempSelectedChildren > 0) this.tempSelectedChildren--;
-    },
-    confirmGuestSelectionAndCloseModal() {
-      this.selectedAdults = this.tempSelectedAdults;
-      this.selectedChildren = this.tempSelectedChildren;
-      this.showToast('인원이 선택되었습니다.');
-      this.showGuestModal = false;
+    async confirmGuestSelectionAndCloseModal(payload) {
+      if (payload && typeof payload.guests === "number") {
+        this.selectedGuests = payload.guests;
+        this.showToast("인원이 선택되어 객실 정보를 업데이트합니다.");
+        this.showGuestModal = false;
+
+        if (this.selectedCheckInDate && this.selectedCheckOutDate) {
+          this.loading = true;
+          try {
+            await this.fetchAccommodationAndRooms();
+          } catch (error) {
+            console.error("인원 변경 후 데이터 다시 로드 실패:", error);
+            this.showToast("객실 정보 업데이트 중 오류가 발생했습니다.", "error");
+          } finally {
+            this.loading = false;
+          }
+        }
+      } else {
+        this.showGuestModal = false;
+      }
     },
     nextReviewSlide() {
       if (this.canNextReviewSlide) {
@@ -795,7 +1021,7 @@ export default {
     },
     isDateDisabled(dateStr) {
       const today = new Date();
-      today.setHours(0,0,0,0);
+      today.setHours(0, 0, 0, 0);
       return new Date(dateStr) < today;
     },
     handleDateClick(dateStr) {
@@ -810,7 +1036,7 @@ export default {
       } else {
         const nights = this.calculateNights(this.tempSelectedCheckInDate, clickedDate);
         if (nights > 9) {
-          this.showToast('최대 9박까지 선택 가능합니다.');
+          this.showToast("최대 9박까지 선택 가능합니다.");
           this.tempSelectedCheckOutDate = new Date(this.tempSelectedCheckInDate);
           this.tempSelectedCheckOutDate.setDate(this.tempSelectedCheckInDate.getDate() + 9);
         } else {
@@ -820,26 +1046,79 @@ export default {
     },
     getDatePrice(dateStr) {
       const day = new Date(dateStr).getDate();
-      if (day % 7 === 0) return '15.0';
-      if (day % 5 === 0) return '18.7';
-      if (day % 3 === 0) return '13.7';
-      return '16.7';
+      if (day % 7 === 0) return "15.0";
+      if (day % 5 === 0) return "18.7";
+      if (day % 3 === 0) return "13.7";
+      return "16.7";
     },
-    resetDateSelection() {
-      this.tempSelectedCheckInDate = null;
-      this.tempSelectedCheckOutDate = null;
-      this.calendarDate = new Date();
+    handleBookRoom(room) {
+      console.log(`Book room: ${room.roomId}`);
     },
-    confirmDateSelectionAndCloseModal() {
-      if (this.tempSelectedCheckInDate && this.tempSelectedCheckOutDate) {
-        this.selectedCheckInDate = new Date(this.tempSelectedCheckInDate);
-        this.selectedCheckOutDate = new Date(this.tempSelectedCheckOutDate);
-        this.showToast('날짜가 선택되었습니다.');
-      } else if (this.tempSelectedCheckInDate) {
-        this.showToast('체크아웃 날짜를 선택해주세요.');
+    async handleAddToCart(room) {
+      if (!this.isRoomBookable(room)) {
+        this.showToast("선택하신 조건으로 현재 예약이 불가능하여 장바구니에 담을 수 없습니다.", 3000);
         return;
       }
-      this.showDateModal = false;
+      if (!this.isLoggedIn) {
+        this.showToast("로그인이 필요한 서비스입니다.");
+        this.$router.push({ name: "Login", query: { redirect: this.$route.fullPath } });
+        return;
+      }
+      if (!this.selectedCheckInDate || !this.selectedCheckOutDate || this.selectedGuests <= 0) {
+        this.showToast("날짜와 인원을 모두 선택해야 장바구니에 담을 수 있습니다.");
+        const bookingOptionsSection = document.getElementById("booking-options-section");
+        if (bookingOptionsSection) {
+          bookingOptionsSection.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+        return;
+      }
+
+      const itemDetails = {
+        roomId: room.roomId,
+        checkInDate: this.formatDateForApi(this.selectedCheckInDate),
+        checkOutDate: this.formatDateForApi(this.selectedCheckOutDate),
+        guestCount: this.selectedGuests,
+        price: room.price,
+      };
+
+      try {
+        const response = await this.cartStore.addToCart(itemDetails);
+        this.showToast(response.message || "객실이 장바구니에 추가되었습니다.");
+      } catch (error) {
+        console.error("AccommodationDetail - Error adding to cart:", error);
+        this.showToast(error.response?.data?.message || error.message || "장바구니 추가 중 오류가 발생했습니다.");
+      }
+    },
+    isRoomBookable(room) {
+      console.log(
+        `[AccommodationDetail] Checking isRoomBookable for Room ID: ${room.roomId}, ` +
+          `Capacity: ${room.capacity}, MinAvailableCount: ${room.minAvailableCount}, ` +
+          `SelectedGuests: ${this.selectedGuests}, SelectedCheckIn: ${this.selectedCheckInDate}, SelectedCheckOut: ${this.selectedCheckOutDate}`
+      );
+
+      if (!this.selectedCheckInDate || !this.selectedCheckOutDate || this.selectedGuests === 0) {
+        console.log("[AccommodationDetail] Date or guests not selected, returning true for UI handling.");
+        return true;
+      }
+
+      const totalGuests = this.selectedGuests;
+
+      const roomCapacity = parseInt(String(room.capacity || 0), 10);
+      if (totalGuests > roomCapacity) {
+        console.log(
+          `[AccommodationDetail] Room ID: ${room.roomId} - Guests (${totalGuests}) > Capacity (${roomCapacity}). Not bookable.`
+        );
+        return false;
+      }
+
+      if (room.minAvailableCount !== undefined && room.minAvailableCount <= 0) {
+        console.log(
+          `[AccommodationDetail] Room ID: ${room.roomId} - MinAvailableCount (${room.minAvailableCount}) <= 0. Not bookable.`
+        );
+        return false;
+      }
+      console.log(`[AccommodationDetail] Room ID: ${room.roomId} - Bookable.`);
+      return true;
     },
   },
 };
@@ -849,16 +1128,18 @@ export default {
 .line-clamp-3 {
   display: -webkit-box;
   -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;  
+  -webkit-box-orient: vertical;
   overflow: hidden;
 }
 .text-xxs {
-  font-size: 0.65rem; /* 10.4px approx */
+  font-size: 0.65rem;
   line-height: 0.9rem;
 }
 
 .animate-toast-in-out {
-  animation: toast-in 0.5s ease-out forwards, toast-out 0.5s ease-in 2.5s forwards;
+  animation:
+    toast-in 0.5s ease-out forwards,
+    toast-out 0.5s ease-in 2.5s forwards;
 }
 
 @keyframes toast-in {

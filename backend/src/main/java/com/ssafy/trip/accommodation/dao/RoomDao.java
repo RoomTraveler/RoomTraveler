@@ -46,6 +46,15 @@ public interface RoomDao {
     List<Room> getAvailableRooms(Long accommodationId, LocalDate checkInDate, LocalDate checkOutDate) throws SQLException;
 
     /**
+     * 숙소 ID와 (선택적) 날짜 범위로 객실 목록을 조회합니다. (신규 추가)
+     * room.xml의 getRoomsByAccommodationIdAndOptionalDateRange 쿼리와 매핑됩니다.
+     * minAvailableCount는 이 메소드에서 채워지지 않으며, 서비스 레이어에서 별도 계산 후 설정됩니다.
+     * @param params Map에 accommodationId, (선택적) startDate, (선택적) endDate 포함
+     * @return 객실 기본 정보 목록
+     */
+    List<Room> getRoomsByAccommodationIdAndOptionalDateRange(Map<String, Object> params) throws SQLException;
+
+    /**
      * 객실 정보를 업데이트합니다.
      * @param room 업데이트할 객실 정보
      * @return 업데이트된 행 수

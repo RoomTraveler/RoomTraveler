@@ -3,10 +3,15 @@ package com.ssafy.trip.notification;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 
 import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * 알림 서비스 구현 클래스
@@ -151,5 +156,36 @@ public class NotificationServiceImpl implements NotificationService {
                 .build();
         
         return createNotification(notification);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<Notification> getNotificationsByUserIdWithFilter(Long userId, String notificationType, Boolean isRead, Pageable pageable) throws SQLException {
+        String sortBy = "createdAt"; // 기본 정렬 필드
+        String sortDir = "DESC";   // 기본 정렬 방향
+
+        if (pageable.getSort().isSorted()) {
+            Sort.Order order = pageable.getSort().iterator().next(); // 첫 번째 정렬 조건 사용
+            sortBy = order.getProperty();
+            sortDir = order.getDirection().name();
+        }
+        
+        List<Notification> notifications = notificationDao.selectByUserIdWithFilter(
+                userId,
+                notificationType,
+                isRead,
+                pageable.getOffset(),
+                pageable.getPageSize(),
+                sortBy,
+                sortDir
+        );
+        long totalCount = notificationDao.countByUserIdWithFilter(userId, notificationType, isRead);
+        return new PageImpl<>(notifications, pageable, totalCount);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public long getUnreadNotificationCountByUserId(Long userId) throws SQLException {
+        return notificationDao.countUnreadByUserId(userId);
     }
 }

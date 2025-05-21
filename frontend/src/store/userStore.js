@@ -52,26 +52,6 @@ export const useUserStore = defineStore(
       user.value = { name: decoded.name, email: decoded.email, role: decoded.role };
     }
 
-    async function register(userData) {
-      loading.value = true;
-      error.value = null;
-
-      try {
-        await new Promise((r) => setTimeout(r, 1000));
-
-        if (userData.email === "user@example.com") {
-          throw new Error("이미 사용 중인 이메일 주소입니다.");
-        }
-
-        return { success: true };
-      } catch (err) {
-        error.value = err.message;
-        return { success: false, error: err.message };
-      } finally {
-        loading.value = false;
-      }
-    }
-
     async function logout() {
       try {
         _tokens.value.accessToken = null;

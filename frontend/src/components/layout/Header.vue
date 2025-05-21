@@ -31,14 +31,27 @@
 
           <!-- 사용자 메뉴 영역 -->
           <div class="user-menu">
-            <!-- 찜 목록 버튼 -->
-            <router-link to="/accommodation/favorites" class="user-menu-item icon-btn" title="찜 목록">
+            <!-- 찜 목록 버튼 (로그인 시에만 보이도록) -->
+            <router-link
+              v-if="isLoggedIn"
+              to="/accommodation/favorites"
+              class="user-menu-item icon-btn"
+              title="찜 목록"
+            >
               <i class="bi bi-heart"></i>
             </router-link>
 
-            <!-- 장바구니 버튼 -->
-            <router-link to="/cart" class="user-menu-item icon-btn" title="장바구니">
+            <!-- 장바구니 버튼 (로그인 시에만 보이도록) -->
+            <router-link
+              v-if="isLoggedIn"
+              to="/accommodation/cart"
+              class="user-menu-item icon-btn position-relative"
+              title="장바구니"
+            >
               <i class="bi bi-cart"></i>
+              <span v-if="cartItemCount > 0" class="notification-badge cart-badge">
+                {{ cartItemCount }}
+              </span>
             </router-link>
 
             <template v-if="!isLoggedIn">
@@ -47,7 +60,7 @@
             </template>
             <template v-else>
               <!-- 알림 아이콘 -->
-              <router-link to="/notification" class="user-menu-item position-relative icon-btn" title="알림">
+              <router-link to="/notification/my" class="user-menu-item position-relative icon-btn" title="알림">
                 <i class="bi bi-bell-fill"></i>
                 <span v-if="unreadNotificationCount > 0" class="notification-badge">
                   {{ unreadNotificationCount }}
@@ -60,16 +73,17 @@
                   <i class="bi bi-person-circle"></i>
                 </button>
                 <div class="user-dropdown-menu">
-                  <router-link to="/user/profile" class="dropdown-item">마이페이지</router-link>
-                  <router-link to="/reservation/my-reservations" class="dropdown-item">예약내역</router-link>
-                  <router-link to="/accommodation/favorites" class="dropdown-item">찜 목록</router-link>
+                  <li><router-link to="/user/profile" class="dropdown-item">마이페이지</router-link></li>
+                  <li><router-link to="/reservation/my-reservations" class="dropdown-item">나의 예약</router-link></li>
+                  <li><router-link to="/accommodation/favorites" class="dropdown-item">찜 목록</router-link></li>
                   <template v-if="isAdmin">
-                    <router-link to="/admin" class="dropdown-item admin-link">관리자</router-link>
+                    <li><router-link to="/admin" class="dropdown-item admin-link">관리자</router-link></li>
                   </template>
                   <template v-if="isHost || isAdmin">
-                    <router-link to="/host" class="dropdown-item host-link">호스트</router-link>
+                    <li><router-link to="/host" class="dropdown-item host-link">호스트</router-link></li>
                   </template>
-                  <a href="#" @click.prevent="logout" class="dropdown-item">로그아웃</a>
+                  <li><hr class="dropdown-divider" /></li>
+                  <li><a href="#" @click.prevent="logout" class="dropdown-item">로그아웃</a></li>
                 </div>
               </div>
             </template>
@@ -77,30 +91,50 @@
         </div>
       </div>
     </div>
+
+
+
   </div>
 </template>
 
 <script>
 import { useUserStore } from "@/store/userStore";
+import { useNotificationStore } from "@/store/notificationStore";
+import { useCartStore } from "@/store/cartStore";
+import { storeToRefs } from "pinia";
 import api from "@/api/index";
 
 /**
  * 헤더 컴포넌트
- *
+ * 
  * 이 컴포넌트는 웹사이트의 공통 헤더 부분을 담당합니다.
  * 로그인 상태에 따라 다른 메뉴를 표시하며, 알림 기능을 포함합니다.
  */
 export default {
-  name: "Header",
+  name: 'Header',
   setup() {
     // Pinia 스토어 사용
     const userStore = useUserStore();
-    return { userStore };
+    const notificationStore = useNotificationStore();
+    const cartStore = useCartStore();
+
+    const { unreadCount: unreadNotificationCount } = storeToRefs(notificationStore);
+    const { fetchUnreadCount } = notificationStore;
+    const { fetchCart: fetchCartItems } = cartStore;
+    const { cart } = storeToRefs(cartStore);
+
+    return {
+      userStore,
+      unreadNotificationCount,
+      fetchUnreadCount,
+      cart,
+      fetchCartItems,
+    };
   },
   data() {
     return {
-      unreadNotificationCount: 0,
       selected: "숙박",
+      notificationInterval: null,
     };
   },
   computed: {
@@ -121,11 +155,18 @@ export default {
       return this.userStore.isAuthenticated;
     },
     /**
+     * 장바구니 아이템 개수
+     * @returns {number} 장바구니 아이템 총 개수
+     */
+    cartItemCount() {
+      return this.cart ? this.cart.totalItems : 0;
+    },
+    /**
      * 현재 로그인한 사용자 ID
      * @returns {number|null} 사용자 ID 또는 null
      */
     userId() {
-      return this.userStore.user?.id;
+      return this.userStore.user?.id
     },
     /**
      * 사용자가 관리자인지 확인
@@ -134,11 +175,19 @@ export default {
     isAdmin() {
       return this.userStore.userRole === "ADMIN";
     },
+    /**
+     * 사용자가 호스트인지 확인
+     * @returns {boolean} 호스트 여부
+     */
+    isHost() {
+      return this.userStore.userRole === "HOST";
+    },
   },
   mounted() {
-    // 로그인 상태일 때만 알림 카운트 로드
+    // 로그인 상태일 때만 알림 카운트 로드 및 장바구니 정보 로드
     if (this.isLoggedIn) {
-      this.loadNotificationCount();
+      this.loadInitialNotificationCount();
+      this.loadCartData();
       // 30초마다 알림 카운트 갱신
       this.notificationInterval = setInterval(this.loadNotificationCount, 30000);
     }
@@ -155,6 +204,22 @@ export default {
       clearInterval(this.notificationInterval);
     }
   },
+  watch: {
+    isLoggedIn(newVal) {
+      if (newVal) {
+        this.loadInitialNotificationCount();
+        this.loadCartData();
+        if (!this.notificationInterval) {
+          this.notificationInterval = setInterval(this.loadNotificationCount, 30000);
+        }
+      } else {
+        if (this.notificationInterval) {
+          clearInterval(this.notificationInterval);
+          this.notificationInterval = null;
+        }
+      }
+    },
+  },
   methods: {
     /**
      * 토글 버튼 선택 함수
@@ -163,22 +228,47 @@ export default {
     select(value) {
       this.selected = value;
       // 선택된 값에 따라 다른 페이지로 이동
-      if (value === "숙박") {
-        this.$router.push("/accommodation");
-      } else if (value === "여행") {
-        this.$router.push("/plan");
+      setTimeout(() => {
+        this.$router.push(value === "숙박" ? "/accommodation" : "/plan");
+      }, 200);
+    },
+    /**
+     * 초기 알림 카운트 로드 함수 (컴포넌트 마운트 시)
+     */
+    async loadInitialNotificationCount() {
+      try {
+        await this.fetchUnreadCount();
+      } catch (error) {
+        console.error("초기 알림 카운트 로드 중 오류:", error);
       }
     },
     /**
-     * 알림 카운트 로드 함수
+     * 장바구니 데이터 로드 함수
+     */
+    async loadCartData() {
+      try {
+        await this.fetchCartItems();
+      } catch (error) {
+        console.error("장바구니 데이터 로드 중 오류:", error);
+      }
+    },
+    /**
+     * 주기적 알림 카운트 로드 함수
      */
     async loadNotificationCount() {
-      // API 호출로 알림 카운트 가져오기
-      const response = await api.api({
-        url: "/api/notification/count/unread",
-        method: "GET",
-      });
-      this.unreadNotificationCount = response.data;
+      // 로그인 상태일 때만 실행 (로그아웃 후 인터벌이 계속 실행될 수 있으므로)
+      if (!this.isLoggedIn) {
+        if (this.notificationInterval) {
+          clearInterval(this.notificationInterval);
+          this.notificationInterval = null;
+        }
+        return;
+      }
+      try {
+        await this.fetchUnreadCount();
+      } catch (error) {
+        console.error("주기적 알림 카운트 로드 중 오류:", error);
+      }
     },
     /**
      * 로그아웃 처리 함수
@@ -314,6 +404,12 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
+  line-height: 1;
+}
+
+.cart-badge {
+  top: -6px;
+  right: -8px;
 }
 
 .user-dropdown {
@@ -448,7 +544,7 @@ export default {
   font-weight: bold;
   font-size: 15px;
   cursor: pointer;
-  background-color: #f8f8f8;
+  background-color: #ffffff;
   margin: 0 15px 0 20px;
 }
 
@@ -475,5 +571,12 @@ export default {
   border-radius: 30px;
   transition: transform 0.3s ease;
   z-index: 0;
+}
+
+/* 드롭다운 메뉴 li 스타일 추가 */
+.user-dropdown-menu > li {
+  list-style-type: none; /* 기본 리스트 스타일(점) 제거 */
+  margin: 0; /* 기본 마진 제거 */
+  padding: 0; /* 기본 패딩 제거 */
 }
 </style>

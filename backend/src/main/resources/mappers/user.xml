@@ -1,14 +1,22 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper
-        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
-        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
 <mapper namespace="com.ssafy.trip.user.UserDao">
 
     <!-- 새 사용자 등록 -->
     <insert id="insert" useGeneratedKeys="true" keyProperty="userId">
-        INSERT INTO users (username, email, password_hash, phone, role, status)
-        VALUES (#{username}, #{email}, #{password}, #{phone}, 'USER', 'ACTIVE')
+        <choose>
+            <when test="userId != null">
+                INSERT INTO users (user_id, username, email, password, phone, role, status)
+                VALUES (#{userId}, #{username}, #{email}, #{password}, #{phone}, #{role}, #{status})
+            </when>
+            <otherwise>
+                INSERT INTO users (username, email, password, phone, role, status)
+                VALUES (#{username}, #{email}, #{password}, #{phone}, 'USER', 'ACTIVE')
+            </otherwise>
+        </choose>
     </insert>
 
     <!-- 로그인 -->
@@ -25,7 +33,7 @@
         <id property="userId" column="user_id" />
         <result property="username" column="username" />
         <result property="email" column="email" />
-        <result property="password" column="password_hash" />
+        <result property="password" column="password" />
         <result property="phone" column="phone" />
         <result property="role" column="role" />
         <result property="status" column="status" />
@@ -46,7 +54,7 @@
         UPDATE users
         SET username = #{username}
         <if test="password != null">
-            , password_hash = #{password}
+            , password = #{password}
         </if>
         WHERE email = #{email}
     </update>
@@ -58,7 +66,7 @@
 
     <!-- 비밀번호 찾기 -->
     <select id="findPassword" resultType="String">
-        SELECT password_hash FROM users
+        SELECT password FROM users
         WHERE username = #{username} AND email = #{email}
     </select>
 

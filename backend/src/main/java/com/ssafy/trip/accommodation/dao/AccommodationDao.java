@@ -1,6 +1,7 @@
 package com.ssafy.trip.accommodation.dao;
 
 import com.ssafy.trip.accommodation.model.Accommodation;
+import com.ssafy.trip.accommodation.model.Room;
 
 import org.apache.ibatis.annotations.Mapper;
 
@@ -42,6 +43,20 @@ public interface AccommodationDao {
      * @return 숙소 목록
      */
     List<Accommodation> getAccommodationsByRegion(Integer sidoCode, Integer gugunCode) throws SQLException;
+
+    /**
+     * 숙소 ID로 객실 목록을 조회합니다. (기존)
+     * @param accommodationId 숙소 ID
+     * @return 객실 목록
+     */
+    List<Room> getRoomsByAccommodationId(Long accommodationId) throws SQLException;
+
+    /**
+     * 숙소 ID와 날짜 범위로 객실 목록 및 최소 가용 객실 수를 조회합니다. (신규)
+     * @param params Map에 accommodationId, startDate, endDate 포함
+     * @return 최소 가용 객실 수가 포함된 객실 목록
+     */
+    List<Room> getRoomsWithAvailabilityByAccommodationId(Map<String, Object> params) throws SQLException;
 
     /**
      * 키워드로 숙소를 검색합니다.

@@ -2,23 +2,23 @@
   <div class="container mt-5 mb-5">
     <div class="payment-history-container">
       <h2 class="mb-4">결제 내역</h2>
-      
+
       <!-- 알림 메시지 -->
       <div v-if="message" class="alert alert-success alert-dismissible fade show" role="alert">
         {{ message }}
         <button type="button" class="btn-close" @click="message = ''" aria-label="Close"></button>
       </div>
-      
+
       <!-- 필터 섹션 -->
       <div class="filter-section">
         <div class="row g-3">
           <div class="col-md-3">
             <label for="startDate" class="form-label">시작일</label>
-            <input type="date" class="form-control" id="startDate" v-model="filters.startDate">
+            <input type="date" class="form-control" id="startDate" v-model="filters.startDate" />
           </div>
           <div class="col-md-3">
             <label for="endDate" class="form-label">종료일</label>
-            <input type="date" class="form-control" id="endDate" v-model="filters.endDate">
+            <input type="date" class="form-control" id="endDate" v-model="filters.endDate" />
           </div>
           <div class="col-md-3">
             <label for="status" class="form-label">결제 상태</label>
@@ -49,7 +49,7 @@
           </div>
         </div>
       </div>
-      
+
       <!-- 결제 내역 목록 -->
       <div v-if="loading" class="text-center py-5">
         <div class="spinner-border text-primary" role="status">
@@ -57,7 +57,7 @@
         </div>
         <p class="mt-2">결제 내역을 불러오는 중입니다...</p>
       </div>
-      
+
       <div v-else-if="payments.length === 0" class="empty-state">
         <div class="empty-state-icon">
           <i class="bi bi-credit-card"></i>
@@ -68,7 +68,7 @@
           <i class="bi bi-search"></i> 숙소 찾아보기
         </router-link>
       </div>
-      
+
       <div v-else class="row">
         <div v-for="payment in payments" :key="payment.paymentId" class="col-md-6">
           <div class="card payment-card">
@@ -105,9 +105,9 @@
                 <router-link :to="`/payment/detail/${payment.paymentId}`" class="btn btn-sm btn-outline-primary">
                   상세 보기
                 </router-link>
-                <router-link 
-                  v-if="payment.status === 'COMPLETED'" 
-                  :to="`/payment/cancel/${payment.paymentId}`" 
+                <router-link
+                  v-if="payment.status === 'COMPLETED'"
+                  :to="`/payment/cancel/${payment.paymentId}`"
                   class="btn btn-sm btn-outline-danger"
                 >
                   결제 취소
@@ -123,7 +123,7 @@
 
 <script>
 export default {
-  name: 'PaymentHistory',
+  name: "PaymentHistory",
   data() {
     return {
       // 결제 내역 목록
@@ -131,27 +131,27 @@ export default {
       // 로딩 상태
       loading: false,
       // 알림 메시지
-      message: '',
+      message: "",
       // 필터 조건
       filters: {
-        startDate: '',
-        endDate: '',
-        status: '',
-        paymentMethod: ''
-      }
+        startDate: "",
+        endDate: "",
+        status: "",
+        paymentMethod: "",
+      },
     };
   },
   created() {
     // 컴포넌트 생성 시 날짜 필터 초기화
     this.initDateFilters();
-    
+
     // URL 쿼리 파라미터에서 필터 조건 가져오기
     const query = this.$route.query;
     if (query.startDate) this.filters.startDate = query.startDate;
     if (query.endDate) this.filters.endDate = query.endDate;
     if (query.status) this.filters.status = query.status;
     if (query.paymentMethod) this.filters.paymentMethod = query.paymentMethod;
-    
+
     // 결제 내역 조회
     this.searchPayments();
   },
@@ -159,46 +159,46 @@ export default {
     // 결제 내역 조회
     async searchPayments() {
       this.loading = true;
-      
+
       try {
         // URL 쿼리 파라미터 업데이트
         this.updateQueryParams();
-        
+
         // API 호출
         const response = await fetch(`/api/payments/history?${this.getQueryString()}`);
         if (!response.ok) {
-          throw new Error('결제 내역을 불러오는데 실패했습니다.');
+          throw new Error("결제 내역을 불러오는데 실패했습니다.");
         }
-        
+
         this.payments = await response.json();
       } catch (error) {
-        console.error('결제 내역 조회 중 오류가 발생했습니다:', error);
-        this.message = '결제 내역을 불러오는데 실패했습니다.';
+        console.error("결제 내역 조회 중 오류가 발생했습니다:", error);
+        this.message = "결제 내역을 불러오는데 실패했습니다.";
       } finally {
         this.loading = false;
       }
     },
-    
+
     // 필터 초기화
     resetFilters() {
       this.initDateFilters();
-      this.filters.status = '';
-      this.filters.paymentMethod = '';
+      this.filters.status = "";
+      this.filters.paymentMethod = "";
       this.searchPayments();
     },
-    
+
     // 날짜 필터 초기화
     initDateFilters() {
       // 시작일: 3개월 전
       const threeMonthsAgo = new Date();
       threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
       this.filters.startDate = this.formatDateForInput(threeMonthsAgo);
-      
+
       // 종료일: 오늘
       const today = new Date();
       this.filters.endDate = this.formatDateForInput(today);
     },
-    
+
     // URL 쿼리 파라미터 업데이트
     updateQueryParams() {
       const query = {};
@@ -206,81 +206,95 @@ export default {
       if (this.filters.endDate) query.endDate = this.filters.endDate;
       if (this.filters.status) query.status = this.filters.status;
       if (this.filters.paymentMethod) query.paymentMethod = this.filters.paymentMethod;
-      
+
       this.$router.replace({ query });
     },
-    
+
     // 쿼리 스트링 생성
     getQueryString() {
       const params = new URLSearchParams();
-      if (this.filters.startDate) params.append('startDate', this.filters.startDate);
-      if (this.filters.endDate) params.append('endDate', this.filters.endDate);
-      if (this.filters.status) params.append('status', this.filters.status);
-      if (this.filters.paymentMethod) params.append('paymentMethod', this.filters.paymentMethod);
-      
+      if (this.filters.startDate) params.append("startDate", this.filters.startDate);
+      if (this.filters.endDate) params.append("endDate", this.filters.endDate);
+      if (this.filters.status) params.append("status", this.filters.status);
+      if (this.filters.paymentMethod) params.append("paymentMethod", this.filters.paymentMethod);
+
       return params.toString();
     },
-    
+
     // 결제 상태에 따른 배지 클래스 반환
     getStatusBadgeClass(status) {
       switch (status) {
-        case 'COMPLETED': return 'badge bg-success';
-        case 'PENDING': return 'badge bg-warning text-dark';
-        case 'FAILED': return 'badge bg-danger';
-        case 'CANCELLED': return 'badge bg-secondary';
-        default: return 'badge bg-info';
+        case "COMPLETED":
+          return "badge bg-success";
+        case "PENDING":
+          return "badge bg-warning text-dark";
+        case "FAILED":
+          return "badge bg-danger";
+        case "CANCELLED":
+          return "badge bg-secondary";
+        default:
+          return "badge bg-info";
       }
     },
-    
+
     // 결제 상태 텍스트 반환
     getStatusText(status) {
       switch (status) {
-        case 'COMPLETED': return '결제 완료';
-        case 'PENDING': return '처리 중';
-        case 'FAILED': return '결제 실패';
-        case 'CANCELLED': return '결제 취소';
-        default: return status;
+        case "COMPLETED":
+          return "결제 완료";
+        case "PENDING":
+          return "처리 중";
+        case "FAILED":
+          return "결제 실패";
+        case "CANCELLED":
+          return "결제 취소";
+        default:
+          return status;
       }
     },
-    
+
     // 결제 방법 텍스트 반환
     getPaymentMethodText(method) {
       switch (method) {
-        case 'CARD': return '신용카드';
-        case 'BANK_TRANSFER': return '계좌이체';
-        case 'PHONE': return '휴대폰 결제';
-        default: return method;
+        case "CARD":
+          return "신용카드";
+        case "BANK_TRANSFER":
+          return "계좌이체";
+        case "PHONE":
+          return "휴대폰 결제";
+        default:
+          return method;
       }
     },
-    
+
     // 날짜 포맷팅
     formatDate(dateString) {
-      if (!dateString) return '-';
+      if (!dateString) return "-";
       const date = new Date(dateString);
-      return new Intl.DateTimeFormat('ko-KR', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
+      return new Intl.DateTimeFormat("ko-KR", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
       }).format(date);
     },
-    
+
     // 날짜를 input[type=date]용으로 포맷팅
     formatDateForInput(date) {
-      return date.toISOString().split('T')[0];
+      return date.toISOString().split("T")[0];
     },
-    
+
     // 금액 포맷팅
     formatCurrency(amount) {
-      return new Intl.NumberFormat('ko-KR', {
-        style: 'currency',
-        currency: 'KRW',
-        maximumFractionDigits: 0
+      return new Intl.NumberFormat("ko-KR", {
+        style: "currency",
+        currency: "KRW",
+        maximumFractionDigits: 0,
       }).format(amount);
-    }
-  }
+    },
+  },
 };
 </script>
 
@@ -297,7 +311,7 @@ export default {
 }
 .payment-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 .payment-header {
   display: flex;

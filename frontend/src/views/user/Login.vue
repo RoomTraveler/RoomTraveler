@@ -69,44 +69,90 @@
 </template>
 
 <script>
-import api from "@/api/index";
+import { ref, computed, onMounted } from "vue";
 import { useUserStore } from "@/store/userStore";
+import { useRouter, useRoute } from "vue-router";
+import api from "@/api/index";
 
 export default {
   name: "LoginView",
-  data() {
-    return {
-      email: "",
-      password: "",
-      rememberMe: false,
-      loading: false,
-      error: null,
-      isHostMode: false,
-    };
-  },
-  methods: {
-    async login() {
-      this.loading = true;
-      this.error = null;
+  setup() {
+    const userStore = useUserStore();
+    const router = useRouter();
+    const route = useRoute();
 
-      const useStore = useUserStore();
-      useStore.login(this.email, this.password);
+    const email = ref("");
+    const password = ref("");
+    const rememberMe = ref(false);
+    const isHostMode = ref(false);
 
-      const redirectPath = this.$route.query.redirect || (this.isHostMode ? "/host" : "/");
-      this.$router.push(redirectPath);
-    },
-    toggleMode() {
-      this.isHostMode = !this.isHostMode;
-      this.error = null;
-      this.email = "";
-      this.password = "";
-    },
-  },
-  created() {
-    const key = this.isHostMode ? "host" : "user";
-    if (localStorage.getItem(key)) {
-      this.$router.push(this.isHostMode ? "/host" : "/");
+    const loading = computed(() => userStore.loading);
+    const componentError = ref(null); // 스토어의 error와 구분하기 위해 componentError 사용
+
+    async function handleLogin() {
+      componentError.value = null;
+      // isHostMode 값에 따라 login API를 다르게 호출할 필요는 현재 없음.
+      // 백엔드 /api/user/login 이 역할을 구분하지 않음.
+      // 역할(role)은 로그인 성공 후 userStore.user.role 로 구분 가능.
+      const result = await userStore.login(email.value, password.value);
+
+      if (result && result.success) {
+        // userStore.user.role을 확인하여 리다이렉트 경로 결정 가능
+        const userRole = userStore.user?.role;
+        let redirectPath = route.query.redirect?.toString() || "/"; // query.redirect가 배열일 수 있으므로 toString()
+
+        if (userRole === "HOST") {
+          redirectPath = route.query.redirect?.toString() || "/host";
+        } else if (userRole === "ADMIN") {
+          redirectPath = route.query.redirect?.toString() || "/admin";
+        }
+        // 일반 USER는 기본 '/' 또는 이전 경로
+
+        router.push(redirectPath);
+      } else {
+        componentError.value = result.error || "이메일 또는 비밀번호가 올바르지 않습니다.";
+      }
     }
+
+    function toggleMode() {
+      isHostMode.value = !isHostMode.value;
+      componentError.value = null;
+      email.value = "";
+      password.value = "";
+      if (userStore.error) {
+        // 스토어의 에러도 있다면 초기화
+        userStore.error = null;
+      }
+    }
+
+    onMounted(() => {
+      // 예시: URL 경로에 따라 isHostMode 기본값 설정
+      if (route.path.toLowerCase().includes("host")) {
+        isHostMode.value = true;
+      }
+
+      // 이미 로그인된 경우 리다이렉트 (선택적: UX에 따라 로그인 페이지를 보여줄 수도 있음)
+      // if (userStore.isAuthenticated) {
+      //   console.log('Already logged in, redirecting...');
+      //   const userRole = userStore.user?.role;
+      //   let redirectPath = '/';
+      //   if (userRole === 'HOST') redirectPath = '/host';
+      //   else if (userRole === 'ADMIN') redirectPath = '/admin';
+      //   router.push(redirectPath);
+      // }
+    });
+
+    return {
+      email,
+      password,
+      rememberMe,
+      loading,
+      error: componentError, // 템플릿에서 'error'로 사용하도록 componentError를 error로 반환
+      isHostMode,
+      login: handleLogin,
+      toggleMode,
+      userStore, // 디버깅 또는 추가적인 스토어 상태 접근을 위해 (선택적)
+    };
   },
 };
 </script>

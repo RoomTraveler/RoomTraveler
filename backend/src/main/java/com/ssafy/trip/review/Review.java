@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * 숙소 리뷰 정보를 담는 클래스
@@ -32,4 +33,7 @@ public class Review {
     private String username;         // 사용자 이름
     private String accommodationTitle; // 숙소 이름
     private String userProfileImage; // 사용자 프로필 이미지
+
+    //리뷰 이미지 목록을 위한 콜렉션
+    private List<ReviewImage> images;
 }

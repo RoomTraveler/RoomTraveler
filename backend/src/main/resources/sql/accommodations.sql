@@ -25,35 +25,50 @@ CREATE TABLE accommodations (
     FOREIGN KEY (gugun_code) REFERENCES guguns(gugun_code)
 );
 
--- 숙소 샘플 데이터 추가 (테스트용)
-INSERT INTO accommodations (accommodation_id, host_id, title, description, address, sido_code, gugun_code, check_in_time, check_out_time, status)
-VALUES 
-(1, 4, '서울 시티 호텔', '서울 중심부에 위치한 현대적인 호텔입니다.', '서울특별시 중구 명동길 123', 1, 1, '15:00:00', '11:00:00', 'ACTIVE'),
-(2, 5, '부산 비치 리조트', '해변가에 위치한 아름다운 리조트입니다.', '부산광역시 해운대구 해운대해변로 456', 2, 2, '16:00:00', '10:00:00', 'ACTIVE'),
-(3, 4, '제주 오션 뷰 펜션', '제주 바다가 보이는 아늑한 펜션입니다.', '제주특별자치도 서귀포시 중문관광로 789', 3, 3, '14:00:00', '12:00:00', 'ACTIVE');
-
 -- 객실 테이블
 CREATE TABLE IF NOT EXISTS rooms (
   room_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   accommodation_id BIGINT UNSIGNED NOT NULL,
   name VARCHAR(100)       NOT NULL,
   description TEXT,
+  price_per_night DECIMAL(10,2) NOT NULL DEFAULT 0, -- 최종 판매가 (할인 적용되었을 수 있음)
+  original_price DECIMAL(10,2) NULL,             -- 원래 가격 (할인 전)
+  discount_rate DECIMAL(5,4) NULL,                -- 할인율 (예: 0.1100은 11%)
+  cancellation_policy VARCHAR(255) NULL,          -- 취소 및 환불 정책
   capacity INT,
-  price_per_night DECIMAL(10,2) NOT NULL DEFAULT 0,
+  room_count INT DEFAULT 1 NOT NULL, -- 해당 타입의 객실 총 수 (기본값 1, 추가됨)
   room_type VARCHAR(50),
-                                     bed_type VARCHAR(50),
-                                     bathroom_count INT,
-                                     amenities TEXT,
-                                     status VARCHAR(20),
-                                     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                                     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                                     PRIMARY KEY (room_id),
-                                     FOREIGN KEY (accommodation_id)
-                                         REFERENCES accommodations(accommodation_id)
-                                         ON DELETE CASCADE
+  bed_type VARCHAR(50),
+  bathroom_count INT,
+  amenities TEXT,
+  status VARCHAR(20), -- 예: AVAILABLE, UNAVAILABLE, MAINTENANCE
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (room_id),
+  FOREIGN KEY (accommodation_id)
+      REFERENCES accommodations(accommodation_id)
+      ON DELETE CASCADE
 );
 
+ALTER TABLE rooms ADD COLUMN room_count INT NOT NULL DEFAULT 1 COMMENT '해당 타입 객실의 총 보유량';
+UPDATE rooms
+SET room_count = 1
+WHERE room_count IS NULL OR room_count = 0; -- 이미 설정된 값이 있다면 건드리지 않거나, 특정 조건의 객실만 업데이트
 
+ALTER TABLE rooms
+    ADD COLUMN original_price DECIMAL(10,2) NULL COMMENT '원래 가격 (할인 전)',
+    ADD COLUMN discount_rate DECIMAL(5,4) NULL COMMENT '할인율 (예: 0.1100은 11%)',
+    ADD COLUMN cancellation_policy VARCHAR(255) NULL COMMENT '취소 및 환불 정책';
+
+UPDATE rooms
+SET
+    original_price = price_per_night, -- 현재 판매가를 원래 가격으로 우선 설정 (정책에 따라 다를 수 있음)
+    discount_rate = 0.00,             -- 기본 할인율 0%
+    cancellation_policy = '숙소의 기본 취소 정책을 따릅니다. 예약 시 확인해주세요.' -- 기본 문구
+WHERE
+    original_price IS NULL; -- 아직 설정되지 않은 행에 대해서만 실행 (선택적)
+
+UPDATE rooms SET status = 'ACTIVE' WHERE status = 'AVAILABLE';
 -- 이미지 테이블
 CREATE TABLE images (
     image_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -82,8 +97,8 @@ CREATE TABLE reservations (
     check_out_date DATE NOT NULL,
     guest_count INT NOT NULL,
     total_price DECIMAL(10,2) NOT NULL,
-    status ENUM('PENDING', 'CONFIRMED', 'CANCELLED', 'COMPLETED') NOT NULL DEFAULT 'PENDING',
-    payment_status ENUM('UNPAID', 'PAID', 'REFUNDED') NOT NULL DEFAULT 'UNPAID',
+    status ENUM('PENDING', 'CONFIRMED', 'CANCELLED', 'COMPLETED', 'NO_SHOW') NOT NULL DEFAULT 'PENDING',
+    payment_status ENUM('UNPAID', 'PAID', 'REFUNDED', 'PARTIALLY_REFUNDED') NOT NULL DEFAULT 'UNPAID',
     special_requests TEXT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -100,8 +115,8 @@ CREATE TABLE room_availability (
     availability_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     room_id BIGINT UNSIGNED NOT NULL,
     date DATE NOT NULL,
-    available_count INT NOT NULL,
-    price DECIMAL(10,2) NULL,
+    available_count INT NOT NULL, -- 해당 날짜에 예약 가능한 실제 객실 수 (예약에 따라 변동)
+    price DECIMAL(10,2) NULL,     -- 해당 날짜의 특별 가격 (NULL이면 rooms.price_per_night 사용)
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (availability_id),

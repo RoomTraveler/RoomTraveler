@@ -86,4 +86,68 @@ public interface ReviewDao {
      * 필터링된 리뷰 목록을 조회합니다.
      */
     List<Review> selectFilteredReviews(Map<String, Object> filters) throws SQLException;
+
+    /**
+     * 단일 리뷰 이미지를 추가합니다.
+     */
+    int insertReviewImage(ReviewImage reviewImage) throws SQLException;
+
+    /**
+     * 여러 리뷰 이미지를 추가합니다. (배치 처리용)
+     */
+    int insertReviewImages(@Param("list") List<ReviewImage> reviewImages) throws SQLException;
+
+    /**
+     * 리뷰 ID로 해당 리뷰의 모든 이미지 목록을 조회합니다.
+     */
+    List<ReviewImage> selectReviewImagesByReviewId(Long reviewId) throws SQLException;
+
+    /**
+     * 이미지 ID로 단일 리뷰 이미지를 조회합니다.
+     */
+    ReviewImage selectReviewImageById(Long imageId) throws SQLException;
+
+    /**
+     * 리뷰 ID로 해당 리뷰의 모든 이미지를 삭제합니다.
+     */
+    int deleteReviewImagesByReviewId(Long reviewId) throws SQLException;
+
+    /**
+     * 이미지 ID로 특정 이미지를 삭제합니다.
+     */
+    int deleteReviewImageById(Long imageId) throws SQLException;
+
+    /**
+     * 특정 이미지의 썸네일 상태를 업데이트합니다.
+     * @param imageId 이미지 ID
+     * @param isThumbnail 썸네일 여부
+     */
+    int updateReviewImageThumbnailStatus(@Param("imageId") Long imageId, @Param("isThumbnail") boolean isThumbnail) throws SQLException;
+
+    /**
+     * 특정 리뷰에 속한 모든 이미지들의 썸네일 상태를 false로 초기화합니다.
+     * @param reviewId 리뷰 ID
+     */
+    int resetThumbnailStatusByReviewId(Long reviewId) throws SQLException;
+
+    /**
+     * 특정 이미지의 정렬 순서를 업데이트합니다.
+     * @param imageId 이미지 ID
+     * @param sortOrder 새로운 정렬 순서
+     */
+    int updateReviewImageSortOrder(@Param("imageId") Long imageId, @Param("sortOrder") int sortOrder) throws SQLException;
+
+    /**
+     * 특정 이미지의 캡션을 업데이트합니다.
+     * @param imageId 이미지 ID
+     * @param caption 새로운 캡션
+     */
+    int updateReviewImageCaption(@Param("imageId") Long imageId, @Param("caption") String caption) throws SQLException;
+
+    /**
+     * (선택적) 이미지의 모든 정보를 업데이트합니다.
+     * ReviewImage 객체 전체를 받아 업데이트합니다.
+     * @param reviewImage 업데이트할 이미지 정보 객체
+     */
+    int updateReviewImage(ReviewImage reviewImage) throws SQLException;
 }

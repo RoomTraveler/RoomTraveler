@@ -28,6 +28,30 @@
         <result property="updatedAt" column="updated_at" />
         <result property="hostName" column="host_name" />
         <result property="mainImageUrl" column="main_image_url" />
+        <result property="thumbnailImageUrl" column="thumbnail_image_url" />
+    </resultMap>
+
+    <!-- 객실 정보 결과 매핑 -->
+    <resultMap id="roomResultMap" type="com.ssafy.trip.accommodation.model.Room">
+        <id property="roomId" column="room_id"/>
+        <result property="accommodationId" column="accommodation_id"/>
+        <result property="name" column="name"/>
+        <result property="description" column="description"/>
+        <result property="price" column="price_per_night"/>
+        <result property="originalPrice" column="original_price"/>
+        <result property="discountRate" column="discount_rate"/>
+        <result property="cancellationPolicy" column="cancellation_policy"/>
+        <result property="capacity" column="capacity"/>
+        <result property="roomType" column="room_type"/>
+        <result property="bedType" column="bed_type"/>
+        <result property="bathroomCount" column="bathroom_count"/>
+        <result property="amenities" column="amenities"/>
+        <result property="status" column="status"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+        <result property="accommodationTitle" column="accommodation_title"/>
+        <result property="mainImageUrl" column="main_image_url"/>
+        <result property="minAvailableCount" column="min_available_count" />
     </resultMap>
 
     <!-- 새 숙소를 등록합니다. -->
@@ -46,7 +70,9 @@
 
     <!-- 숙소 ID로 숙소를 조회합니다. -->
     <select id="getAccommodationById" resultMap="accommodationResultMap">
-        SELECT a.*, u.username as host_name
+        SELECT 
+            a.*, 
+            u.username as host_name
         FROM accommodations a
         LEFT JOIN users u ON a.host_id = u.user_id
         WHERE a.accommodation_id = #{accommodationId}
@@ -54,7 +80,9 @@
 
     <!-- 호스트 ID로 숙소 목록을 조회합니다. -->
     <select id="getAccommodationsByHostId" resultMap="accommodationResultMap">
-        SELECT a.*, u.username as host_name
+        SELECT 
+            a.*, 
+            u.username as host_name
         FROM accommodations a
         LEFT JOIN users u ON a.host_id = u.user_id
         WHERE a.host_id = #{hostId}
@@ -62,7 +90,9 @@
 
     <!-- 지역 코드로 숙소 목록을 조회합니다. -->
     <select id="getAccommodationsByRegion" resultMap="accommodationResultMap">
-        SELECT a.*, u.username as host_name
+        SELECT 
+            a.*, 
+            u.username as host_name
         FROM accommodations a
         LEFT JOIN users u ON a.host_id = u.user_id
         WHERE a.sido_code = #{sidoCode}
@@ -73,7 +103,9 @@
 
     <!-- 키워드로 숙소를 검색합니다. -->
     <select id="searchAccommodations" resultMap="accommodationResultMap">
-        SELECT a.*, u.username as host_name
+        SELECT 
+            a.*, 
+            u.username as host_name
         FROM accommodations a
         LEFT JOIN users u ON a.host_id = u.user_id
         WHERE a.title LIKE CONCAT('%', #{keyword}, '%')
@@ -118,7 +150,9 @@
 
     <!-- 모든 숙소를 조회합니다. -->
     <select id="getAllAccommodations" resultMap="accommodationResultMap">
-        SELECT a.*, u.username as host_name
+        SELECT 
+            a.*, 
+            u.username as host_name
         FROM accommodations a
         LEFT JOIN users u ON a.host_id = u.user_id
         WHERE a.accommodation_id IS NOT NULL
@@ -252,9 +286,12 @@
         <if test="sortBy != null and sortBy != ''">
             ORDER BY
             <choose>
-                <when test="sortBy == 'priceAsc'">a.min_price ASC</when>
-                <when test="sortBy == 'priceDesc'">a.min_price DESC</when>
+                <!-- <when test="sortBy == 'priceAsc'">a.min_price ASC</when> --> <!-- 임시 주석 처리 -->
+                <!-- <when test="sortBy == 'priceDesc'">a.min_price DESC</when> --> <!-- 임시 주석 처리 -->
+                <when test="sortBy == 'priceAsc'">a.title ASC</when> <!-- 임시로 title 정렬 사용 -->
+                <when test="sortBy == 'priceDesc'">a.title DESC</when> <!-- 임시로 title 정렬 사용 -->
                 <when test="sortBy == 'name'">a.title ASC</when>
+                <when test="sortBy == 'created_at_desc'">a.created_at DESC</when>
                 <otherwise>a.created_at DESC</otherwise>
             </choose>
         </if>
@@ -268,7 +305,36 @@
         </if>
     </select>
 
+    <!-- 숙소 ID로 객실 목록 조회 (기존) -->
+    <select id="getRoomsByAccommodationId" resultMap="roomResultMap">
+        SELECT 
+            r.*,
+            a.title as accommodation_title
+        FROM rooms r
+        JOIN accommodations a ON r.accommodation_id = a.accommodation_id
+        WHERE r.accommodation_id = #{accommodationId}
+    </select>
 
+    <!-- 숙소 ID와 날짜 범위로 객실 목록 및 최소 가용 객실 수 조회 (신규) -->
+    <select id="getRoomsWithAvailabilityByAccommodationId" resultMap="roomResultMap" parameterType="map">
+        SELECT
+            r.*,
+            a.title as accommodation_title,
+            IFNULL(MIN(rav.available_count), 0) AS min_available_count
+        FROM
+            rooms r
+        JOIN
+            accommodations a ON r.accommodation_id = a.accommodation_id
+        LEFT JOIN
+            room_availability rav ON r.room_id = rav.room_id
+            AND rav.date BETWEEN #{startDate} AND #{endDate}
+        WHERE
+            r.accommodation_id = #{accommodationId}
+        GROUP BY
+            r.room_id, r.name, r.description, r.price_per_night, r.capacity, r.room_type, r.bed_type, 
+            r.bathroom_count, r.amenities, r.status, r.created_at, r.updated_at, a.title
+        ORDER BY r.price_per_night ASC, r.name ASC
+    </select>
 
     <!-- 외부 API에서 가져온 숙소 정보를 저장합니다. -->
     <insert id="insertFromApi" parameterType="com.ssafy.trip.accommodation.model.Accommodation" useGeneratedKeys="true" keyProperty="accommodationId">
@@ -285,11 +351,17 @@
     </insert>
 
     <!-- 유사한 숙소 목록을 조회합니다. -->
-    <select id="getSimilarAccommodations" resultMap="accommodationResultMap">
-        SELECT a.*, u.username as host_name
+    <select id="getSimilarAccommodations" resultMap="accommodationResultMap" parameterType="map">
+        SELECT
+            a.*,
+            u.username as host_name,
+            sd.sido_name as sido_name,
+            gg.gugun_name as gugun_name
         FROM accommodations a
         JOIN accommodations base ON a.sido_code = base.sido_code AND a.gugun_code = base.gugun_code
         LEFT JOIN users u ON a.host_id = u.user_id
+        LEFT JOIN sido sd ON a.sido_code = sd.sido_code
+        LEFT JOIN gugun gg ON a.gugun_code = gg.gugun_code
         WHERE base.accommodation_id = #{accommodationId}
         AND a.accommodation_id IS NOT NULL
         AND a.accommodation_id != #{accommodationId}

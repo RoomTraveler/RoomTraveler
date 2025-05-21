@@ -2,6 +2,8 @@ package com.ssafy.trip.notification;
 
 import java.sql.SQLException;
 import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 /**
  * 알림 서비스 인터페이스
@@ -111,4 +113,25 @@ public interface NotificationService {
      * @throws SQLException SQL 예외 발생 시
      */
     Long createSystemNotification(Long userId, String title, String content) throws SQLException;
+
+    /**
+     * 사용자 ID와 필터 조건에 따라 알림 목록을 페이지네이션하여 조회합니다.
+     *
+     * @param userId 사용자 ID
+     * @param notificationType 알림 유형 필터 (null이면 전체)
+     * @param isRead 읽음 상태 필터 (null이면 전체, true면 읽음, false면 읽지 않음)
+     * @param pageable 페이지네이션 정보 (페이지 번호, 크기, 정렬)
+     * @return 페이지네이션된 알림 목록
+     * @throws SQLException SQL 예외 발생 시
+     */
+    Page<Notification> getNotificationsByUserIdWithFilter(Long userId, String notificationType, Boolean isRead, Pageable pageable) throws SQLException;
+
+    /**
+     * 사용자 ID로 읽지 않은 알림 개수를 조회합니다.
+     *
+     * @param userId 사용자 ID
+     * @return 읽지 않은 알림 개수
+     * @throws SQLException SQL 예외 발생 시
+     */
+    long getUnreadNotificationCountByUserId(Long userId) throws SQLException;
 }

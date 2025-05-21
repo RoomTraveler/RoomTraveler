@@ -37,11 +37,13 @@ frontend/
 ## 주요 컴포넌트
 
 ### 레이아웃 컴포넌트
+
 - `Layout.vue`: 전체 레이아웃을 담당하는 컴포넌트
 - `Header.vue`: 헤더 영역을 담당하는 컴포넌트
 - `Footer.vue`: 푸터 영역을 담당하는 컴포넌트
 
 ### 페이지 컴포넌트
+
 - `Home.vue`: 메인 페이지
 - `accommodation/AccommodationList.vue`: 숙소 목록 페이지
 - `accommodation/AccommodationDetail.vue`: 숙소 상세 페이지
@@ -55,96 +57,98 @@ frontend/
 ## 다음 단계
 
 ### 라우팅 설정
+
 Vue Router를 사용하여 다음과 같은 라우팅을 설정해야 합니다:
 
 ```javascript
 // router/index.js
-import { createRouter, createWebHistory } from 'vue-router'
-import Home from '@/views/Home.vue'
-import AccommodationList from '@/views/accommodation/AccommodationList.vue'
-import AccommodationDetail from '@/views/accommodation/AccommodationDetail.vue'
-import Login from '@/views/user/Login.vue'
-import Register from '@/views/user/Register.vue'
-import MyReviews from '@/views/review/MyReviews.vue'
-import ReviewForm from '@/views/review/ReviewForm.vue'
-import ReviewEditForm from '@/views/review/ReviewEditForm.vue'
-import ReviewList from '@/views/review/ReviewList.vue'
+import { createRouter, createWebHistory } from "vue-router";
+import Home from "@/views/Home.vue";
+import AccommodationList from "@/views/accommodation/AccommodationList.vue";
+import AccommodationDetail from "@/views/accommodation/AccommodationDetail.vue";
+import Login from "@/views/user/Login.vue";
+import Register from "@/views/user/Register.vue";
+import MyReviews from "@/views/review/MyReviews.vue";
+import ReviewForm from "@/views/review/ReviewForm.vue";
+import ReviewEditForm from "@/views/review/ReviewEditForm.vue";
+import ReviewList from "@/views/review/ReviewList.vue";
 
 const routes = [
   {
-    path: '/',
-    name: 'Home',
-    component: Home
+    path: "/",
+    name: "Home",
+    component: Home,
   },
   {
-    path: '/accommodation/list',
-    name: 'AccommodationList',
-    component: AccommodationList
+    path: "/accommodation/list",
+    name: "AccommodationList",
+    component: AccommodationList,
   },
   {
-    path: '/accommodation/detail/:id',
-    name: 'AccommodationDetail',
+    path: "/accommodation/detail/:id",
+    name: "AccommodationDetail",
     component: AccommodationDetail,
-    props: true
+    props: true,
   },
   {
-    path: '/user/login',
-    name: 'Login',
-    component: Login
+    path: "/user/login",
+    name: "Login",
+    component: Login,
   },
   {
-    path: '/user/register',
-    name: 'Register',
-    component: Register
+    path: "/user/register",
+    name: "Register",
+    component: Register,
   },
   {
-    path: '/review/my-reviews',
-    name: 'MyReviews',
+    path: "/review/my-reviews",
+    name: "MyReviews",
     component: MyReviews,
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true },
   },
   {
-    path: '/review/write/:accommodationId',
-    name: 'ReviewForm',
+    path: "/review/write/:accommodationId",
+    name: "ReviewForm",
     component: ReviewForm,
     props: true,
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true },
   },
   {
-    path: '/review/edit/:reviewId',
-    name: 'ReviewEditForm',
+    path: "/review/edit/:reviewId",
+    name: "ReviewEditForm",
     component: ReviewEditForm,
     props: true,
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true },
   },
   {
-    path: '/review/list/:accommodationId',
-    name: 'ReviewList',
+    path: "/review/list/:accommodationId",
+    name: "ReviewList",
     component: ReviewList,
-    props: true
-  }
-]
+    props: true,
+  },
+];
 
 const router = createRouter({
   history: createWebHistory(),
-  routes
-})
+  routes,
+});
 
 // 인증이 필요한 라우트에 대한 네비게이션 가드
 router.beforeEach((to, from, next) => {
-  const isLoggedIn = store.state.user.isLoggedIn
+  const isLoggedIn = store.state.user.isLoggedIn;
 
-  if (to.matched.some(record => record.meta.requiresAuth) && !isLoggedIn) {
-    next({ name: 'Login', query: { redirect: to.fullPath } })
+  if (to.matched.some((record) => record.meta.requiresAuth) && !isLoggedIn) {
+    next({ name: "Login", query: { redirect: to.fullPath } });
   } else {
-    next()
+    next();
   }
-})
+});
 
-export default router
+export default router;
 ```
 
 ### 상태 관리 설정
+
 Vuex를 사용하여 다음과 같은 상태 관리를 설정해야 합니다:
 
 ```javascript
@@ -229,54 +233,56 @@ export default {
 ```
 
 ### API 연동 설정
+
 Axios를 사용하여 다음과 같은 API 연동을 설정해야 합니다:
 
 ```javascript
 // plugins/axios.js
-import axios from 'axios'
-import store from '@/store'
-import router from '@/router'
+import axios from "axios";
+import store from "@/store";
+import router from "@/router";
 
 // API 기본 URL 설정
-axios.defaults.baseURL = import.meta.env.VITE_API_URL || '/api'
+axios.defaults.baseURL = import.meta.env.VITE_API_URL || "/api";
 
 // 요청 인터셉터
 axios.interceptors.request.use(
-  config => {
-    const token = store.state.user.token
+  (config) => {
+    const token = store.state.user.token;
 
     if (token) {
-      config.headers.Authorization = `Bearer ${token}`
+      config.headers.Authorization = `Bearer ${token}`;
     }
 
-    return config
+    return config;
   },
-  error => {
-    return Promise.reject(error)
+  (error) => {
+    return Promise.reject(error);
   }
-)
+);
 
 // 응답 인터셉터
 axios.interceptors.response.use(
-  response => {
-    return response
+  (response) => {
+    return response;
   },
-  error => {
+  (error) => {
     if (error.response && error.response.status === 401) {
-      store.dispatch('user/logout')
-      router.push('/user/login')
+      store.dispatch("user/logout");
+      router.push("/user/login");
     }
 
-    return Promise.reject(error)
+    return Promise.reject(error);
   }
-)
+);
 
-export default axios
+export default axios;
 ```
 
 ## 실행 방법
 
 1. 의존성 설치:
+
 ```bash
 rmdir /s /q node_modules
 del package-lock.json
@@ -287,18 +293,23 @@ npm install @vuepic/vue-datepicker
 npm install @vuepic/vue-datepicker date-fns
 npm install element-plus
 npm install vuedraggable@next
-
+npm install @vueuse/motion
+npm install bootstrap-icons
+npm install bootstrap
 ```
 
 2. 개발 서버 실행:
+
 ```bash
 # 반드시 frontend 디렉토리에서 실행해야 합니다
 npm run dev
 ```
 
 3. 프로덕션 빌드:
-```bash
+
+````bash
 npm run build
 ```f
 
 > **주의**: `npm run dev` 명령은 반드시 frontend 디렉토리에서 실행해야 합니다. backend 디렉토리에서 실행하면 작동하지 않습니다.
+````

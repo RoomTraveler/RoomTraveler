@@ -3,21 +3,21 @@
     :model-value="props.show"
     @update:model-value="handleClose"
     title="지역 선택"
-    width="90%"
-    :max-width="'600px'"
+    width="70%"
+    :max-width="'450px'"
     top="10vh"
     custom-class="region-selection-dialog"
   >
     <div class="dialog-content">
-      <div :class="['flex gap-x-3 min-h-[calc(100%-0px)] sm:min-h-[400px] max-h-[60vh] sm:max-h-[50vh] overflow-y-hidden', gugunList.length > 0 && selectedSidoCode !== ALL_SIDO_CODE ? 'sm:gap-x-4' : '']">
-        <div class="flex-1 overflow-y-auto custom-scrollbar pr-1 sm:pr-2 border-r border-gray-200">
+      <div :class="['flex gap-x-2 min-h-[calc(100%-0px)] sm:min-h-[300px] max-h-[60vh] sm:max-h-[50vh] overflow-y-hidden', gugunList.length > 0 && selectedSidoCode !== ALL_SIDO_CODE ? 'sm:gap-x-3' : '']">
+        <div class="flex-1 overflow-y-auto custom-scrollbar pr-1 sm:pr-1.5 border-r border-gray-200">
           <div
             v-for="sido in sidoList"
             :key="sido.code === null ? 'sido-all' : sido.code"
-            class="py-2.5 px-2 mb-1.5 rounded-lg cursor-pointer select-none transition-all duration-150 ease-in-out font-medium text-sm text-gray-700 hover:text-pink-600 hover:bg-pink-50 text-center"
+            class="py-3.5 px-1.5 mb-2.5 rounded-lg cursor-pointer select-none transition-all duration-150 ease-in-out font-semibold text-3xl text-gray-700 hover:text-pink-600 hover:bg-pink-50 text-center"
             :class="
               sido.code === selectedSidoCode 
-                ? 'bg-pink-100 text-pink-700 font-semibold shadow-md scale-105'
+                ? 'bg-pink-100 text-pink-700 shadow-md scale-105'
                 : 'bg-white hover:shadow-sm'
             "
             @click="selectSido(sido)" 
@@ -25,14 +25,14 @@
             {{ sido.name }}
           </div>
         </div>
-        <div class="flex-1 overflow-y-auto custom-scrollbar pl-1 sm:pl-2" v-if="gugunList.length > 0 && selectedSidoCode !== ALL_SIDO_CODE">
+        <div class="flex-1 overflow-y-auto custom-scrollbar pl-1 sm:pl-1.5" v-if="gugunList.length > 0 && selectedSidoCode !== ALL_SIDO_CODE">
           <div
             v-for="gugun in gugunList" 
             :key="gugun.code === null ? 'gugun-all' : gugun.code"
-            class="py-2.5 px-2 mb-1.5 rounded-lg cursor-pointer select-none transition-all duration-150 ease-in-out font-medium text-sm text-gray-700 hover:text-pink-600 hover:bg-pink-50 text-center"
+            class="py-3.5 px-1.5 mb-2.5 rounded-lg cursor-pointer select-none transition-all duration-150 ease-in-out font-semibold text-3xl text-gray-700 hover:text-pink-600 hover:bg-pink-50 text-center"
             :class="
               gugun.code === selectedGugunCode 
-                ? 'bg-pink-100 text-pink-700 font-semibold shadow-md scale-105'
+                ? 'bg-pink-100 text-pink-700 shadow-md scale-105'
                 : 'bg-white hover:shadow-sm'
             "
             @click="selectGugun(gugun)" 
@@ -43,11 +43,11 @@
       </div>
     </div>
     <template #footer>
-      <div class="w-full px-2 sm:px-4 pb-1">
+      <div class="w-full px-1.5 sm:px-3 pb-1">
         <el-button 
           type="primary" 
           @click="apply" 
-          class="w-full bg-pink-500 hover:bg-pink-600 border-pink-500 py-2.5 text-base font-semibold rounded-md"
+          class="w-full bg-pink-500 hover:bg-pink-600 border-pink-500 py-3.5 text-2xl font-bold rounded-md"
           :disabled="!canApply"
         >
           선택 완료
@@ -60,7 +60,7 @@
 <script setup lang="ts">
 import { ref, watch, computed } from "vue";
 import { ElDialog, ElButton } from 'element-plus';
-import regionApi from '@/api/regionApi';
+import regionApi from '../../api/regionApi';
 
 const props = defineProps({
   show: Boolean,

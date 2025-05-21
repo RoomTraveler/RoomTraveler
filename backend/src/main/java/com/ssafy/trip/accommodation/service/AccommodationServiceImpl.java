@@ -6,11 +6,14 @@ import com.ssafy.trip.accommodation.dao.ImageDao;
 import com.ssafy.trip.accommodation.model.Accommodation;
 import com.ssafy.trip.accommodation.model.Room;
 import com.ssafy.trip.accommodation.model.Image;
+import com.ssafy.trip.accommodation.service.ReservationService;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.SQLException;
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -30,6 +33,7 @@ public class AccommodationServiceImpl implements AccommodationService {
     private final AccommodationDao accommodationDao;
     private final RoomDao roomDao;
     private final ImageDao imageDao;
+    private final ReservationService reservationService;
 
     /**
      * 새 숙소를 등록합니다.
@@ -111,11 +115,55 @@ public class AccommodationServiceImpl implements AccommodationService {
     }
 
     /**
-     * 숙소 ID로 객실 목록을 조회합니다.
+     * 숙소 ID와 선택적 날짜 범위 및 인원수로 객실 목록을 조회합니다.
      */
     @Override
-    public List<Room> getRoomsByAccommodationId(Long accommodationId) throws SQLException {
-        List<Room> rooms = roomDao.getRoomsByAccommodationId(accommodationId);
+    public List<Room> getRoomsByAccommodationId(Long accommodationId, String startDateStr, String endDateStr, Integer guests) throws SQLException {
+        log.info("[AccommodationService] getRoomsByAccommodationId called - accommodationId: {}, startDate: {}, endDate: {}, guests: {}", 
+                accommodationId, startDateStr, endDateStr, guests);
+        
+        Map<String, Object> params = new HashMap<>();
+        params.put("accommodationId", accommodationId);
+
+        LocalDate startDate = null;
+        LocalDate endDate = null;
+
+        if (startDateStr != null && !startDateStr.isEmpty() && endDateStr != null && !endDateStr.isEmpty()) {
+            try {
+                startDate = LocalDate.parse(startDateStr);
+                endDate = LocalDate.parse(endDateStr);
+                // DAO에는 문자열로 전달할 수도 있고, LocalDate로 변환해서 전달할 수도 있습니다.
+                // 현재 RoomDao.getRoomsByAccommodationIdAndOptionalDateRange가 Map<String, Object>를 받으므로 문자열 유지 가능
+                params.put("startDate", startDateStr);
+                params.put("endDate", endDateStr);
+            } catch (DateTimeParseException e) {
+                log.warn("Invalid date format for startDate or endDate. Proceeding without date filter for availability calculation.");
+            }
+        }
+        
+        // RoomDao를 통해 객실 기본 정보를 가져옵니다.
+        List<Room> rooms = roomDao.getRoomsByAccommodationIdAndOptionalDateRange(params); // 이 메소드가 날짜 필터링도 하는지 확인 필요
+        log.info("[AccommodationService] Got {} rooms from RoomDao for accommodationId: {}", rooms.size(), accommodationId);
+
+        // 날짜 정보와 인원수 정보가 유효한 경우에만 각 객실의 minAvailableCount를 계산하여 설정합니다.
+        if (startDate != null && endDate != null && guests != null && guests > 0) {
+            log.info("[AccommodationService] Calculating minAvailableCount for each room with dates and guests");
+            for (Room room : rooms) {
+                log.debug("[AccommodationService] Processing room ID: {}, capacity: {}", room.getRoomId(), room.getCapacity());
+                // ReservationService를 사용하여 minAvailableCount 계산 (guests 파라미터 전달)
+                int minAvailableCount = reservationService.calculateMinAvailableCountForRoom(room, startDate, endDate, guests);
+                log.info("[AccommodationService] Room ID: {}, capacity: {}, calculated minAvailableCount: {}", 
+                        room.getRoomId(), room.getCapacity(), minAvailableCount);
+                room.setMinAvailableCount(minAvailableCount);
+            }
+        } else {
+            log.info("[AccommodationService] Date or guests info insufficient, setting minAvailableCount to -1 for all rooms");
+            for (Room room : rooms) {
+                // 날짜나 인원 정보가 충분하지 않으면, 예약 가능 여부를 알 수 없으므로 minAvailableCount를 -1 (또는 다른 특정 값)로 설정
+                room.setMinAvailableCount(-1); // 프론트에서 이 값을 보고 "날짜/인원 선택 시 확인 가능" 등으로 표시 가능
+            }
+        }
+
         for (Room room : rooms) {
             setImagesForSingleRoom(room);
         }
@@ -143,18 +191,95 @@ public class AccommodationServiceImpl implements AccommodationService {
     }
     
     private void setMainImageUrlForSingleAccommodation(Accommodation accommodation) throws SQLException {
-        if (accommodation == null) return;
-        List<Image> images = imageDao.getImagesByReference(accommodation.getAccommodationId(), "ACCOMMODATION");
+        log.debug("setMainImageUrlForSingleAccommodation - START for accommodation ID: {}", accommodation != null ? accommodation.getAccommodationId() : "null accommodation object");
+        if (accommodation == null) {
+            log.warn("setMainImageUrlForSingleAccommodation - Received null accommodation object.");
+            return;
+        }
+
+        Long currentAccommodationId = accommodation.getAccommodationId();
+        log.debug("Accommodation ID for image fetching: {}", currentAccommodationId);
+        if (currentAccommodationId == null) {
+            log.error("Accommodation ID is NULL before calling imageDao.getImagesByReference for {}. Skipping image fetch.", accommodation);
+            // 기본 이미지 또는 오류 처리
+            accommodation.setMainImageUrl("https://via.placeholder.com/800x600?text=Error+ID+Null");
+            accommodation.setThumbnailImageUrl("https://via.placeholder.com/800x600?text=Error+ID+Null");
+            return;
+        }
+
+        // 1. DB에서 이미 thumbnailImageUrl이 로드되었는지 확인
+        String thumbnailImageUrlFromDb = accommodation.getThumbnailImageUrl();
+        log.debug("ThumbnailImageUrl from DB for accommodation ID {}: {}", currentAccommodationId, thumbnailImageUrlFromDb);
+
+        // 2. mainImageUrl 설정 (기존 로직)
+        log.debug("Calling imageDao.getImagesByReference with ID: {}, Type: ACCOMMODATION", currentAccommodationId);
+        List<Image> images = null;
+        try {
+            images = imageDao.getImagesByReference(currentAccommodationId, "ACCOMMODATION");
+        } catch (Exception e) {
+            log.error("Error calling imageDao.getImagesByReference for accommodation ID {}: {}", currentAccommodationId, e.getMessage(), e);
+            // 기본 이미지 또는 오류 처리
+            accommodation.setMainImageUrl("https://via.placeholder.com/800x600?text=Image+Fetch+Error");
+            accommodation.setThumbnailImageUrl("https://via.placeholder.com/800x600?text=Image+Fetch+Error");
+            // SQLException을 다시 던지거나 상황에 맞게 처리
+            if (e instanceof SQLException) {
+                throw (SQLException) e;
+            }
+            // 혹은 다른 RuntimeException으로 감싸서 던질 수 있습니다.
+            // throw new RuntimeException("Failed to fetch images for accommodation " + currentAccommodationId, e);
+            return; 
+        }
+        
+        log.debug("Retrieved {} images for accommodation ID: {}", (images != null ? images.size() : "null list"), currentAccommodationId);
+
+        if (images == null) { // Defensive check
+            log.warn("imageDao.getImagesByReference returned null for accommodation ID: {}. Treating as no images.", currentAccommodationId);
+            images = new ArrayList<>(); // Null 대신 빈 리스트로 처리
+        }
+
+        String mainImageUrl = null;
         if (!images.isEmpty()) {
             Image mainImage = images.stream().filter(img -> img.getIsMain() != null && img.getIsMain()).findFirst().orElse(images.get(0));
-            String imageUrl = mainImage.getImageUrl();
-            if (imageUrl == null || imageUrl.isEmpty()) {
-                imageUrl = "https://via.placeholder.com/800x600?text=No+Image+Available";
-            } else if (!imageUrl.startsWith("http://") && !imageUrl.startsWith("https://")) {
-                imageUrl = "http://" + imageUrl;
+            mainImageUrl = mainImage.getImageUrl();
+            if (mainImageUrl == null || mainImageUrl.isEmpty()) {
+                mainImageUrl = "https://via.placeholder.com/800x600?text=No+Image+Available";
+            } else if (!mainImageUrl.startsWith("http://") && !mainImageUrl.startsWith("https://")) {
+                mainImageUrl = "http://" + mainImageUrl;
             }
-            accommodation.setMainImageUrl(imageUrl);
+            accommodation.setMainImageUrl(mainImageUrl);
+        } else {
+            // 이미지가 없는 경우의 기본 mainImageUrl
+            mainImageUrl = "https://via.placeholder.com/800x600?text=No+Images";
+            accommodation.setMainImageUrl(mainImageUrl);
         }
+        log.debug("Set mainImageUrl: {} for accommodation ID: {}", mainImageUrl, currentAccommodationId);
+
+        // 3. thumbnailImageUrl 설정
+        if (thumbnailImageUrlFromDb != null && !thumbnailImageUrlFromDb.isEmpty()) {
+            // DB에서 가져온 값이 있으면 사용
+            if (!thumbnailImageUrlFromDb.startsWith("http://") && !thumbnailImageUrlFromDb.startsWith("https://")) {
+                accommodation.setThumbnailImageUrl("http://" + thumbnailImageUrlFromDb);
+            } else {
+                accommodation.setThumbnailImageUrl(thumbnailImageUrlFromDb);
+            }
+        } else if (mainImageUrl != null && !mainImageUrl.contains("placeholder.com")) {
+            // DB에 썸네일 URL이 없고, mainImageUrl이 유효하면 파생 시도 (예: _thumb 접미사)
+            // 실제 이 URL로 접근 가능한 썸네일 파일이 서버에 존재해야 함
+            int dotIndex = mainImageUrl.lastIndexOf('.');
+            if (dotIndex > 0) {
+                String name = mainImageUrl.substring(0, dotIndex);
+                String ext = mainImageUrl.substring(dotIndex);
+                accommodation.setThumbnailImageUrl(name + "_thumb" + ext);
+            } else {
+                // 확장자가 없는 경우, mainImageUrl을 그대로 사용
+                accommodation.setThumbnailImageUrl(mainImageUrl);
+            }
+        } else {
+            // 위 조건 모두 해당 없으면, mainImageUrl을 썸네일로 사용 (플레이스홀더 포함)
+            accommodation.setThumbnailImageUrl(mainImageUrl);
+        }
+        log.debug("Set thumbnailImageUrl: {} for accommodation ID: {}", accommodation.getThumbnailImageUrl(), currentAccommodationId);
+        log.debug("setMainImageUrlForSingleAccommodation - END for accommodation ID: {}", currentAccommodationId);
     }
 
     private void setImagesForSingleRoom(Room room) throws SQLException {
@@ -194,9 +319,21 @@ public class AccommodationServiceImpl implements AccommodationService {
      * 숙소 목록에 대표 이미지 URL을 설정합니다.
      */
     private void setMainImageUrlForAccommodations(List<Accommodation> accommodations) throws SQLException {
+        log.debug("setMainImageUrlForAccommodations - START. Number of accommodations: {}", accommodations != null ? accommodations.size() : "null list");
+        if (accommodations == null) {
+            log.error("setMainImageUrlForAccommodations - accommodations list is null!");
+            // 예외를 던지거나, 빈 리스트로 처리하는 등의 방어 코드 추가 가능
+            return; 
+        }
         for (Accommodation accommodation : accommodations) {
+            if (accommodation == null) {
+                log.warn("setMainImageUrlForAccommodations - Found a null accommodation object in the list. Skipping.");
+                continue;
+            }
+            log.debug("Processing images for accommodation ID: {}", accommodation.getAccommodationId());
             setMainImageUrlForSingleAccommodation(accommodation);
         }
+        log.debug("setMainImageUrlForAccommodations - END");
     }
 
     /**
@@ -295,25 +432,80 @@ public class AccommodationServiceImpl implements AccommodationService {
      */
     @Override
     public Map<String, Object> getFilteredAccommodations(Map<String, Object> filters) throws SQLException {
-        // 전체 아이템 수 조회
-        long totalItems = accommodationDao.countFilteredAccommodations(filters);
+        log.info("Service: getFilteredAccommodations with filters: {}", filters);
         
-        // 페이징된 숙소 목록 조회
+        // DAO 호출 전에 필요한 경우 filters 맵의 guestCount, checkInDate, checkOutDate 등을 확인하고 로깅할 수 있습니다.
+        // 예를 들어, checkInDate, checkOutDate 문자열을 LocalDate로 변환하여 ReservationService와 연동 준비
+        String checkInDateStr = (String) filters.get("checkInDate");
+        String checkOutDateStr = (String) filters.get("checkOutDate");
+        Integer guestCount = (Integer) filters.get("guestCount");
+
+        LocalDate checkIn = null;
+        LocalDate checkOut = null;
+
+        if (checkInDateStr != null && !checkInDateStr.isEmpty()){
+            try {
+                checkIn = LocalDate.parse(checkInDateStr);
+            } catch (DateTimeParseException e){
+                log.warn("Invalid checkInDate format: {}. Date filter for availability might not work as expected.", checkInDateStr);
+            }
+        }
+        if (checkOutDateStr != null && !checkOutDateStr.isEmpty()){
+            try {
+                checkOut = LocalDate.parse(checkOutDateStr);
+            } catch (DateTimeParseException e){
+                log.warn("Invalid checkOutDate format: {}. Date filter for availability might not work as expected.", checkOutDateStr);
+            }
+        }
+
+        // 1. DAO를 통해 기본 필터링된 숙소 목록과 전체 카운트 조회
         List<Accommodation> accommodations = accommodationDao.getFilteredAccommodations(filters);
-        setMainImageUrlForAccommodations(accommodations);
+        long totalCount = accommodationDao.countFilteredAccommodations(filters);
+
+        log.debug("DAO returned {} accommodations, total count: {}", accommodations.size(), totalCount);
+
+        // 2. (선택적이지만 권장) 날짜와 인원이 주어졌다면, 각 숙소의 실제 예약 가능 여부를 확인하여 추가 필터링
+        // 이 로직은 성능에 영향을 줄 수 있으므로, 매우 많은 숙소가 반환될 경우 주의 필요
+        List<Accommodation> availableAccommodations = new ArrayList<>();
+        if (checkIn != null && checkOut != null && guestCount != null && guestCount > 0) {
+            log.debug("Performing secondary availability check for {} accommodations with dates: {} - {} and guests: {}", accommodations.size(), checkIn, checkOut, guestCount);
+            for (Accommodation acc : accommodations) {
+                // 각 숙소의 객실 목록을 가져와 예약 가능 여부 확인
+                List<Room> rooms = roomDao.getRoomsByAccommodationId(acc.getAccommodationId()); // RoomDao에 accommodationId로 객실 목록만 가져오는 메소드 필요
+                boolean isBookableAccommodation = false;
+                for (Room room : rooms) {
+                    if (room.getCapacity() >= guestCount) { // 1차: 인원 수용 가능 여부
+                        int availableCount = reservationService.calculateMinAvailableCountForRoom(room, checkIn, checkOut, guestCount);
+                        if (availableCount > 0) {
+                            isBookableAccommodation = true;
+                            break; // 이 숙소는 예약 가능한 객실이 있음
+                        }
+                    }
+                }
+                if (isBookableAccommodation) {
+                    availableAccommodations.add(acc);
+                }
+            }
+            log.debug("After secondary availability check, {} accommodations are available.", availableAccommodations.size());
+            // TODO: totalCount도 이 기준으로 다시 세어야 할 수 있으나, 복잡도를 높임.
+            // 우선 프론트엔드에서는 필터링 된 목록을 보여주고, 페이지네이션은 초기 DB 카운트 기준으로 할 수 있음.
+            // 또는, 여기서 필터링된 목록만으로 페이지네이션 정보를 재구성.
+            // 현재는 DB 카운트를 그대로 사용하고, 필터링된 숙소 목록만 교체합니다.
+        } else {
+            availableAccommodations.addAll(accommodations); // 날짜/인원 필터 없으면 모두 추가
+        }
+
+        // 이미지 설정
+        setMainImageUrlForAccommodations(availableAccommodations);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("content", availableAccommodations); // 필터링된 숙소 목록
+        response.put("currentPage", filters.get("page"));
+        response.put("totalItems", totalCount); // DB에서 가져온 전체 아이템 수 (2차 필터링 전 기준)
+        response.put("totalPages", (int) Math.ceil((double) totalCount / (int) filters.get("size")));
         
-        // 페이징 정보 계산
-        int page = (int) filters.get("page");
-        int size = (int) filters.get("size");
-        int totalPages = (int) Math.ceil((double) totalItems / size);
-        
-        Map<String, Object> result = new HashMap<>();
-        result.put("content", accommodations);
-        result.put("currentPage", page);
-        result.put("totalItems", totalItems);
-        result.put("totalPages", totalPages);
-        
-        return result;
+        log.info("Service: getFilteredAccommodations response: {}", response);
+        return response;
     }
 
 

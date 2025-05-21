@@ -228,64 +228,64 @@ public class UserController {
 	 * @param passwordRequest 비밀번호 변경 요청 정보
 	 * @return 변경 결과 및 상태 코드
 	 */
-    @Operation(summary = "Change password", description = "Changes the password of the currently logged-in user")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Password changed successfully",
-                    content = @Content(mediaType = "application/json")),
-        @ApiResponse(responseCode = "400", description = "Invalid input or password change failed",
-                    content = @Content(mediaType = "application/json")),
-        @ApiResponse(responseCode = "401", description = "Not logged in",
-                    content = @Content(mediaType = "application/json")),
-        @ApiResponse(responseCode = "404", description = "User not found",
-                    content = @Content(mediaType = "application/json")),
-        @ApiResponse(responseCode = "500", description = "Internal server error",
-                    content = @Content(mediaType = "application/json"))
-    })
-	@PutMapping("/password")
-	public ResponseEntity<?> changePassword(@RequestBody Map<String, String> passwordRequest) {
-		Map<String, Object> response = new HashMap<>();
-
-		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-		if (authentication == null || !authentication.isAuthenticated()) {
-			response.put("success", false);
-			response.put("message", "로그인이 필요합니다.");
-			return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
-		}
-
-		String email = ((UserDetails) authentication.getPrincipal()).getUsername(); // 사용자 이메일 꺼냄
-		String newPassword = passwordRequest.get("password");
-
-		if (newPassword == null || newPassword.trim().isEmpty()) {
-			response.put("success", false);
-			response.put("message", "새 비밀번호를 입력해주세요.");
-			return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
-		}
-
-		try {
-			Optional<User> user = userService.getUserByEmail(email);
-			if (user.isEmpty()) {
-				response.put("success", false);
-				response.put("message", "사용자 정보를 찾을 수 없습니다.");
-				return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
-			}
-
-			int result = userService.updateUser(email, user.get().getUsername(), newPassword);
-			if (result > 0) {
-				response.put("success", true);
-				response.put("message", "비밀번호가 성공적으로 변경되었습니다.");
-				return new ResponseEntity<>(response, HttpStatus.OK);
-			} else {
-				response.put("success", false);
-				response.put("message", "비밀번호 변경에 실패했습니다.");
-				return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
-			}
-		} catch (SQLException e) {
-			response.put("success", false);
-			response.put("message", "비밀번호 변경 중 오류가 발생했습니다: " + e.getMessage());
-			return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
-		}
-	}
+//    @Operation(summary = "Change password", description = "Changes the password of the currently logged-in user")
+//    @ApiResponses(value = {
+//        @ApiResponse(responseCode = "200", description = "Password changed successfully",
+//                    content = @Content(mediaType = "application/json")),
+//        @ApiResponse(responseCode = "400", description = "Invalid input or password change failed",
+//                    content = @Content(mediaType = "application/json")),
+//        @ApiResponse(responseCode = "401", description = "Not logged in",
+//                    content = @Content(mediaType = "application/json")),
+//        @ApiResponse(responseCode = "404", description = "User not found",
+//                    content = @Content(mediaType = "application/json")),
+//        @ApiResponse(responseCode = "500", description = "Internal server error",
+//                    content = @Content(mediaType = "application/json"))
+//    })
+//	@PutMapping("/password")
+//	public ResponseEntity<?> changePassword(@RequestBody Map<String, String> passwordRequest) {
+//		Map<String, Object> response = new HashMap<>();
+//
+//		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+//
+//		if (authentication == null || !authentication.isAuthenticated()) {
+//			response.put("success", false);
+//			response.put("message", "로그인이 필요합니다.");
+//			return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
+//		}
+//
+//		String email = ((UserDetails) authentication.getPrincipal()).getUsername(); // 사용자 이메일 꺼냄
+//		String newPassword = passwordRequest.get("password");
+//
+//		if (newPassword == null || newPassword.trim().isEmpty()) {
+//			response.put("success", false);
+//			response.put("message", "새 비밀번호를 입력해주세요.");
+//			return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+//		}
+//
+//		try {
+//			Optional<User> user = userService.getUserByEmail(email);
+//			if (user.isEmpty()) {
+//				response.put("success", false);
+//				response.put("message", "사용자 정보를 찾을 수 없습니다.");
+//				return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
+//			}
+//
+//			int result = userService.updateUser(email, user.get().getUsername(), newPassword);
+//			if (result > 0) {
+//				response.put("success", true);
+//				response.put("message", "비밀번호가 성공적으로 변경되었습니다.");
+//				return new ResponseEntity<>(response, HttpStatus.OK);
+//			} else {
+//				response.put("success", false);
+//				response.put("message", "비밀번호 변경에 실패했습니다.");
+//				return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+//			}
+//		} catch (SQLException e) {
+//			response.put("success", false);
+//			response.put("message", "비밀번호 변경 중 오류가 발생했습니다: " + e.getMessage());
+//			return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+//		}
+//	}
 
 	@PostMapping("/refresh")
 	public ResponseEntity<?> refreshAccessToken(@RequestHeader("Refresh-Token") String token) {
