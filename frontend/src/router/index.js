@@ -9,9 +9,9 @@ import { userRoutes } from "./user";
 import { adminRoutes } from "./admin";
 import { reservationRoutes } from "./reservation";
 import { planRoutes } from "./plan";
+import { eventRoutes } from "./event";
 
 const NotFound = () => import("../views/NotFound.vue");
-const ApiTest = () => import("../components/ApiTest.vue");
 // 에러 페이지 컴포넌트
 const AccessDenied = () => import("../views/error/AccessDenied.vue");
 
@@ -27,13 +27,8 @@ const routes = [
   ...adminRoutes,
   ...reservationRoutes,
   ...planRoutes,
+  ...eventRoutes,
 
-  {
-    path: "/api-test",
-    name: "ApiTest",
-    component: ApiTest,
-    meta: { title: "API 테스트 - Room Traveler" },
-  },
   // 에러 페이지 라우트
   {
     path: "/error/access-denied",
@@ -65,22 +60,19 @@ router.beforeEach((to, from, next) => {
   if (to.meta.requiresAuth) {
     // 인증 확인 로직
     // const isAuthenticated = store.getters.isAuthenticated;
-    const isAuthenticated = localStorage.getItem("user") !== null;
+    const userStr = sessionStorage.getItem("user");
 
-    if (!isAuthenticated) {
+    if (!userStr) {
       next({ name: "Login", query: { redirect: to.fullPath } });
       return;
     }
 
-    // 관리자 권한이 필요한 페이지 처리
-    if (to.meta.requiresAdmin) {
-      // 관리자 권한 확인 로직
-      // const isAdmin = store.getters.isAdmin;
-      const user = JSON.parse(localStorage.getItem("user") || "{}");
-      const isAdmin = user.role === "ADMIN";
+    const user = JSON.parse(sessionStorage.getItem("user") || "{}");
+    const role = user.user?.role;
 
-      if (!isAdmin) {
-        // 관리자가 아닌 경우 접근 거부 페이지로 리다이렉트
+    //1.관리자 권한만 필요한 경우
+    if (to.meta.requiresAdmin) {
+      if (role !== 'ADMIN') {
         next({
           path: "/error/access-denied",
           query: { message: "관리자만 접근할 수 있는 페이지입니다." },
@@ -89,8 +81,33 @@ router.beforeEach((to, from, next) => {
       }
     }
 
+
+    // 호스트나 어드민 권한 필요
+    if (to.meta.requiresHost) {
+      if (!(role === 'HOST' || role === 'ADMIN')) {
+        next({
+          path: "/error/access-denied",
+          query: { message: "호스트 또는 관리자만 접근할 수 있는 페이지입니다." },
+        });
+        return;
+      }
+    }
+
+    // 호스트만 (ONLY)
+    if (to.meta.requiresHostOnly) {
+      if (role !== 'HOST') {
+        next({
+          path: "/error/access-denied",
+          query: { message: "호스트만 접근할 수 있는 페이지입니다." },
+        });
+        return;
+      }
+    }
+
+    //인증 ,권한 다 통과한 경우
     next();
   } else {
+    //인증 필요 없는 페이지
     next();
   }
 });

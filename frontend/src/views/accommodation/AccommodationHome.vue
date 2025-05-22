@@ -9,44 +9,16 @@
     <section class="section">
       <div class="section-title">숙소 유형</div>
       <div class="category-grid">
-        <!-- 모텔 카테고리 -->
-        <router-link :to="{ name: 'AccommodationList', query: { accommodationType: 'MOTEL' } }" class="category-item">
+        <router-link
+          v-for="cat in categories"
+          :key="cat.value"
+          :to="{ name: 'AccommodationList', query: { accommodationType: cat.value } }"
+          class="category-item"
+        >
           <div class="category-image-container">
-            <img src="/img/accommodationMotel.png" alt="모텔" class="category-image" />
+            <img :src="cat.img" :alt="cat.label" class="category-image" />
           </div>
-          <div class="category-name">모텔</div>
-        </router-link>
-
-        <!-- 호텔/리조트 카테고리 -->
-        <router-link :to="{ name: 'AccommodationList', query: { accommodationType: 'HOTEL' } }" class="category-item">
-          <div class="category-image-container">
-            <img src="/img/accommodationHotel.png" alt="호텔/리조트" class="category-image" />
-          </div>
-          <div class="category-name">호텔/리조트</div>
-        </router-link>
-
-        <!-- 펜션/풀빌라 카테고리 -->
-        <router-link :to="{ name: 'AccommodationList', query: { accommodationType: 'PENSION' } }" class="category-item">
-          <div class="category-image-container">
-            <img src="/img/accommodationPension.png" alt="펜션/풀빌라" class="category-image" />
-          </div>
-          <div class="category-name">펜션/풀빌라</div>
-        </router-link>
-
-        <!-- 프리미엄 카테고리 -->
-        <router-link :to="{ name: 'AccommodationList', query: { accommodationType: 'PREMIUM' } }" class="category-item">
-          <div class="category-image-container">
-            <img src="/img/accommodationPremium.png" alt="프리미엄" class="category-image" />
-          </div>
-          <div class="category-name">프리미엄</div>
-        </router-link>
-
-        <!-- 글램핑/캠핑 카테고리 -->
-        <router-link :to="{ name: 'AccommodationList', query: { accommodationType: 'CAMPING' } }" class="category-item">
-          <div class="category-image-container">
-            <img src="/img/accommodationCamping.png" alt="글램핑/캠핑" class="category-image" />
-          </div>
-          <div class="category-name">글램핑/캠핑</div>
+          <div class="category-name">{{ cat.label }}</div>
         </router-link>
       </div>
     </section>
@@ -55,26 +27,28 @@
     <section class="section">
       <div class="section-title">
         진행중인 이벤트
-        <router-link to="/events" class="view-all">전체보기 <i class="bi bi-chevron-right"></i></router-link>
+        <router-link to="/event" class="view-all"> 전체보기 <i class="bi bi-chevron-right"></i> </router-link>
       </div>
       <div class="event-slider">
-        <!-- 이벤트 1 -->
-        <div class="event-card">
-          <img src="https://via.placeholder.com/800x300?text=Event+1" alt="이벤트 1" class="event-image" />
-          <div class="event-info">
-            <div class="event-title">여름 휴가 특별 할인</div>
-            <div class="event-period">2025.05.15 ~ 2025.06.30</div>
+        <router-link
+          v-for="event in homeEvents"
+          :key="event.id"
+          :to="{ name: 'EventDetail', params: { eventId: event.id } }"
+          class="event-card-link"
+        >
+          <div class="event-card">
+            <img :src="event.image" :alt="event.title" class="event-image" />
+            <div class="event-info">
+              <div class="event-title">{{ event.title }}</div>
+              <div class="event-period">{{ event.date }}</div>
+            </div>
           </div>
-        </div>
-
-        <!-- 이벤트 2 -->
-        <div class="event-card">
-          <img src="https://via.placeholder.com/800x300?text=Event+2" alt="이벤트 2" class="event-image" />
-          <div class="event-info">
-            <div class="event-title">신규 회원 첫 예약 50% 할인</div>
-            <div class="event-period">2025.05.01 ~ 2025.05.31</div>
-          </div>
-        </div>
+        </router-link>
+      </div>
+      <div v-if="isLoadingEvents" class="p-3 text-center text-muted">이벤트 로딩 중...</div>
+      <div v-if="!isLoadingEvents && fetchEventsError" class="p-3 text-center text-danger">{{ fetchEventsError }}</div>
+      <div v-if="!isLoadingEvents && !fetchEventsError && homeEvents.length === 0" class="p-3 text-center text-muted">
+        진행중인 이벤트가 없습니다.
       </div>
     </section>
 
@@ -82,74 +56,32 @@
     <section class="section">
       <div class="section-title">
         지역별 인기 숙소
-        <router-link :to="{ name: 'AccommodationList', query: { sort: 'POPULAR' } }" class="view-all"
-          >전체보기 <i class="bi bi-chevron-right"></i
-        ></router-link>
+        <router-link :to="{ name: 'AccommodationList', query: { sort: 'POPULAR' } }" class="view-all">
+          전체보기 <i class="bi bi-chevron-right"></i>
+        </router-link>
       </div>
-
-      <!-- 지역 탭 -->
       <div class="region-tabs">
-        <button class="region-tab active">서울</button>
-        <button class="region-tab">부산</button>
-        <button class="region-tab">제주</button>
-        <button class="region-tab">강원</button>
-        <button class="region-tab">경기</button>
+        <button
+          v-for="region in regions"
+          :key="region"
+          class="region-tab"
+          :class="{ active: selectedRegion === region }"
+          @click="selectRegion(region)"
+        >
+          {{ region }}
+        </button>
       </div>
-
-      <!-- 인라인 호텔 리스트 -->
       <div class="region-hotel-list">
-        <!-- 호텔 1 -->
-        <div class="region-hotel-item">
+        <div class="region-hotel-item" v-for="hotel in popularHotels" :key="hotel.title">
           <div class="hotel-image">
-            <img src="https://via.placeholder.com/200x150?text=Hotel+1" alt="호텔 이미지" />
+            <img :src="hotel.img" alt="호텔 이미지" />
           </div>
           <div class="hotel-info">
-            <div class="hotel-rating"><i class="bi bi-star-fill"></i> 4.9 <span class="rating-count">(412)</span></div>
-            <div class="hotel-price">220,000원</div>
-          </div>
-        </div>
-
-        <!-- 호텔 2 -->
-        <div class="region-hotel-item">
-          <div class="hotel-image">
-            <img src="https://via.placeholder.com/200x150?text=Hotel+2" alt="호텔 이미지" />
-          </div>
-          <div class="hotel-info">
-            <div class="hotel-rating"><i class="bi bi-star-fill"></i> 4.8 <span class="rating-count">(356)</span></div>
-            <div class="hotel-price">180,000원</div>
-          </div>
-        </div>
-
-        <!-- 호텔 3 -->
-        <div class="region-hotel-item">
-          <div class="hotel-image">
-            <img src="https://via.placeholder.com/200x150?text=Hotel+3" alt="호텔 이미지" />
-          </div>
-          <div class="hotel-info">
-            <div class="hotel-rating"><i class="bi bi-star-fill"></i> 4.7 <span class="rating-count">(289)</span></div>
-            <div class="hotel-price">170,000원</div>
-          </div>
-        </div>
-
-        <!-- 호텔 4 -->
-        <div class="region-hotel-item">
-          <div class="hotel-image">
-            <img src="https://via.placeholder.com/200x150?text=Hotel+4" alt="호텔 이미지" />
-          </div>
-          <div class="hotel-info">
-            <div class="hotel-rating"><i class="bi bi-star-fill"></i> 4.9 <span class="rating-count">(198)</span></div>
-            <div class="hotel-price">250,000원</div>
-          </div>
-        </div>
-
-        <!-- 호텔 5 -->
-        <div class="region-hotel-item">
-          <div class="hotel-image">
-            <img src="https://via.placeholder.com/200x150?text=Hotel+5" alt="호텔 이미지" />
-          </div>
-          <div class="hotel-info">
-            <div class="hotel-rating"><i class="bi bi-star-fill"></i> 4.6 <span class="rating-count">(245)</span></div>
-            <div class="hotel-price">195,000원</div>
+            <div class="hotel-rating">
+              <i class="bi bi-star-fill"></i>
+              {{ hotel.rating }} <span class="rating-count">({{ hotel.count }})</span>
+            </div>
+            <div class="hotel-price">{{ hotel.price }}원</div>
           </div>
         </div>
       </div>
@@ -159,30 +91,14 @@
     <section class="section">
       <div class="section-title">
         인기 여행지
-        <router-link :to="{ name: 'AccommodationList', query: { sort: 'POPULAR' } }" class="view-all"
-          >전체보기 <i class="bi bi-chevron-right"></i
-        ></router-link>
+        <router-link :to="{ name: 'AccommodationList', query: { sort: 'POPULAR' } }" class="view-all">
+          전체보기 <i class="bi bi-chevron-right"></i>
+        </router-link>
       </div>
       <div class="destination-grid">
-        <div class="destination-card">
-          <img src="https://via.placeholder.com/300x200?text=Seoul" alt="서울" class="destination-image" />
-          <div class="destination-name">서울</div>
-        </div>
-        <div class="destination-card">
-          <img src="https://via.placeholder.com/300x200?text=Busan" alt="부산" class="destination-image" />
-          <div class="destination-name">부산</div>
-        </div>
-        <div class="destination-card">
-          <img src="https://via.placeholder.com/300x200?text=Jeju" alt="제주" class="destination-image" />
-          <div class="destination-name">제주</div>
-        </div>
-        <div class="destination-card">
-          <img src="https://via.placeholder.com/300x200?text=Gangneung" alt="강릉" class="destination-image" />
-          <div class="destination-name">강릉</div>
-        </div>
-        <div class="destination-card">
-          <img src="https://via.placeholder.com/300x200?text=Gyeongju" alt="경주" class="destination-image" />
-          <div class="destination-name">경주</div>
+        <div class="destination-card" v-for="dest in destinations" :key="dest.name">
+          <img :src="dest.img" :alt="dest.name" class="destination-image" />
+          <div class="destination-name">{{ dest.name }}</div>
         </div>
       </div>
     </section>
@@ -220,37 +136,167 @@
   </Layout>
 </template>
 
-<script>
+<script setup>
+import { ref, computed, onMounted } from "vue";
 import Layout from "@/components/layout/Layout.vue";
 import { useUserStore } from "@/store/userStore";
+import axios from "axios";
 
-export default {
-  name: "HomeView",
-  components: {
-    Layout,
-  },
-  setup() {
-    const userStore = useUserStore();
-    return { userStore };
-  },
-  computed: {
-    isLoggedIn() {
-      return this.userStore.isAuthenticated;
-    },
-    user() {
-      return this.userStore.user;
-    },
-    userId() {
-      return this.userStore.user?.id;
-    },
-    isAdmin() {
-      return this.userStore.userRole === "ADMIN";
-    },
-    isHost() {
-      return this.userStore.userRole === "HOST";
-    },
-  },
+// 유저 store
+const userStore = useUserStore();
+
+// 로그인, 권한
+const isLoggedIn = computed(() => userStore.isAuthenticated);
+const isAdmin = computed(() => userStore.userRole === "ADMIN");
+const isHost = computed(() => userStore.userRole === "HOST");
+
+// 숙소 카테고리
+const categories = [
+  { label: "모텔", value: "MOTEL", img: "/img/accommodationMotel.png" },
+  { label: "호텔/리조트", value: "HOTEL", img: "/img/accommodationHotel.png" },
+  { label: "펜션/풀빌라", value: "PENSION", img: "/img/accommodationPension.png" },
+  { label: "프리미엄", value: "PREMIUM", img: "/img/accommodationPremium.png" },
+  { label: "글램핑/캠핑", value: "CAMPING", img: "/img/accommodationCamping.png" },
+];
+
+const homeEvents = ref([]);
+const isLoadingEvents = ref(true);
+const fetchEventsError = ref(null);
+
+// 진행중인 이벤트 중 일부를 가져오는 함수 (예: 최신 2개)
+const fetchHomeEvents = async () => {
+  isLoadingEvents.value = true;
+  fetchEventsError.value = null;
+  try {
+    const response = await axios.get("/api/events");
+    // 백엔드 EventBoard 필드명에 맞게 매핑 필요 (EventList.vue와 동일하게)
+    const fetchedEvents = (response.data.result || []).map((event) => ({
+      id: event.eventId,
+      title: event.title,
+      image: event.mainImageUrl,
+      date: event.startDate && event.endDate ? `${event.startDate}~${event.endDate}` : "상시 진행",
+      status:
+        event.status === "ONGOING"
+          ? "진행중"
+          : event.status === "ENDED"
+            ? "종료"
+            : event.status === "HIDDEN"
+              ? "숨김"
+              : event.status,
+    }));
+    // 진행중인 이벤트만 필터링하고, 최신 3개만 선택 (또는 다른 기준으로 정렬/선택)
+    homeEvents.value = fetchedEvents
+      .filter((event) => event.status === "진행중") // "진행중" 상태 값은 백엔드와 일치해야 함
+      .slice(0, 3); // 예시로 처음 3개만 가져옴 (최신순 정렬이 백엔드에서 된다면 더 좋음)
+  } catch (error) {
+    console.error("Error fetching events for home:", error);
+    fetchEventsError.value = "이벤트 정보를 가져오는데 실패했습니다.";
+  }
+  isLoadingEvents.value = false;
 };
+
+onMounted(() => {
+  fetchHomeEvents();
+});
+
+// 지역별 인기 숙소
+const regions = ["서울", "부산", "제주", "강원", "경기"];
+const selectedRegion = ref("서울");
+const hotelsByRegion = {
+  서울: [
+    {
+      img: "https://via.placeholder.com/200x150?text=Hotel+1",
+      title: "호텔1",
+      rating: "4.9",
+      count: 412,
+      price: "220,000",
+    },
+    {
+      img: "https://via.placeholder.com/200x150?text=Hotel+2",
+      title: "호텔2",
+      rating: "4.8",
+      count: 356,
+      price: "180,000",
+    },
+    {
+      img: "https://via.placeholder.com/200x150?text=Hotel+3",
+      title: "호텔3",
+      rating: "4.7",
+      count: 289,
+      price: "170,000",
+    },
+    {
+      img: "https://via.placeholder.com/200x150?text=Hotel+4",
+      title: "호텔4",
+      rating: "4.9",
+      count: 198,
+      price: "250,000",
+    },
+    {
+      img: "https://via.placeholder.com/200x150?text=Hotel+5",
+      title: "호텔5",
+      rating: "4.6",
+      count: 245,
+      price: "195,000",
+    },
+  ],
+  부산: [
+    {
+      img: "https://via.placeholder.com/200x150?text=Hotel+1",
+      title: "호텔1",
+      rating: "4.7",
+      count: 300,
+      price: "155,000",
+    },
+    {
+      img: "https://via.placeholder.com/200x150?text=Hotel+2",
+      title: "호텔2",
+      rating: "4.8",
+      count: 272,
+      price: "210,000",
+    },
+  ],
+  제주: [
+    {
+      img: "https://via.placeholder.com/200x150?text=Hotel+1",
+      title: "호텔1",
+      rating: "4.8",
+      count: 460,
+      price: "120,000",
+    },
+  ],
+  강원: [
+    {
+      img: "https://via.placeholder.com/200x150?text=Hotel+1",
+      title: "호텔1",
+      rating: "4.7",
+      count: 133,
+      price: "130,000",
+    },
+  ],
+  경기: [
+    {
+      img: "https://via.placeholder.com/200x150?text=Hotel+1",
+      title: "호텔1",
+      rating: "4.9",
+      count: 98,
+      price: "110,000",
+    },
+  ],
+};
+const popularHotels = computed(() => hotelsByRegion[selectedRegion.value] || []);
+function selectRegion(region) {
+  selectedRegion.value = region;
+}
+
+// 인기 여행지
+const destinations = [
+  { img: "https://via.placeholder.com/300x200?text=Seoul", name: "서울" },
+  { img: "https://via.placeholder.com/300x200?text=Busan", name: "부산" },
+  { img: "https://via.placeholder.com/300x200?text=Jeju", name: "제주" },
+  { img: "https://via.placeholder.com/300x200?text=Gangneung", name: "강릉" },
+  { img: "https://via.placeholder.com/300x200?text=Gyeongju", name: "경주" },
+];
 </script>
 
 <style scoped>
@@ -368,24 +414,30 @@ export default {
 
 /* 이벤트 슬라이더 스타일 */
 .event-slider {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
-  gap: 20px;
-  margin-bottom: 30px;
+  display: flex;
+  overflow-x: auto;
+  gap: 16px;
+  padding-bottom: 10px;
   background-color: #ffffff; /* 흰색 배경 추가 */
+}
+
+.event-card-link {
+  text-decoration: none;
+  color: inherit;
+  min-width: 280px;
 }
 
 .event-card {
+  border: 1px solid #eee;
   border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  transition: transform 0.3s ease;
-  cursor: pointer;
-  background-color: #ffffff; /* 흰색 배경 추가 */
+  background-color: #fff;
+  transition: box-shadow 0.2s ease-in-out;
+  height: 100%;
 }
 
 .event-card:hover {
-  transform: translateY(-5px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .event-image {

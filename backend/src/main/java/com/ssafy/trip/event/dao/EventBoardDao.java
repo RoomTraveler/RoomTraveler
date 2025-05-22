@@ -19,7 +19,8 @@ public interface EventBoardDao {
     void incrementViewCount(Long eventId);
 
     // 이미지
-    void insertEventImages(@Param("eventId") Long eventId, @Param("imgUrls") List<String> imgUrls);
+    // void insertEventImages(@Param("eventId") Long eventId, @Param("imgUrls") List<String> imgUrls); // 이전 메소드 주석 처리
+    void insertEventImages(List<EventBoardImg> images); // 수정된 메소드: EventBoardImg 리스트를 직접 받음
     List<EventBoardImg> selectEventImages(Long eventId);
     void deleteEventImages(Long eventId); // 게시글 전체 이미지
     void deleteEventImageByUrl(String imgUrl); // 단일 이미지

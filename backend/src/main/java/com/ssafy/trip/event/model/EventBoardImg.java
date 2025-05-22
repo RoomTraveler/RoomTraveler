@@ -15,6 +15,7 @@ public class EventBoardImg {
     private Long imgId;
     private Long eventId;
     private String imgUrl;
+    private Boolean isThumbnail;
     private LocalDateTime createdAt;
 
 }

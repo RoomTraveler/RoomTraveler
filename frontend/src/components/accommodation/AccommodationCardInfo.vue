@@ -1,18 +1,18 @@
 <template>
-  <div class="text-left">
-    <span v-if="item.hotelGrade" class="block text-xs text-gray-500 mb-0.5">{{ item.hotelGrade }}</span>
-    <h3 class="font-semibold text-lg text-gray-800 leading-tight mb-1">{{ item.title }}</h3>
-    <div class="flex items-center text-sm text-gray-600 mb-1">
-      <i class="bi bi-geo-alt-fill mr-1.5 text-xs"></i>
+  <div class="text-start">
+    <span v-if="item.hotelGrade" class="d-block small text-secondary mb-1">{{ item.hotelGrade }}</span>
+    <h3 class="fw-semibold fs-5 text-dark lh-sm mb-2">{{ item.title }}</h3>
+    <div class="d-flex align-items-center small text-secondary mb-2">
+      <i class="bi bi-geo-alt-fill me-2"></i>
       <span>{{ item.address }}</span>
     </div>
-    <div class="flex items-center text-sm text-gray-600 mb-2.5">
-      <i class="bi bi-star-fill text-yellow-400 mr-1 text-sm"></i>
-      <span class="font-bold text-gray-800">{{ (item.rating ?? 0).toFixed(1) }}</span>
-      <span class="ml-1 text-gray-500">({{ (item.reviewCount ?? 0).toLocaleString() }})</span>
+    <div class="d-flex align-items-center small text-secondary mb-3">
+      <i class="bi bi-star-fill text-warning me-1"></i>
+      <span class="fw-bold text-dark">{{ (item.rating ?? 0).toFixed(1) }}</span>
+      <span class="ms-2 text-muted">({{ (item.reviewCount ?? 0).toLocaleString() }})</span>
     </div>
     <div v-if="item.couponInfo" class="mb-2">
-      <span class="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded font-medium">{{ item.couponInfo }}</span>
+      <span class="badge bg-primary bg-opacity-10 text-primary px-2 py-1">{{ item.couponInfo }}</span>
     </div>
   </div>
 </template>
@@ -41,5 +41,5 @@ defineProps({
 </script>
 
 <style scoped>
-/* 필요한 경우 여기에 커스텀 스타일 추가 */
-</style> 
+/* 필요하면 추가 커스텀 스타일 작성 */
+</style>

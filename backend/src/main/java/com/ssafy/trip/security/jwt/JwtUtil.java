@@ -5,6 +5,8 @@ import io.jsonwebtoken.*;
 import java.util.Date;
 import java.util.Map;
 import javax.crypto.SecretKey;
+import io.jsonwebtoken.security.Keys;
+import java.nio.charset.StandardCharsets;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -21,9 +23,15 @@ import com.ssafy.trip.security.CustomUserDetailsService;
 public class JwtUtil {
 
     private final SecretKey key;
-    public JwtUtil() {
-        key = Jwts.SIG.HS256.key().build();
+
+    // @Value("${jwt.secret}") // 주석 처리
+    // private String secretString; // 주석 처리
+
+    public JwtUtil(/*@Value("${jwt.secret}") String secretString*/) { // 생성자 파라미터 제거
+        // this.key = Keys.hmacShaKeyFor(secretString.getBytes(StandardCharsets.UTF_8)); // 이전 로직으로 변경
+        this.key = Jwts.SIG.HS256.key().build(); // 원래 동적 생성 로직으로 복원
     }
+
     @Value("${ssafy.jwt.access-expmin}")
     private int accessExpire;
     @Value("${ssafy.jwt.refresh-expmin}")

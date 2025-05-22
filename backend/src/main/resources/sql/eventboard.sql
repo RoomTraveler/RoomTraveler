@@ -15,6 +15,9 @@ CREATE TABLE event_board_img (
                                  img_id      BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
                                  event_id    BIGINT UNSIGNED NOT NULL,
                                  img_url     VARCHAR(500)    NOT NULL,
+                                 is_thumbnail BOOLEAN        DEFAULT FALSE,
                                  created_at  DATETIME        DEFAULT CURRENT_TIMESTAMP,
                                  FOREIGN KEY (event_id) REFERENCES event_board(event_id) ON DELETE CASCADE
 );
+
+ALTER TABLE event_board_img ADD COLUMN is_thumbnail BOOLEAN DEFAULT FALSE;

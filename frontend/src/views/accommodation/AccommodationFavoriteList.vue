@@ -35,9 +35,9 @@
           <div v-for="favorite in favorites" :key="favorite.favoriteId" class="col-md-4 mb-4">
             <div class="card favorite-card h-100">
               <img
-                :src="favorite.mainImageUrl || 'https://via.placeholder.com/300x200?text=No+Image'"
-                class="card-img-top"
-                :alt="favorite.accommodationTitle || 'No Image'"
+                  :src="favorite.mainImageUrl || 'https://via.placeholder.com/300x200?text=No+Image'"
+                  class="card-img-top"
+                  :alt="favorite.accommodationTitle || 'No Image'"
               />
               <div class="card-body d-flex flex-column">
                 <h5 class="card-title">{{ favorite.accommodationTitle }}</h5>
@@ -47,7 +47,7 @@
                 </p>
                 <div class="favorite-actions mt-auto">
                   <router-link :to="`/accommodation/detail/${favorite.accommodationId}`" class="btn btn-primary"
-                    >상세 보기</router-link
+                  >상세 보기</router-link
                   >
                   <button class="btn btn-outline-danger" @click="removeFavorite(favorite.favoriteId)">삭제</button>
                 </div>
@@ -75,7 +75,6 @@ const message = ref("");
 const error = ref("");
 
 function formatDate(date) {
-  // date: ISO or timestamp
   return date ? dayjs(date).format("YYYY-MM-DD") : "";
 }
 

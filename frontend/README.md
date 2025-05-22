@@ -298,7 +298,8 @@ npm install vuedraggable@next
 npm install @vueuse/motion
 npm install bootstrap-icons
 npm install bootstrap
-npm install @toast-ui/editor @toast-ui/editor-vue axios
+npm install chart.js
+npm install @toast-ui/editor
 ```
 
 2. 개발 서버 실행:

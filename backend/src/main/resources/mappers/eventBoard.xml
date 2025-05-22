@@ -5,7 +5,8 @@
 
 <mapper namespace="com.ssafy.trip.event.dao.EventBoardDao">
 
-    <insert id="insertEvent" parameterType="com.ssafy.trip.event.model.EventBoard">
+    <insert id="insertEvent" parameterType="com.ssafy.trip.event.model.EventBoard"
+            useGeneratedKeys="true" keyProperty="eventId">
         INSERT INTO event_board
         (title, content, writer, start_date, end_date, status)
         VALUES
@@ -16,8 +17,8 @@
         SELECT * FROM event_board ORDER BY created_at DESC
     </select>
 
-    <select id="selectById" resultType="com.ssafy.trip.event.model.EventBoard">
-        SELECT * FROM event_board WHERE event_id = #{event}
+    <select id="selectEventBoardByEventId" resultType="com.ssafy.trip.event.model.EventBoard">
+        SELECT * FROM event_board WHERE event_id = #{eventId}
     </select>
 
     <update id="updateEvent" parameterType="com.ssafy.trip.event.model.EventBoard">
@@ -40,17 +41,17 @@
     </update>
 
 
-    <insert id="insertEventImages">
-        INSERT INTO event_board_img (event_id, img_url)
+    <insert id="insertEventImages" parameterType="java.util.List">
+        INSERT INTO event_board_img (event_id, img_url, is_thumbnail)
         VALUES
-        <foreach collection="imgUrls" item="url" separator=",">
-            (#{eventId}, #{url})
+        <foreach collection="images" item="image" separator=",">
+            (#{image.eventId}, #{image.imgUrl}, #{image.isThumbnail, jdbcType=BOOLEAN})
         </foreach>
     </insert>
 
 
     <select id="selectEventImages" resultType="com.ssafy.trip.event.model.EventBoardImg">
-        SELECT img_id, event_id, img_url, created_at
+        SELECT img_id, event_id, img_url, is_thumbnail, created_at
         FROM event_board_img
         WHERE event_id = #{eventId}
     </select>

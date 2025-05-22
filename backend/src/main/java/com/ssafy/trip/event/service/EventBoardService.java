@@ -9,9 +9,9 @@ import java.util.List;
 
 
 public interface EventBoardService {
-    void createEventBoard(EventBoard eventBoard, List<MultipartFile> images) throws IOException;
+    void createEventBoard(EventBoard eventBoard, MultipartFile thumbnailImage) throws IOException;
     List<EventBoard> getAllEventBoard();
     EventBoard getEventBoard(Long eventId);
-    void updateEventBoard(EventBoard eventBoard, List<MultipartFile> newImages, List<String> deleteImgUrls) throws IOException;
+    void updateEventBoard(EventBoard eventBoard, MultipartFile newThumbnailImage, List<String> deleteImgUrls) throws IOException;
     void deleteEventBoard(Long eventId);
 }

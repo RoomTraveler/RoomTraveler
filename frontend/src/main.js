@@ -19,6 +19,9 @@ import "bootstrap-icons/font/bootstrap-icons.css"; // Bootstrap Icons CSS 추가
 import axios from "axios"; // axios import
 import piniaPersist from "pinia-plugin-persistedstate";
 
+// Toast UI Editor CSS 추가
+import "@toast-ui/editor/dist/toastui-editor.css";
+
 // Axios 기본 설정 (중요!)
 // axios.defaults.baseURL = 'http://localhost:8080'; // 백엔드 주소에 맞게 설정 (Vite 프록시 사용 시 불필요할 수 있음)
 axios.defaults.withCredentials = true; // 모든 요청에 쿠키를 포함하도록 설정

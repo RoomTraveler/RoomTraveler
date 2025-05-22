@@ -2,8 +2,6 @@ const AdminDashboard = () => import("../views/admin/Dashboard.vue");
 const AdminUsers = () => import("../views/admin/Users.vue");
 const AdminAccommodations = () => import("../views/admin/AdminAccommodations.vue");
 const AdminRegions = () => import("../views/admin/Regions.vue");
-const AdminApiConfig = () => import("../views/admin/ApiConfig.vue");
-
 export const adminRoutes = [
   // 관리자 페이지 라우트
   {
@@ -29,11 +27,5 @@ export const adminRoutes = [
     name: "AdminRegions",
     component: AdminRegions,
     meta: { title: "지역 데이터 관리 - Room Traveler", requiresAuth: true, requiresAdmin: true },
-  },
-  {
-    path: "/admin/api-config",
-    name: "AdminApiConfig",
-    component: AdminApiConfig,
-    meta: { title: "API 설정 관리 - Room Traveler", requiresAuth: true, requiresAdmin: true },
   },
 ];

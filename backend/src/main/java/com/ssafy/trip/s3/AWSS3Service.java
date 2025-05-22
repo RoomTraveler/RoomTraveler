@@ -106,7 +106,7 @@ public class AWSS3Service {
 
     // 파일명 생성
     private String createFileName(String originalFilename) {
-        return UUID.randomUUID().toString().concat(getFileExtension(originalFilename));
+        return "trip/" + UUID.randomUUID().toString().concat(getFileExtension(originalFilename));
     }
 
     // 확장자 추출

@@ -1,4 +1,4 @@
-package com.ssafy.trip.review.scheduler;
+package com.ssafy.trip.event.scheduler;
 
 import com.ssafy.trip.event.dao.EventBoardImgDao;
 import com.ssafy.trip.event.model.EventBoardImg;
@@ -11,12 +11,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
-
-//수정 시 지우셈.
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class UnmappedImageCleanupScheduler {
+public class EventUnmappedImageCleanupScheduler {
 
     private final EventBoardImgDao eventBoardImgDao;
     private final AWSS3Service awsS3Service;

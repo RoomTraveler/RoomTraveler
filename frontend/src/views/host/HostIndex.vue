@@ -4,13 +4,13 @@
     <div class="hero-section text-center">
       <h1 class="display-4">호스트 포털에 오신 것을 환영합니다</h1>
       <p class="lead">숙소를 등록하고 관리하세요. 새로운 호스트가 되어보세요!</p>
-      
+
       <div v-if="!isLoggedIn" class="mt-4">
         <router-link to="/host/login-form" class="btn btn-primary me-2">로그인</router-link>
         <router-link to="/host/regist-user-form" class="btn btn-success">호스트 가입하기</router-link>
       </div>
     </div>
-    
+
     <div v-if="isLoggedIn">
       <!-- 로그인한 호스트를 위한 대시보드 -->
       <div class="row mb-4">
@@ -23,7 +23,7 @@
           </div>
         </div>
       </div>
-      
+
       <!-- 호스트 기능 카드 -->
       <div class="row">
         <div class="col-md-4">
@@ -35,7 +35,7 @@
             </div>
           </div>
         </div>
-        
+
         <div class="col-md-4">
           <div class="card h-100">
             <div class="card-body text-center">
@@ -45,7 +45,7 @@
             </div>
           </div>
         </div>
-        
+
         <div class="col-md-4">
           <div class="card h-100">
             <div class="card-body text-center">
@@ -56,7 +56,7 @@
           </div>
         </div>
       </div>
-      
+
       <div class="row mt-4">
         <div class="col-md-6">
           <div class="card h-100">
@@ -67,7 +67,7 @@
             </div>
           </div>
         </div>
-        
+
         <div class="col-md-6">
           <div class="card h-100">
             <div class="card-body text-center">
@@ -79,13 +79,12 @@
         </div>
       </div>
     </div>
-    
+
     <!-- 호스트 혜택 소개 -->
     <div class="row mt-5">
       <div class="col-md-12">
         <h3 class="text-center mb-4">호스트가 되면 누릴 수 있는 혜택</h3>
       </div>
-      
       <div class="col-md-4">
         <div class="card h-100">
           <div class="card-body text-center">
@@ -94,7 +93,6 @@
           </div>
         </div>
       </div>
-      
       <div class="col-md-4">
         <div class="card h-100">
           <div class="card-body text-center">
@@ -103,7 +101,6 @@
           </div>
         </div>
       </div>
-      
       <div class="col-md-4">
         <div class="card h-100">
           <div class="card-body text-center">
@@ -116,44 +113,37 @@
   </div>
 </template>
 
-<script>
-export default {
-  name: 'HostIndex',
-  data() {
-    return {
-      // 사용자 정보
-      isLoggedIn: false,
-      username: '',
-      userId: null
-    };
-  },
-  created() {
-    // 사용자 정보 로드
-    this.loadUserInfo();
-  },
-  methods: {
-    // 사용자 정보 로드
-    async loadUserInfo() {
-      try {
-        // API 호출
-        const response = await fetch('/api/users/me');
-        if (!response.ok) {
-          // 로그인되지 않은 상태
-          this.isLoggedIn = false;
-          return;
-        }
-        
-        const user = await response.json();
-        this.isLoggedIn = true;
-        this.username = user.name;
-        this.userId = user.id;
-      } catch (error) {
-        console.error('사용자 정보 로드 중 오류가 발생했습니다:', error);
-        this.isLoggedIn = false;
-      }
+<script setup>
+import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+
+const isLoggedIn = ref(false)
+const username = ref('')
+const userId = ref(null)
+const router = useRouter()
+
+const loadUserInfo = async () => {
+  try {
+    // 실제 배포환경에서는 /api/users/me 를 자신의 API 규격에 맞게 수정!
+    const response = await fetch('/api/users/me', {
+      credentials: 'include', // 세션 쿠키 인증 필요시
+    })
+    if (!response.ok) {
+      isLoggedIn.value = false
+      return
     }
+    const user = await response.json()
+    isLoggedIn.value = true
+    username.value = user.name
+    userId.value = user.id
+  } catch (err) {
+    isLoggedIn.value = false
+    username.value = ''
+    userId.value = null
   }
-};
+}
+
+onMounted(loadUserInfo)
 </script>
 
 <style scoped>

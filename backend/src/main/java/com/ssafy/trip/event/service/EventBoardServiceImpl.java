@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -20,20 +21,31 @@ public class EventBoardServiceImpl implements EventBoardService {
 
     @Override
     @Transactional
-    public void createEventBoard(EventBoard eventBoard, List<MultipartFile> images) throws IOException {
+    public void createEventBoard(EventBoard eventBoard, MultipartFile thumbnailImage) throws IOException {
         if(eventBoard.getStatus() == null) eventBoard.setStatus("ONGOING");
         if(eventBoard.getViewCount() == null) eventBoard.setViewCount(0);
         eventBoardDao.insertEvent(eventBoard);
-        if (images != null && !images.isEmpty()) {
-            List<String> imgUrls = awsS3Service.uploadFiles(images);
-            eventBoardDao.insertEventImages(eventBoard.getEventId(), imgUrls);
+
+        Long eventId = eventBoard.getEventId();
+        List<EventBoardImg> eventImagesToSave = new ArrayList<>();
+
+        if (thumbnailImage != null && !thumbnailImage.isEmpty()) {
+            String thumbnailUrl = awsS3Service.uploadFile(thumbnailImage);
+            eventImagesToSave.add(EventBoardImg.builder()
+                    .eventId(eventId)
+                    .imgUrl(thumbnailUrl)
+                    .isThumbnail(true)
+                    .build());
+        }
+
+        if (!eventImagesToSave.isEmpty()) {
+            eventBoardDao.insertEventImages(eventImagesToSave);
         }
     }
 
     @Override
     public List<EventBoard> getAllEventBoard() {
         List<EventBoard> list = eventBoardDao.selectAll();
-        // 각 게시글에 이미지 채워주기
         for (EventBoard board : list) {
             board.setImages(eventBoardDao.selectEventImages(board.getEventId()));
         }
@@ -44,23 +56,42 @@ public class EventBoardServiceImpl implements EventBoardService {
     public EventBoard getEventBoard(Long eventId) {
         eventBoardDao.incrementViewCount(eventId);
         EventBoard board = eventBoardDao.selectEventBoardByEventId(eventId);
-        board.setImages(eventBoardDao.selectEventImages(eventId));
+        if (board != null) {
+            board.setImages(eventBoardDao.selectEventImages(eventId));
+        }
         return board;
     }
 
     @Override
     @Transactional
-    public void updateEventBoard(EventBoard eventBoard, List<MultipartFile> newImages, List<String> deleteImgUrls) throws IOException {
+    public void updateEventBoard(EventBoard eventBoard, MultipartFile newThumbnailImage, List<String> deleteImgUrls) throws IOException {
         eventBoardDao.updateEvent(eventBoard);
-        if (deleteImgUrls != null) {
+        Long eventId = eventBoard.getEventId();
+
+        if (deleteImgUrls != null && !deleteImgUrls.isEmpty()) {
             for (String url : deleteImgUrls) {
                 awsS3Service.deleteImage(url);
                 eventBoardDao.deleteEventImageByUrl(url);
             }
         }
-        if (newImages != null && !newImages.isEmpty()) {
-            List<String> imgUrls = awsS3Service.uploadFiles(newImages);
-            eventBoardDao.insertEventImages(eventBoard.getEventId(), imgUrls);
+
+        if (newThumbnailImage != null && !newThumbnailImage.isEmpty()) {
+            List<EventBoardImg> oldThumbnails = eventBoardDao.selectEventImages(eventId).stream().filter(img -> Boolean.TRUE.equals(img.getIsThumbnail())).toList();
+            for(EventBoardImg oldThumb : oldThumbnails){
+                if(!deleteImgUrls.contains(oldThumb.getImgUrl())) {
+                     awsS3Service.deleteImage(oldThumb.getImgUrl());
+                     eventBoardDao.deleteEventImageByUrl(oldThumb.getImgUrl());
+                }
+            }
+
+            String thumbnailUrl = awsS3Service.uploadFile(newThumbnailImage);
+            List<EventBoardImg> thumbnailToSave = new ArrayList<>();
+            thumbnailToSave.add(EventBoardImg.builder()
+                    .eventId(eventId)
+                    .imgUrl(thumbnailUrl)
+                    .isThumbnail(true)
+                    .build());
+            eventBoardDao.insertEventImages(thumbnailToSave);
         }
     }
 
@@ -68,8 +99,12 @@ public class EventBoardServiceImpl implements EventBoardService {
     @Transactional
     public void deleteEventBoard(Long eventId) {
         List<EventBoardImg> imgs = eventBoardDao.selectEventImages(eventId);
-        for (EventBoardImg img : imgs) {
-            awsS3Service.deleteImage(img.getImgUrl());
+        if (imgs != null) {
+            for (EventBoardImg img : imgs) {
+                if (img.getImgUrl() != null && Boolean.TRUE.equals(img.getIsThumbnail())) {
+                    awsS3Service.deleteImage(img.getImgUrl());
+                }
+            }
         }
         eventBoardDao.deleteEventImages(eventId);
         eventBoardDao.deleteEvent(eventId);

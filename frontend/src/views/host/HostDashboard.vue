@@ -1,7 +1,7 @@
 <template>
   <div class="container mt-4">
     <h2 class="mb-4">호스트 대시보드</h2>
-    
+
     <!-- 호스트 정보 -->
     <div v-if="host" class="row mb-4">
       <div class="col-md-12">
@@ -18,7 +18,7 @@
         </div>
       </div>
     </div>
-    
+
     <!-- 통계 요약 -->
     <div class="row">
       <div class="col-md-3">
@@ -46,7 +46,7 @@
         </div>
       </div>
     </div>
-    
+
     <!-- 차트 -->
     <div class="row mt-4">
       <div class="col-md-6">
@@ -70,7 +70,7 @@
         </div>
       </div>
     </div>
-    
+
     <!-- 예약 상태 분포 -->
     <div class="row mt-4">
       <div class="col-md-6">
@@ -94,7 +94,7 @@
         </div>
       </div>
     </div>
-    
+
     <!-- 숙소 목록 -->
     <div class="row mt-4">
       <div class="col-md-12">
@@ -104,37 +104,33 @@
             <div class="table-responsive">
               <table class="table table-striped">
                 <thead>
-                  <tr>
-                    <th>숙소명</th>
-                    <th>주소</th>
-                    <th>상태</th>
-                    <th>예약 수</th>
-                    <th>상세 통계</th>
-                  </tr>
+                <tr>
+                  <th>숙소명</th>
+                  <th>주소</th>
+                  <th>상태</th>
+                  <th>예약 수</th>
+                  <th>상세 통계</th>
+                </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="accommodation in accommodations" :key="accommodation.accommodationId">
-                    <td>{{ accommodation.title }}</td>
-                    <td>{{ accommodation.address }}</td>
-                    <td>
-                      <span 
-                        :class="getStatusBadgeClass(accommodation.status)"
-                      >
+                <tr v-for="accommodation in accommodations" :key="accommodation.accommodationId">
+                  <td>{{ accommodation.title }}</td>
+                  <td>{{ accommodation.address }}</td>
+                  <td>
+                      <span :class="getStatusBadgeClass(accommodation.status)">
                         {{ getStatusText(accommodation.status) }}
                       </span>
-                    </td>
-                    <td>
-                      {{ getReservationCount(accommodation.accommodationId) }}
-                    </td>
-                    <td>
-                      <router-link 
-                        :to="`/host/dashboard/accommodation?accommodationId=${accommodation.accommodationId}`" 
+                  </td>
+                  <td>
+                    {{ getReservationCount(accommodation.accommodationId) }}
+                  </td>
+                  <td>
+                    <router-link
+                        :to="`/host/dashboard/accommodation?accommodationId=${accommodation.accommodationId}`"
                         class="btn btn-sm btn-primary"
-                      >
-                        상세 통계
-                      </router-link>
-                    </td>
-                  </tr>
+                    >상세 통계</router-link>
+                  </td>
+                </tr>
                 </tbody>
               </table>
             </div>
@@ -145,235 +141,209 @@
   </div>
 </template>
 
-<script>
-import Chart from 'chart.js/auto';
+<script setup>
+import { ref, onMounted, nextTick } from 'vue'
+import Chart from 'chart.js/auto'
 
-export default {
-  name: 'HostDashboard',
-  data() {
-    return {
-      // 호스트 정보
-      host: null,
-      
-      // 통계 데이터
-      accommodationCount: 0,
-      totalReservations: 0,
-      confirmedReservations: 0,
-      pendingReservations: 0,
-      cancelledReservations: 0,
-      completedReservations: 0,
-      totalRevenue: 0,
-      
-      // 월별 데이터
-      monthlyReservations: {},
-      monthlyRevenue: {},
-      
-      // 숙소 및 예약 데이터
-      accommodations: [],
-      reservations: [],
-      
-      // 차트 인스턴스
-      charts: {
-        reservationsChart: null,
-        revenueChart: null,
-        reservationStatusChart: null,
-        accommodationReservationsChart: null
-      }
-    };
-  },
-  mounted() {
-    // 데이터 로드
-    this.loadDashboardData();
-  },
-  methods: {
-    // 대시보드 데이터 로드
-    async loadDashboardData() {
-      try {
-        // API 호출
-        const response = await fetch('/api/host/dashboard');
-        if (!response.ok) {
-          throw new Error('대시보드 데이터를 불러오는데 실패했습니다.');
-        }
-        
-        const data = await response.json();
-        
-        // 데이터 설정
-        this.host = data.host;
-        this.accommodationCount = data.accommodationCount;
-        this.totalReservations = data.totalReservations;
-        this.confirmedReservations = data.confirmedReservations;
-        this.pendingReservations = data.pendingReservations;
-        this.cancelledReservations = data.cancelledReservations;
-        this.completedReservations = data.completedReservations;
-        this.totalRevenue = data.totalRevenue;
-        this.monthlyReservations = data.monthlyReservations;
-        this.monthlyRevenue = data.monthlyRevenue;
-        this.accommodations = data.accommodations;
-        this.reservations = data.reservations;
-        
-        // 차트 초기화
-        this.initCharts();
-      } catch (error) {
-        console.error('대시보드 데이터 로드 중 오류가 발생했습니다:', error);
-      }
-    },
-    
-    // 차트 초기화
-    initCharts() {
-      // 기존 차트 제거
-      Object.values(this.charts).forEach(chart => {
-        if (chart) {
-          chart.destroy();
-        }
-      });
-      
-      // 월별 예약 차트
-      this.charts.reservationsChart = new Chart(this.$refs.reservationsChart, {
-        type: 'line',
-        data: {
-          labels: Object.keys(this.monthlyReservations),
-          datasets: [{
-            label: '월별 예약 수',
-            data: Object.values(this.monthlyReservations),
-            borderColor: 'rgba(75, 192, 192, 1)',
-            backgroundColor: 'rgba(75, 192, 192, 0.2)',
-            tension: 0.1
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            y: {
-              beginAtZero: true,
-              ticks: {
-                precision: 0
-              }
-            }
-          }
-        }
-      });
-      
-      // 월별 수익 차트
-      this.charts.revenueChart = new Chart(this.$refs.revenueChart, {
-        type: 'bar',
-        data: {
-          labels: Object.keys(this.monthlyRevenue),
-          datasets: [{
-            label: '월별 수익 (원)',
-            data: Object.values(this.monthlyRevenue),
-            backgroundColor: 'rgba(54, 162, 235, 0.5)',
-            borderColor: 'rgba(54, 162, 235, 1)',
-            borderWidth: 1
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            y: {
-              beginAtZero: true
-            }
-          }
-        }
-      });
-      
-      // 예약 상태 분포 차트
-      this.charts.reservationStatusChart = new Chart(this.$refs.reservationStatusChart, {
-        type: 'pie',
-        data: {
-          labels: ['확정', '대기중', '취소', '완료'],
-          datasets: [{
-            data: [
-              this.confirmedReservations,
-              this.pendingReservations,
-              this.cancelledReservations,
-              this.completedReservations
-            ],
-            backgroundColor: [
-              'rgba(54, 162, 235, 0.5)',
-              'rgba(255, 206, 86, 0.5)',
-              'rgba(255, 99, 132, 0.5)',
-              'rgba(75, 192, 192, 0.5)'
-            ],
-            borderColor: [
-              'rgba(54, 162, 235, 1)',
-              'rgba(255, 206, 86, 1)',
-              'rgba(255, 99, 132, 1)',
-              'rgba(75, 192, 192, 1)'
-            ],
-            borderWidth: 1
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false
-        }
-      });
-      
-      // 숙소별 예약 현황 차트
-      this.charts.accommodationReservationsChart = new Chart(this.$refs.accommodationReservationsChart, {
-        type: 'bar',
-        data: {
-          labels: this.accommodations.map(acc => acc.title),
-          datasets: [{
-            label: '예약 수',
-            data: this.accommodations.map(acc => this.getReservationCount(acc.accommodationId)),
-            backgroundColor: 'rgba(153, 102, 255, 0.5)',
-            borderColor: 'rgba(153, 102, 255, 1)',
-            borderWidth: 1
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            y: {
-              beginAtZero: true,
-              ticks: {
-                precision: 0
-              }
-            }
-          }
-        }
-      });
-    },
-    
-    // 숙소별 예약 수 계산
-    getReservationCount(accommodationId) {
-      return this.reservations.filter(reservation => reservation.accommodationId === accommodationId).length;
-    },
-    
-    // 숙소 상태에 따른 배지 클래스 반환
-    getStatusBadgeClass(status) {
-      switch (status) {
-        case 'ACTIVE': return 'badge bg-success';
-        case 'INACTIVE': return 'badge bg-secondary';
-        case 'PENDING_REVIEW': return 'badge bg-warning';
-        default: return 'badge bg-secondary';
-      }
-    },
-    
-    // 숙소 상태 텍스트 반환
-    getStatusText(status) {
-      switch (status) {
-        case 'ACTIVE': return '활성';
-        case 'INACTIVE': return '비활성';
-        case 'PENDING_REVIEW': return '검토중';
-        default: return status;
-      }
-    },
-    
-    // 금액 포맷팅
-    formatCurrency(amount) {
-      return new Intl.NumberFormat('ko-KR', {
-        style: 'currency',
-        currency: 'KRW',
-        maximumFractionDigits: 0
-      }).format(amount);
-    }
+const host = ref(null)
+
+const accommodationCount = ref(0)
+const totalReservations = ref(0)
+const confirmedReservations = ref(0)
+const pendingReservations = ref(0)
+const cancelledReservations = ref(0)
+const completedReservations = ref(0)
+const totalRevenue = ref(0)
+
+const monthlyReservations = ref({})
+const monthlyRevenue = ref({})
+const accommodations = ref([])
+const reservations = ref([])
+
+// 차트 레퍼런스
+const reservationsChart = ref(null)
+const revenueChart = ref(null)
+const reservationStatusChart = ref(null)
+const accommodationReservationsChart = ref(null)
+
+// 차트 인스턴스 저장
+let charts = {
+  reservationsChart: null,
+  revenueChart: null,
+  reservationStatusChart: null,
+  accommodationReservationsChart: null
+}
+
+// 공통 함수: 금액 포맷팅
+const formatCurrency = (amount) =>
+    new Intl.NumberFormat('ko-KR', {
+      style: 'currency',
+      currency: 'KRW',
+      maximumFractionDigits: 0
+    }).format(amount ?? 0)
+
+// 숙소별 예약 수 계산
+const getReservationCount = (accommodationId) =>
+    reservations.value.filter(r => r.accommodationId === accommodationId).length
+
+// 숙소 상태에 따른 배지 클래스
+const getStatusBadgeClass = (status) => {
+  switch (status) {
+    case 'ACTIVE': return 'badge bg-success'
+    case 'INACTIVE': return 'badge bg-secondary'
+    case 'PENDING_REVIEW': return 'badge bg-warning'
+    default: return 'badge bg-secondary'
   }
-};
+}
+const getStatusText = (status) => {
+  switch (status) {
+    case 'ACTIVE': return '활성'
+    case 'INACTIVE': return '비활성'
+    case 'PENDING_REVIEW': return '검토중'
+    default: return status
+  }
+}
+
+// 차트 초기화
+const initCharts = async () => {
+  // 기존 차트 제거
+  Object.values(charts).forEach(chart => {
+    if (chart) chart.destroy()
+  })
+
+  // 월별 예약 차트
+  charts.reservationsChart = new Chart(reservationsChart.value, {
+    type: 'line',
+    data: {
+      labels: Object.keys(monthlyReservations.value),
+      datasets: [{
+        label: '월별 예약 수',
+        data: Object.values(monthlyReservations.value),
+        borderColor: 'rgba(75, 192, 192, 1)',
+        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+        tension: 0.1
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: { beginAtZero: true, ticks: { precision: 0 } }
+      }
+    }
+  })
+
+  // 월별 수익 차트
+  charts.revenueChart = new Chart(revenueChart.value, {
+    type: 'bar',
+    data: {
+      labels: Object.keys(monthlyRevenue.value),
+      datasets: [{
+        label: '월별 수익 (원)',
+        data: Object.values(monthlyRevenue.value),
+        backgroundColor: 'rgba(54, 162, 235, 0.5)',
+        borderColor: 'rgba(54, 162, 235, 1)',
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: { beginAtZero: true }
+      }
+    }
+  })
+
+  // 예약 상태 분포 차트
+  charts.reservationStatusChart = new Chart(reservationStatusChart.value, {
+    type: 'pie',
+    data: {
+      labels: ['확정', '대기중', '취소', '완료'],
+      datasets: [{
+        data: [
+          confirmedReservations.value,
+          pendingReservations.value,
+          cancelledReservations.value,
+          completedReservations.value
+        ],
+        backgroundColor: [
+          'rgba(54, 162, 235, 0.5)',
+          'rgba(255, 206, 86, 0.5)',
+          'rgba(255, 99, 132, 0.5)',
+          'rgba(75, 192, 192, 0.5)'
+        ],
+        borderColor: [
+          'rgba(54, 162, 235, 1)',
+          'rgba(255, 206, 86, 1)',
+          'rgba(255, 99, 132, 1)',
+          'rgba(75, 192, 192, 1)'
+        ],
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false
+    }
+  })
+
+  // 숙소별 예약 현황 차트
+  charts.accommodationReservationsChart = new Chart(accommodationReservationsChart.value, {
+    type: 'bar',
+    data: {
+      labels: accommodations.value.map(acc => acc.title),
+      datasets: [{
+        label: '예약 수',
+        data: accommodations.value.map(acc => getReservationCount(acc.accommodationId)),
+        backgroundColor: 'rgba(153, 102, 255, 0.5)',
+        borderColor: 'rgba(153, 102, 255, 1)',
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: { beginAtZero: true, ticks: { precision: 0 } }
+      }
+    }
+  })
+}
+
+// 대시보드 데이터 로드
+const loadDashboardData = async () => {
+  try {
+    const res = await fetch('/api/host/dashboard')
+    if (!res.ok) throw new Error('대시보드 데이터를 불러오는데 실패했습니다.')
+    const data = await res.json()
+    host.value = data.host
+    accommodationCount.value = data.accommodationCount
+    totalReservations.value = data.totalReservations
+    confirmedReservations.value = data.confirmedReservations
+    pendingReservations.value = data.pendingReservations
+    cancelledReservations.value = data.cancelledReservations
+    completedReservations.value = data.completedReservations
+    totalRevenue.value = data.totalRevenue
+    monthlyReservations.value = data.monthlyReservations
+    monthlyRevenue.value = data.monthlyRevenue
+    accommodations.value = data.accommodations
+    reservations.value = data.reservations
+
+    // nextTick 후 차트 초기화 (DOM 반영 보장)
+    await nextTick()
+    await initCharts()
+  } catch (e) {
+    // 실제 서비스에서는 Toast나 에러 바인딩 필요
+    alert('대시보드 데이터 로드 중 오류: ' + e.message)
+    console.error(e)
+  }
+}
+
+// 최초 진입 시 데이터 로드
+onMounted(() => {
+  loadDashboardData()
+})
 </script>
 
 <style scoped>

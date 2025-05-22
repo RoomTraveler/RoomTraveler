@@ -1,41 +1,49 @@
 <template>
   <el-dialog
-    :model-value="props.show"
-    @update:model-value="handleClose"
-    title="지역 선택"
-    width="70%"
-    :max-width="'450px'"
-    top="10vh"
-    custom-class="region-selection-dialog"
+      :model-value="props.show"
+      @update:model-value="handleClose"
+      title="지역 선택"
+      width="700px"
+      :max-width="'700px'"
+      top="10vh"
+      custom-class="region-selection-dialog"
   >
-    <div class="dialog-content">
-      <div :class="['flex gap-x-2 min-h-[calc(100%-0px)] sm:min-h-[300px] max-h-[60vh] sm:max-h-[50vh] overflow-y-hidden', gugunList.length > 0 && selectedSidoCode !== ALL_SIDO_CODE ? 'sm:gap-x-3' : '']">
-        <div class="flex-1 overflow-y-auto custom-scrollbar pr-1 sm:pr-1.5 border-r border-gray-200">
+    <div class="dialog-content p-2">
+      <div
+          class="d-flex flex-row gap-3 region-lists-container"
+          style="min-height:210px; max-height:330px;"
+      >
+        <!-- 시도 리스트 -->
+        <div class="flex-fill region-list-scroll pe-3 border-end">
           <div
-            v-for="sido in sidoList"
-            :key="sido.code === null ? 'sido-all' : sido.code"
-            class="py-3.5 px-1.5 mb-2.5 rounded-lg cursor-pointer select-none transition-all duration-150 ease-in-out font-semibold text-3xl text-gray-700 hover:text-pink-600 hover:bg-pink-50 text-center"
-            :class="
-              sido.code === selectedSidoCode 
-                ? 'bg-pink-100 text-pink-700 shadow-md scale-105'
-                : 'bg-white hover:shadow-sm'
-            "
-            @click="selectSido(sido)" 
+              v-for="sido in sidoList"
+              :key="sido.code === null ? 'sido-all' : sido.code"
+              class="py-2 px-1 mb-1 rounded-3 text-center fw-semibold fs-5 text-secondary bg-white region-item"
+              :class="{
+              'bg-light text-primary shadow-sm scale-105': sido.code === selectedSidoCode,
+              'region-item-hover': sido.code !== selectedSidoCode
+            }"
+              style="cursor:pointer; user-select:none; transition:all .15s;"
+              @click="selectSido(sido)"
           >
             {{ sido.name }}
           </div>
         </div>
-        <div class="flex-1 overflow-y-auto custom-scrollbar pl-1 sm:pl-1.5" v-if="gugunList.length > 0 && selectedSidoCode !== ALL_SIDO_CODE">
+        <!-- 구군 리스트 -->
+        <div
+            v-if="gugunList.length > 0 && selectedSidoCode !== ALL_SIDO_CODE"
+            class="flex-fill region-list-scroll ps-3"
+        >
           <div
-            v-for="gugun in gugunList" 
-            :key="gugun.code === null ? 'gugun-all' : gugun.code"
-            class="py-3.5 px-1.5 mb-2.5 rounded-lg cursor-pointer select-none transition-all duration-150 ease-in-out font-semibold text-3xl text-gray-700 hover:text-pink-600 hover:bg-pink-50 text-center"
-            :class="
-              gugun.code === selectedGugunCode 
-                ? 'bg-pink-100 text-pink-700 shadow-md scale-105'
-                : 'bg-white hover:shadow-sm'
-            "
-            @click="selectGugun(gugun)" 
+              v-for="gugun in gugunList"
+              :key="gugun.code === null ? 'gugun-all' : gugun.code"
+              class="py-2 px-1 mb-1 rounded-3 text-center fw-semibold fs-5 text-secondary bg-white region-item"
+              :class="{
+              'bg-light text-primary shadow-sm scale-105': gugun.code === selectedGugunCode,
+              'region-item-hover': gugun.code !== selectedGugunCode
+            }"
+              style="cursor:pointer; user-select:none; transition:all .15s;"
+              @click="selectGugun(gugun)"
           >
             {{ gugun.name }}
           </div>
@@ -43,12 +51,13 @@
       </div>
     </div>
     <template #footer>
-      <div class="w-full px-1.5 sm:px-3 pb-1">
-        <el-button 
-          type="primary" 
-          @click="apply" 
-          class="w-full bg-pink-500 hover:bg-pink-600 border-pink-500 py-3.5 text-2xl font-bold rounded-md"
-          :disabled="!canApply"
+      <div class="w-100 px-2 pb-2">
+        <el-button
+            type="primary"
+            @click="apply"
+            class="w-100 py-3 fs-5 fw-bold rounded-2"
+            :disabled="!canApply"
+            style="background-color:#e83e8c; border-color:#e83e8c;"
         >
           선택 완료
         </el-button>
@@ -62,18 +71,16 @@ import { ref, watch, computed } from "vue";
 import { ElDialog, ElButton } from 'element-plus';
 import regionApi from '../../api/regionApi';
 
-const props = defineProps({
-  show: Boolean,
-});
-
+// props, emit 정의
+const props = defineProps<{ show: boolean }>();
 const emit = defineEmits(["close", "selected", "update:show"]);
 
-const ALL_SIDO_CODE = 0; 
+const ALL_SIDO_CODE = 0;
 const ALL_SIDO_NAME = "전체";
 const ALL_GUGUN_NAME = "전체";
 
-const sidoList = ref<any[]>([]); 
-const gugunList = ref<any[]>([]); 
+const sidoList = ref<any[]>([]);
+const gugunList = ref<any[]>([]);
 const selectedSidoCode = ref<number | null>(null);
 const selectedGugunCode = ref<number | null>(null);
 const selectedSidoName = ref("");
@@ -86,18 +93,17 @@ const canApply = computed(() => {
 });
 
 watch(
-  () => props.show,
-  (newShow) => {
-    if (newShow) {
-      selectedSidoCode.value = null;
-      selectedSidoName.value = "";
-      selectedGugunCode.value = null;
-      selectedGugunName.value = "";
-      gugunList.value = [];
-      fetchSido();
-    } 
-  },
-  { immediate: false }
+    () => props.show,
+    (newShow) => {
+      if (newShow) {
+        selectedSidoCode.value = null;
+        selectedSidoName.value = "";
+        selectedGugunCode.value = null;
+        selectedGugunName.value = "";
+        gugunList.value = [];
+        fetchSido();
+      }
+    }
 );
 
 async function fetchSido() {
@@ -119,12 +125,12 @@ async function fetchGugun(sidoCodeValue: number) {
   try {
     const response = await regionApi.getGuguns(sidoCodeValue);
     const data = response.data;
-    gugunList.value = [{ code: null, name: ALL_GUGUN_NAME }, ...data]; 
+    gugunList.value = [{ code: null, name: ALL_GUGUN_NAME }, ...data];
     selectedGugunCode.value = null;
     selectedGugunName.value = ALL_GUGUN_NAME;
   } catch (err) {
     console.error("Error fetching gugun list:", err);
-    gugunList.value = [{ code: null, name: ALL_GUGUN_NAME }]; 
+    gugunList.value = [{ code: null, name: ALL_GUGUN_NAME }];
   }
 }
 
@@ -133,7 +139,7 @@ function selectSido(sido: any) {
   selectedSidoName.value = sido.name;
 
   if (sido.code === ALL_SIDO_CODE) {
-    gugunList.value = []; 
+    gugunList.value = [];
     selectedGugunCode.value = null;
     selectedGugunName.value = "";
   } else {
@@ -153,9 +159,7 @@ function apply() {
   let finalGugunCode: number | null = selectedGugunCode.value;
   let displayName = "";
 
-  if (finalSidoCode === null) {
-    return;
-  }
+  if (finalSidoCode === null) return;
 
   if (finalSidoCode === ALL_SIDO_CODE) {
     displayName = ALL_SIDO_NAME;
@@ -184,49 +188,43 @@ function handleClose() {
 </script>
 
 <style scoped>
-.custom-scrollbar::-webkit-scrollbar {
-  width: 4px;
-  background: transparent;
-}
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #e5e7eb;
-  border-radius: 10px;
-}
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
+/* flex-row에 강제 가로 스크롤 방지 */
+.region-lists-container {
+  min-width: 0;
+  overflow-x: hidden !important;
 }
 
+/* 각 리스트는 세로 스크롤만 허용 */
+.region-list-scroll {
+  max-height: 270px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.region-item.region-item-hover:hover {
+  background-color: #f8d7da;
+  color: #e83e8c;
+  box-shadow: 0 2px 8px 0 rgba(232, 62, 140, .08);
+}
+.scale-105 {
+  transform: scale(1.05);
+}
 .dialog-content {
   padding: 8px;
 }
-
 @media (min-width: 640px) {
   .dialog-content {
     padding: 12px;
   }
 }
 </style>
-
 <style>
 .region-selection-dialog .el-dialog__header {
   display: none;
 }
 .region-selection-dialog .el-dialog__body {
-  padding: 16px 4px 8px 4px !important;
+  padding: 18px 12px 8px 12px !important;
 }
-@media (min-width: 640px) {
-  .region-selection-dialog .el-dialog__body {
-    padding: 20px 8px 12px 8px !important;
-  }
-}
-
 .region-selection-dialog .el-dialog__footer {
-  padding: 0rem 0.5rem 0.5rem 0.5rem;
-}
-
-@media (min-width: 640px) {
-  .region-selection-dialog .el-dialog__footer {
-    padding: 0rem 1rem 0.5rem 1rem;
-  }
+  padding: 0 1.5rem 0.8rem 1.5rem;
 }
 </style>

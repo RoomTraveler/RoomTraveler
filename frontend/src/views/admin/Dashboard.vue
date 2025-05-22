@@ -1,8 +1,9 @@
 <template>
   <Layout>
     <div class="container mt-4">
-      <h2 class="mb-4">관리자 대시보드</h2>
+      <h2 class="mb-4 fw-bold">관리자 대시보드</h2>
 
+      <!-- 로딩 중 스피너 -->
       <div v-if="loading" class="text-center py-5">
         <div class="spinner-border text-primary" role="status">
           <span class="visually-hidden">로딩 중...</span>
@@ -14,7 +15,7 @@
         <!-- 주요 지표 카드 -->
         <div class="row mb-4">
           <div class="col-md-3" v-for="(item, idx) in statsCardData" :key="idx">
-            <div :class="['card', item.bgClass, 'text-white', 'h-100']">
+            <div :class="['card text-white h-100', item.bgClass]">
               <div class="card-body">
                 <h5 class="card-title">{{ item.title }}</h5>
                 <h2 class="display-4">{{ item.value }}</h2>
@@ -30,10 +31,10 @@
           </div>
         </div>
 
-        <!-- 그래프 및 차트 -->
+        <!-- 차트 섹션 -->
         <div class="row mb-4">
-          <div class="col-md-8">
-            <div class="card">
+          <div class="col-md-8 mb-3 mb-md-0">
+            <div class="card h-100">
               <div class="card-header">
                 <h5 class="mb-0">월별 예약 및 매출 추이</h5>
               </div>
@@ -42,9 +43,8 @@
               </div>
             </div>
           </div>
-
           <div class="col-md-4">
-            <div class="card">
+            <div class="card h-100">
               <div class="card-header">
                 <h5 class="mb-0">숙소 유형 분포</h5>
               </div>
@@ -55,10 +55,10 @@
           </div>
         </div>
 
-        <!-- 최근 활동 및 알림 -->
+        <!-- 최근 등록된 숙소 / 최근 가입한 사용자 -->
         <div class="row">
-          <div class="col-md-6">
-            <div class="card">
+          <div class="col-md-6 mb-3 mb-md-0">
+            <div class="card h-100">
               <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">최근 등록된 숙소</h5>
                 <router-link to="/admin/accommodations" class="btn btn-sm btn-outline-primary">모두 보기</router-link>
@@ -95,9 +95,8 @@
               </div>
             </div>
           </div>
-
           <div class="col-md-6">
-            <div class="card">
+            <div class="card h-100">
               <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">최근 가입한 사용자</h5>
                 <router-link to="/admin/users" class="btn btn-sm btn-outline-primary">모두 보기</router-link>
@@ -141,21 +140,19 @@
               </div>
               <div class="card-body">
                 <div class="row">
-                  <div class="col-md-3" v-for="item in systemProgressItems" :key="item.label">
-                    <div class="mb-3">
-                      <h6>{{ item.label }}</h6>
-                      <div class="progress">
-                        <div 
-                          class="progress-bar" 
-                          role="progressbar"
-                          :class="item.progressClass"
-                          :style="{ width: item.progressWidth }"
-                          :aria-valuenow="item.value"
-                          aria-valuemin="0"
-                          :aria-valuemax="item.max"
-                        >
-                          {{ item.displayValue }}
-                        </div>
+                  <div class="col-md-3 mb-3 mb-md-0" v-for="item in systemProgressItems" :key="item.label">
+                    <h6>{{ item.label }}</h6>
+                    <div class="progress">
+                      <div
+                        class="progress-bar"
+                        role="progressbar"
+                        :class="item.progressClass"
+                        :style="{ width: item.progressWidth }"
+                        :aria-valuenow="item.value"
+                        aria-valuemin="0"
+                        :aria-valuemax="item.max"
+                      >
+                        {{ item.displayValue }}
                       </div>
                     </div>
                   </div>
@@ -206,19 +203,17 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, nextTick } from 'vue';
-import { useStore } from 'vuex';
-import { useRouter } from 'vue-router';
-import Layout from '@/components/layout/Layout.vue';
-import Chart from 'chart.js/auto';
-import { useUserStore } from '@/stores/user';
+import { ref, computed, watch, onMounted, nextTick } from "vue";
+import { useRouter } from "vue-router";
+import Layout from "@/components/layout/Layout.vue";
+import Chart from "chart.js/auto";
+import { useUserStore } from "@/store/userStore";
 
-const store = useStore();
+// ----- 상태 관련 변수 선언 -----
 const router = useRouter();
 const userStore = useUserStore();
-const isAdmin = computed(() => userStore.userRole === 'ADMIN');
+const isAdmin = computed(() => userStore.userRole === "ADMIN");
 
-// ----- State -----
 const loading = ref(true);
 const stats = ref({
   totalUsers: 0,
@@ -239,115 +234,111 @@ const systemStatus = ref({
   apiRequestsPerMinute: 0,
   maxApiRequestsPerMinute: 1000,
   uptime: 0,
-  javaVersion: '',
-  osName: '',
-  dbType: '',
+  javaVersion: "",
+  osName: "",
+  dbType: "",
   activeConnections: 0,
   maxConnections: 0,
-  dbSize: 0
+  dbSize: 0,
 });
 const monthlyData = ref({
   labels: [],
   reservations: [],
-  revenue: []
+  revenue: [],
 });
 const accommodationTypes = ref({
   labels: [],
-  data: []
+  data: [],
 });
-const charts = {
-  monthlyChart: null,
-  accommodationTypeChart: null
-};
+const charts = { monthlyChart: null, accommodationTypeChart: null };
 
-// ---- refs for charts (Composition API) ----
 const monthlyChartRef = ref(null);
 const accommodationTypeChartRef = ref(null);
 
-// ---- 카드 데이터 가공 ----
+// ----- 주요 지표 카드 데이터 가공 -----
 const statsCardData = computed(() => [
   {
-    title: '총 사용자',
+    title: "총 사용자",
     value: stats.value.totalUsers,
     growth: stats.value.userGrowth,
-    bgClass: 'bg-primary',
-    badgeUp: 'bg-success'
+    bgClass: "bg-primary",
+    badgeUp: "bg-success",
   },
   {
-    title: '총 숙소',
+    title: "총 숙소",
     value: stats.value.totalAccommodations,
     growth: stats.value.accommodationGrowth,
-    bgClass: 'bg-success',
-    badgeUp: 'bg-info'
+    bgClass: "bg-success",
+    badgeUp: "bg-info",
   },
   {
-    title: '총 예약',
+    title: "총 예약",
     value: stats.value.totalReservations,
     growth: stats.value.reservationGrowth,
-    bgClass: 'bg-info',
-    badgeUp: 'bg-success'
+    bgClass: "bg-info",
+    badgeUp: "bg-success",
   },
   {
-    title: '총 매출',
+    title: "총 매출",
     value: formatCurrency(stats.value.totalRevenue),
     growth: stats.value.revenueGrowth,
-    bgClass: 'bg-warning text-dark',
-    badgeUp: 'bg-success'
-  }
+    bgClass: "bg-warning text-dark",
+    badgeUp: "bg-success",
+  },
 ]);
 
+// ----- 시스템 자원 사용량 progressbar 데이터 가공 -----
 const systemProgressItems = computed(() => [
   {
-    label: 'CPU 사용량',
+    label: "CPU 사용량",
     value: systemStatus.value.cpuUsage,
     max: 100,
     progressClass: getProgressBarClass(systemStatus.value.cpuUsage),
-    progressWidth: systemStatus.value.cpuUsage + '%',
-    displayValue: systemStatus.value.cpuUsage + '%'
+    progressWidth: systemStatus.value.cpuUsage + "%",
+    displayValue: systemStatus.value.cpuUsage + "%",
   },
   {
-    label: '메모리 사용량',
+    label: "메모리 사용량",
     value: systemStatus.value.memoryUsage,
     max: 100,
     progressClass: getProgressBarClass(systemStatus.value.memoryUsage),
-    progressWidth: systemStatus.value.memoryUsage + '%',
-    displayValue: systemStatus.value.memoryUsage + '%'
+    progressWidth: systemStatus.value.memoryUsage + "%",
+    displayValue: systemStatus.value.memoryUsage + "%",
   },
   {
-    label: '디스크 사용량',
+    label: "디스크 사용량",
     value: systemStatus.value.diskUsage,
     max: 100,
     progressClass: getProgressBarClass(systemStatus.value.diskUsage),
-    progressWidth: systemStatus.value.diskUsage + '%',
-    displayValue: systemStatus.value.diskUsage + '%'
+    progressWidth: systemStatus.value.diskUsage + "%",
+    displayValue: systemStatus.value.diskUsage + "%",
   },
   {
-    label: 'API 요청 (분당)',
+    label: "API 요청 (분당)",
     value: systemStatus.value.apiRequestsPerMinute,
     max: systemStatus.value.maxApiRequestsPerMinute,
-    progressClass: 'bg-info',
-    progressWidth: (systemStatus.value.apiRequestsPerMinute / systemStatus.value.maxApiRequestsPerMinute * 100) + '%',
-    displayValue: `${systemStatus.value.apiRequestsPerMinute}/${systemStatus.value.maxApiRequestsPerMinute}`
-  }
+    progressClass: "bg-info",
+    progressWidth: (systemStatus.value.apiRequestsPerMinute / systemStatus.value.maxApiRequestsPerMinute) * 100 + "%",
+    displayValue: `${systemStatus.value.apiRequestsPerMinute}/${systemStatus.value.maxApiRequestsPerMinute}`,
+  },
 ]);
 
-// ---- Lifecycle ----
+// ----- 라이프사이클 -----
 onMounted(async () => {
-  // 권한 체크
+  // 관리자 권한 체크
   if (!isAdmin.value) {
     router.push({
-      path: '/error/access-denied',
-      query: { message: '관리자만 접근할 수 있는 페이지입니다.' }
+      path: "/error/access-denied",
+      query: { message: "관리자만 접근할 수 있는 페이지입니다." },
     });
     return;
   }
-
   await loadDashboardData();
   await nextTick();
   initCharts();
 });
 
-// watch loading 상태 → 차트 재생성
+// loading이 false 되면 차트 다시 그림
 watch(loading, (val) => {
   if (val === false) {
     destroyCharts();
@@ -355,19 +346,17 @@ watch(loading, (val) => {
   }
 });
 
+// ----- 차트 제거 -----
 function destroyCharts() {
   if (charts.monthlyChart) charts.monthlyChart.destroy();
   if (charts.accommodationTypeChart) charts.accommodationTypeChart.destroy();
 }
 
-// ---- Methods ----
-
+// ----- 데이터 로딩 함수 -----
 async function loadDashboardData() {
   loading.value = true;
   try {
-    // 실제 구현에서는 아래 fetchDashboardData로 대체
-    // const data = await store.dispatch('admin/fetchDashboardData');
-    await delay(1000); // 시뮬레이션
+    await delay(1000); // 실제 API로 교체 시 이 부분 삭제
     const data = generateDummyData();
     stats.value = data.stats;
     recentAccommodations.value = data.recentAccommodations;
@@ -376,116 +365,121 @@ async function loadDashboardData() {
     monthlyData.value = data.monthlyData;
     accommodationTypes.value = data.accommodationTypes;
   } catch (e) {
-    console.error('대시보드 데이터 불러오기 실패:', e);
+    console.error("대시보드 데이터 불러오기 실패:", e);
   } finally {
     loading.value = false;
   }
 }
 
+// ----- 차트 초기화 함수 -----
 function initCharts() {
-  // 월별 차트
-  const ctx1 = monthlyChartRef.value?.getContext('2d');
+  // 월별 예약/매출 차트
+  const ctx1 = monthlyChartRef.value?.getContext("2d");
   if (ctx1) {
     charts.monthlyChart = new Chart(ctx1, {
-      type: 'bar',
+      type: "bar",
       data: {
         labels: monthlyData.value.labels,
         datasets: [
           {
-            label: '예약 수',
+            label: "예약 수",
             data: monthlyData.value.reservations,
-            backgroundColor: 'rgba(54, 162, 235, 0.5)',
-            borderColor: 'rgba(54, 162, 235, 1)',
+            backgroundColor: "rgba(54, 162, 235, 0.5)",
+            borderColor: "rgba(54, 162, 235, 1)",
             borderWidth: 1,
-            yAxisID: 'y'
+            yAxisID: "y",
           },
           {
-            label: '매출 (만원)',
-            data: monthlyData.value.revenue.map(val => val / 10000),
-            type: 'line',
-            backgroundColor: 'rgba(255, 99, 132, 0.2)',
-            borderColor: 'rgba(255, 99, 132, 1)',
+            label: "매출 (만원)",
+            data: monthlyData.value.revenue.map((val) => val / 10000),
+            type: "line",
+            backgroundColor: "rgba(255, 99, 132, 0.2)",
+            borderColor: "rgba(255, 99, 132, 1)",
             borderWidth: 2,
             fill: false,
-            yAxisID: 'y1'
-          }
-        ]
+            yAxisID: "y1",
+          },
+        ],
       },
       options: {
         responsive: true,
         scales: {
           y: {
-            type: 'linear',
+            type: "linear",
             display: true,
-            position: 'left',
+            position: "left",
             title: {
               display: true,
-              text: '예약 수'
-            }
+              text: "예약 수",
+            },
           },
           y1: {
-            type: 'linear',
+            type: "linear",
             display: true,
-            position: 'right',
+            position: "right",
             title: {
               display: true,
-              text: '매출 (만원)'
+              text: "매출 (만원)",
             },
             grid: {
-              drawOnChartArea: false
-            }
-          }
-        }
-      }
+              drawOnChartArea: false,
+            },
+          },
+        },
+      },
     });
   }
-  // 숙소 유형 차트
-  const ctx2 = accommodationTypeChartRef.value?.getContext('2d');
+
+  // 숙소 유형 분포 차트
+  const ctx2 = accommodationTypeChartRef.value?.getContext("2d");
   if (ctx2) {
     charts.accommodationTypeChart = new Chart(ctx2, {
-      type: 'doughnut',
+      type: "doughnut",
       data: {
         labels: accommodationTypes.value.labels,
-        datasets: [{
-          data: accommodationTypes.value.data,
-          backgroundColor: [
-            'rgba(255, 99, 132, 0.7)',
-            'rgba(54, 162, 235, 0.7)',
-            'rgba(255, 206, 86, 0.7)',
-            'rgba(75, 192, 192, 0.7)',
-            'rgba(153, 102, 255, 0.7)',
-            'rgba(255, 159, 64, 0.7)',
-            'rgba(199, 199, 199, 0.7)',
-            'rgba(83, 102, 255, 0.7)',
-            'rgba(40, 159, 64, 0.7)'
-          ],
-          borderWidth: 1
-        }]
+        datasets: [
+          {
+            data: accommodationTypes.value.data,
+            backgroundColor: [
+              "rgba(255, 99, 132, 0.7)",
+              "rgba(54, 162, 235, 0.7)",
+              "rgba(255, 206, 86, 0.7)",
+              "rgba(75, 192, 192, 0.7)",
+              "rgba(153, 102, 255, 0.7)",
+              "rgba(255, 159, 64, 0.7)",
+              "rgba(199, 199, 199, 0.7)",
+              "rgba(83, 102, 255, 0.7)",
+              "rgba(40, 159, 64, 0.7)",
+            ],
+            borderWidth: 1,
+          },
+        ],
       },
       options: {
         responsive: true,
         plugins: {
-          legend: { position: 'right' }
-        }
-      }
+          legend: { position: "right" },
+        },
+      },
     });
   }
 }
 
-// --- 기타 유틸 ---
+// ----- 유틸 함수 (한글 주석) -----
 function delay(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
-
 function formatCurrency(amount) {
-  return new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW', maximumFractionDigits: 0 }).format(amount);
+  return new Intl.NumberFormat("ko-KR", { style: "currency", currency: "KRW", maximumFractionDigits: 0 }).format(
+    amount
+  );
 }
 function formatDate(date) {
-  if (!date) return '';
+  if (!date) return "";
   const d = new Date(date);
   const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 }
 function formatUptime(seconds) {
@@ -495,51 +489,53 @@ function formatUptime(seconds) {
   return `${days}일 ${hours}시간 ${minutes}분`;
 }
 function formatSize(bytes) {
-  if (bytes === 0) return '0 Bytes';
+  if (bytes === 0) return "0 Bytes";
   const k = 1024;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB'];
+  const sizes = ["Bytes", "KB", "MB", "GB", "TB", "PB"];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
 }
 function getStatusName(status) {
   const statuses = {
-    'PENDING': '승인 대기',
-    'APPROVED': '승인됨',
-    'REJECTED': '거부됨',
-    'SUSPENDED': '중지됨'
+    PENDING: "승인 대기",
+    APPROVED: "승인됨",
+    REJECTED: "거부됨",
+    SUSPENDED: "중지됨",
   };
   return statuses[status] || status;
 }
 function getStatusBadgeClass(status) {
   const classes = {
-    'PENDING': 'badge bg-warning',
-    'APPROVED': 'badge bg-success',
-    'REJECTED': 'badge bg-danger',
-    'SUSPENDED': 'badge bg-secondary'
+    PENDING: "badge bg-warning",
+    APPROVED: "badge bg-success",
+    REJECTED: "badge bg-danger",
+    SUSPENDED: "badge bg-secondary",
   };
-  return classes[status] || 'badge bg-secondary';
+  return classes[status] || "badge bg-secondary";
 }
 function getRoleName(role) {
   const roles = {
-    'USER': '사용자',
-    'HOST': '호스트',
-    'ADMIN': '관리자'
+    USER: "사용자",
+    HOST: "호스트",
+    ADMIN: "관리자",
   };
   return roles[role] || role;
 }
 function getRoleBadgeClass(role) {
   const classes = {
-    'USER': 'badge bg-primary',
-    'HOST': 'badge bg-success',
-    'ADMIN': 'badge bg-danger'
+    USER: "badge bg-primary",
+    HOST: "badge bg-success",
+    ADMIN: "badge bg-danger",
   };
-  return classes[role] || 'badge bg-secondary';
+  return classes[role] || "badge bg-secondary";
 }
 function getProgressBarClass(value) {
-  if (value < 50) return 'bg-success';
-  if (value < 80) return 'bg-warning';
-  return 'bg-danger';
+  if (value < 50) return "bg-success";
+  if (value < 80) return "bg-warning";
+  return "bg-danger";
 }
+
+// ----- 더미 데이터 -----
 function generateDummyData() {
   return {
     stats: {
@@ -550,21 +546,51 @@ function generateDummyData() {
       totalReservations: 3421,
       reservationGrowth: 15.7,
       totalRevenue: 245678900,
-      revenueGrowth: 18.2
+      revenueGrowth: 18.2,
     },
     recentAccommodations: [
-      { accommodationId: 1, title: '서울 시티 호텔', hostName: '김호스트', status: 'APPROVED', createdAt: '2023-05-15T10:30:00' },
-      { accommodationId: 2, title: '부산 해변 펜션', hostName: '이호스트', status: 'PENDING', createdAt: '2023-05-14T14:20:00' },
-      { accommodationId: 3, title: '제주 풀빌라', hostName: '박호스트', status: 'APPROVED', createdAt: '2023-05-13T09:15:00' },
-      { accommodationId: 4, title: '강원도 스키 리조트', hostName: '최호스트', status: 'REJECTED', createdAt: '2023-05-12T16:45:00' },
-      { accommodationId: 5, title: '경주 한옥 스테이', hostName: '정호스트', status: 'APPROVED', createdAt: '2023-05-11T11:10:00' }
+      {
+        accommodationId: 1,
+        title: "서울 시티 호텔",
+        hostName: "김호스트",
+        status: "APPROVED",
+        createdAt: "2023-05-15T10:30:00",
+      },
+      {
+        accommodationId: 2,
+        title: "부산 해변 펜션",
+        hostName: "이호스트",
+        status: "PENDING",
+        createdAt: "2023-05-14T14:20:00",
+      },
+      {
+        accommodationId: 3,
+        title: "제주 풀빌라",
+        hostName: "박호스트",
+        status: "APPROVED",
+        createdAt: "2023-05-13T09:15:00",
+      },
+      {
+        accommodationId: 4,
+        title: "강원도 스키 리조트",
+        hostName: "최호스트",
+        status: "REJECTED",
+        createdAt: "2023-05-12T16:45:00",
+      },
+      {
+        accommodationId: 5,
+        title: "경주 한옥 스테이",
+        hostName: "정호스트",
+        status: "APPROVED",
+        createdAt: "2023-05-11T11:10:00",
+      },
     ],
     recentUsers: [
-      { userId: 1, username: '김사용자', email: 'user1@example.com', role: 'USER', createdAt: '2023-05-15T08:30:00' },
-      { userId: 2, username: '이호스트', email: 'host1@example.com', role: 'HOST', createdAt: '2023-05-14T12:20:00' },
-      { userId: 3, username: '박사용자', email: 'user2@example.com', role: 'USER', createdAt: '2023-05-13T15:45:00' },
-      { userId: 4, username: '최호스트', email: 'host2@example.com', role: 'HOST', createdAt: '2023-05-12T09:10:00' },
-      { userId: 5, username: '정관리자', email: 'admin@example.com', role: 'ADMIN', createdAt: '2023-05-11T14:25:00' }
+      { userId: 1, username: "김사용자", email: "user1@example.com", role: "USER", createdAt: "2023-05-15T08:30:00" },
+      { userId: 2, username: "이호스트", email: "host1@example.com", role: "HOST", createdAt: "2023-05-14T12:20:00" },
+      { userId: 3, username: "박사용자", email: "user2@example.com", role: "USER", createdAt: "2023-05-13T15:45:00" },
+      { userId: 4, username: "최호스트", email: "host2@example.com", role: "HOST", createdAt: "2023-05-12T09:10:00" },
+      { userId: 5, username: "정관리자", email: "admin@example.com", role: "ADMIN", createdAt: "2023-05-11T14:25:00" },
     ],
     systemStatus: {
       cpuUsage: 45,
@@ -573,32 +599,30 @@ function generateDummyData() {
       apiRequestsPerMinute: 350,
       maxApiRequestsPerMinute: 1000,
       uptime: 1234567, // 초 단위
-      javaVersion: 'Java 17.0.2',
-      osName: 'Linux 5.15.0-1019-aws',
-      dbType: 'MySQL 8.0.28',
+      javaVersion: "Java 17.0.2",
+      osName: "Linux 5.15.0-1019-aws",
+      dbType: "MySQL 8.0.28",
       activeConnections: 12,
       maxConnections: 100,
-      dbSize: 1073741824 // 바이트 단위 (1GB)
+      dbSize: 1073741824, // 바이트 단위 (1GB)
     },
     monthlyData: {
-      labels: ['1월', '2월', '3월', '4월', '5월', '6월'],
+      labels: ["1월", "2월", "3월", "4월", "5월", "6월"],
       reservations: [120, 150, 180, 210, 250, 300],
-      revenue: [12000000, 15000000, 18000000, 21000000, 25000000, 30000000]
+      revenue: [12000000, 15000000, 18000000, 21000000, 25000000, 30000000],
     },
     accommodationTypes: {
-      labels: ['호텔', '모텔', '펜션', '게스트하우스', '리조트', '콘도', '한옥', '캠핑/글램핑', '기타'],
-      data: [250, 180, 120, 80, 70, 60, 50, 40, 26]
-    }
+      labels: ["호텔", "모텔", "펜션", "게스트하우스", "리조트", "콘도", "한옥", "캠핑/글램핑", "기타"],
+      data: [250, 180, 120, 80, 70, 60, 50, 40, 26],
+    },
   };
 }
 </script>
 
 <style scoped>
+/* Bootstrap 위주로 스타일링하므로 최소한으로만 커스텀 */
 .card {
   margin-bottom: 20px;
-}
-.card-header {
-  background-color: #f8f9fa;
 }
 .display-4 {
   font-size: 2.5rem;

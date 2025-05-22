@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.access.hierarchicalroles.RoleHierarchy;
 import org.springframework.security.access.hierarchicalroles.RoleHierarchyImpl;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -61,10 +62,21 @@ public class CustomSecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
         http.authorizeHttpRequests(authorize ->
-                authorize.requestMatchers("/api/user/auth/**", "/api/user/refresh", "/api/map/**", "/api/attractions/**", "/api/plans/**", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
-                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                authorize.requestMatchers(
+                        "/api/user/auth/**",
+                                "/api/user/refresh",
+                                "/api/map/**",
+                                "/api/attractions/**",
+                                "/api/plans/**",
+                                "/swagger-ui/**",
+                                "/v3/api-docs/**",
+                        "/api/accommodations/**",
+                                "/api/region/**",
+                                "/api/reviews/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/events/**").permitAll()
+                        .requestMatchers("/api/admin/**", "/api/events/**").hasRole("ADMIN")
                         .requestMatchers("/api/host/**").hasAnyRole("HOST", "ADMIN")
-                        .requestMatchers("/api/notifications/**", "/api/cart/**").hasAnyRole("USER", "HOST", "ADMIN")
+                        .requestMatchers("/api/notifications/**", "/api/cart","/api/cart/**").hasAnyRole("USER", "HOST", "ADMIN")
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().permitAll());
 

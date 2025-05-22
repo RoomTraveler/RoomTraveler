@@ -1,54 +1,58 @@
 <template>
-  <div class="sticky top-0 z-50 bg-white border-b border-gray-200">
-    <!-- 기존 헤더 대신 새로운 AccommodationHeader 사용 -->
+  <div class="sticky-top bg-white border-bottom" style="z-index:1050;">
+    <!-- AccommodationHeader 사용 -->
     <AccommodationHeader :selected-accommodation-type="selectedAccommodationType" />
 
     <!-- 필터 트리거 버튼 영역 -->
     <div
-      class="flex items-center justify-between px-3 h-[52.8px] gap-2 border-b border-gray-100 overflow-x-auto scrollbar-hide"
+        class="d-flex align-items-center justify-content-between px-3"
+        style="height: 53px; gap: 8px; border-bottom: 1px solid #f1f1f1; overflow-x: auto;"
     >
       <!-- 지역 선택 버튼 -->
       <button
-        @click="openRegionModal"
-        class="flex-shrink-0 whitespace-nowrap text-xs sm:text-sm px-3 py-2 border border-pink-300 rounded-md text-pink-500 hover:bg-pink-50 transition flex items-center h-full"
+          @click="openRegionModal"
+          class="btn btn-outline-danger btn-sm d-flex align-items-center flex-shrink-0"
+          type="button"
+          style="min-width: 92px;"
       >
-        <i class="bi bi-geo-alt mr-1.5"></i>
+        <i class="bi bi-geo-alt me-1"></i>
         <span>{{ selectedRegionLabel }}</span>
-        <i class="bi bi-chevron-down text-xs ml-1"></i>
+        <i class="bi bi-chevron-down ms-1"></i>
       </button>
 
       <!-- 날짜 및 인원 선택 버튼 그룹 -->
-      <div class="flex items-center gap-2 ml-auto">
+      <div class="d-flex align-items-center gap-2 ms-auto">
         <button
-          @click="showDateSelectModal = true"
-          class="flex-shrink-0 whitespace-nowrap text-xs sm:text-sm px-3 py-2 border border-pink-300 rounded-md text-pink-500 hover:bg-pink-50 transition flex items-center h-full"
+            @click="showDateSelectModal = true"
+            class="btn btn-outline-danger btn-sm d-flex align-items-center flex-shrink-0"
+            type="button"
         >
-          <i class="bi bi-calendar-check mr-1.5"></i>
+          <i class="bi bi-calendar-check me-1"></i>
           <span>{{ dateRangeLabel }}</span>
         </button>
         <button
-          @click="showGuestSelectModal = true"
-          class="flex-shrink-0 whitespace-nowrap text-xs sm:text-sm px-3 py-2 border border-pink-300 rounded-md text-pink-500 hover:bg-pink-50 transition flex items-center h-full"
+            @click="showGuestSelectModal = true"
+            class="btn btn-outline-danger btn-sm d-flex align-items-center flex-shrink-0"
+            type="button"
         >
-          <i class="bi bi-person mr-1.5"></i>
+          <i class="bi bi-person me-1"></i>
           <span>{{ guestLabel }}</span>
         </button>
       </div>
     </div>
 
     <!-- 호텔 종류 필터 -->
-    <div class="px-3 py-2.5 border-b border-gray-100 overflow-x-auto scrollbar-hide">
-      <div class="flex items-center gap-2">
+    <div class="px-3 pt-2 pb-2 border-bottom" style="overflow-x:auto;">
+      <div class="d-flex align-items-center gap-2 flex-nowrap">
         <button
-          v-for="type in accommodationTypes"
-          :key="type.value === null ? 'type-all' : type.value"
-          @click="selectAccommodationType(type.value)"
-          :class="[
-            'flex-shrink-0 whitespace-nowrap text-xs sm:text-sm px-3.5 py-1.5 rounded-full transition-colors duration-150 ease-in-out',
-            selectedAccommodationType === type.value
-              ? 'bg-pink-500 text-white font-semibold shadow-md'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200 hover:text-gray-800',
-          ]"
+            v-for="type in accommodationTypes"
+            :key="type.value === null ? 'type-all' : type.value"
+            @click="selectAccommodationType(type.value)"
+            class="btn btn-sm flex-shrink-0"
+            :class="selectedAccommodationType === type.value
+            ? 'btn-danger text-white fw-semibold shadow-sm'
+            : 'btn-light text-secondary border'"
+            type="button"
         >
           {{ type.label }}
         </button>
@@ -56,21 +60,20 @@
     </div>
   </div>
 
+  <!-- 모달 영역 (각각의 컴포넌트는 기존과 동일) -->
   <RegionSelectModal v-model:show="showRegionModal" @selected="handleRegionSelected" :isFullScreen="true" />
-
   <DateSelectModal v-model:show="showDateSelectModal" :initialDateRange="dateRange" @apply="handleDateApplied" />
-
   <GuestSelectModal
-    v-model:show="showGuestSelectModal"
-    :initial-guests="selectedGuests"
-    :max-guests="30"
-    @apply="handleGuestApplied"
+      v-model:show="showGuestSelectModal"
+      :initial-guests="selectedGuests"
+      :max-guests="30"
+      @apply="handleGuestApplied"
   />
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick } from "vue";
-import AccommodationHeader from "./AccommodationHeader.vue"; // 새로 만든 헤더 컴포넌트 임포트
+import { ref, computed, watch } from "vue";
+import AccommodationHeader from "./AccommodationHeader.vue";
 import RegionSelectModal from "../modals/RegionSelectModal.vue";
 import DateSelectModal from "../modals/DateSelectModal.vue";
 import GuestSelectModal from "../modals/GuestSelectModal.vue";
@@ -81,10 +84,9 @@ interface Region {
   name: string;
 }
 
-// 호텔 유형 인터페이스 및 상수 추가
 interface AccommodationType {
   label: string;
-  value: string | null; // 'null' for '전체'
+  value: string | null;
 }
 
 const accommodationTypes: AccommodationType[] = [
@@ -104,69 +106,58 @@ interface FilterValuesFromParent {
 }
 
 const props = defineProps<{
-  initialFilters?: FilterValuesFromParent; // AccommodationList로부터 전체 필터 값 받음
-  initialSort?: string; // AccommodationList로부터 정렬 값 받음
+  initialFilters?: FilterValuesFromParent;
+  initialSort?: string;
 }>();
 
 const emit = defineEmits(["update-filters"]);
 
-// State for filters - props로부터 초기화
-const selectedRegion = ref<Region>(
-  props.initialFilters?.region || { sidoCode: null, gugunCode: null, name: "전체 지역" }
-);
+// States
+const selectedRegion = ref<Region>(props.initialFilters?.region || { sidoCode: null, gugunCode: null, name: "전체 지역" });
 const dateRange = ref<[Date, Date] | null>(props.initialFilters?.dateRange || null);
 const selectedGuests = ref<number>(props.initialFilters?.guests || 2);
 const selectedAccommodationType = ref<string | null>(props.initialFilters?.accommodationType || null);
-const currentSortValue = ref<string>(props.initialSort || "created_at_desc"); // 정렬 상태 추가
+const currentSortValue = ref<string>(props.initialSort || "created_at_desc");
 
-// accommodationTypes와 sorts는 FilterHeader가 자체적으로 가질 수 있음
 const sortOptions: Array<{ label: string; value: string }> = [
   { label: "추천순", value: "created_at_desc" },
-  { label: "이름순", value: "name" }, // API가 지원하는 정렬값으로 변경 필요
+  { label: "이름순", value: "name" },
   { label: "가격 낮은순", value: "priceAsc" },
   { label: "가격 높은순", value: "priceDesc" },
 ];
 
-// Props 변경 감지하여 내부 상태 업데이트
+// Watch props
 watch(
-  () => props.initialFilters,
-  (newFilters) => {
-    if (newFilters) {
-      selectedRegion.value = newFilters.region || { sidoCode: null, gugunCode: null, name: "전체 지역" };
-      dateRange.value = newFilters.dateRange || null;
-      selectedGuests.value = newFilters.guests || 2;
-      selectedAccommodationType.value = newFilters.accommodationType || null;
+    () => props.initialFilters,
+    (newFilters) => {
+      if (newFilters) {
+        selectedRegion.value = newFilters.region || { sidoCode: null, gugunCode: null, name: "전체 지역" };
+        dateRange.value = newFilters.dateRange || null;
+        selectedGuests.value = newFilters.guests || 2;
+        selectedAccommodationType.value = newFilters.accommodationType || null;
+      }
+    },
+    { deep: true }
+);
+watch(
+    () => props.initialSort,
+    (newSort) => {
+      currentSortValue.value = newSort || "created_at_desc";
     }
-  },
-  { deep: true }
 );
 
-watch(
-  () => props.initialSort,
-  (newSort) => {
-    currentSortValue.value = newSort || "created_at_desc";
-  }
-);
-
-// Computed labels for display
+// Computed labels
 const selectedRegionLabel = computed(() => selectedRegion.value.name || "지역을 선택해주세요.");
 const dateRangeLabel = computed(() => {
   if (!dateRange.value || !dateRange.value[0] || !dateRange.value[1]) return "날짜를 선택해주세요.";
   const [start, end] = dateRange.value;
-  const formatDateForLabel = (d: Date) => {
-    if (!(d instanceof Date) || isNaN(d.getTime())) return ""; // 유효한 Date 객체인지 확인
-    return d.getMonth() + 1 + "." + d.getDate();
-  };
-  return formatDateForLabel(start) + " ~ " + formatDateForLabel(end);
+  const formatDateForLabel = (d: Date) => d instanceof Date && !isNaN(d.getTime()) ? `${d.getMonth() + 1}.${d.getDate()}` : "";
+  return `${formatDateForLabel(start)} ~ ${formatDateForLabel(end)}`;
 });
-const guestLabel = computed(() => {
-  return `인원 ${selectedGuests.value}명`;
-});
+const guestLabel = computed(() => `인원 ${selectedGuests.value}명`);
 
-// Region Modal state
+// Modal states
 const showRegionModal = ref(false);
-
-// New Modal States
 const showDateSelectModal = ref(false);
 const showGuestSelectModal = ref(false);
 
@@ -174,25 +165,22 @@ let isOpeningRegionModal = false;
 
 // --- Methods ---
 
-// Region Modal
 function openRegionModal() {
-  if (isOpeningRegionModal || showRegionModal.value) {
-    return;
-  }
+  if (isOpeningRegionModal || showRegionModal.value) return;
   isOpeningRegionModal = true;
   showRegionModal.value = true;
 }
-
 function handleRegionSelected(region: Region) {
   selectedRegion.value = region;
   showRegionModal.value = false;
   isOpeningRegionModal = false;
   emitFilters();
 }
-
-// DateSelectModal handler
 function handleDateApplied(newDateRange: [Date, Date]) {
-  if (newDateRange && newDateRange.length === 2 && newDateRange[0] instanceof Date && newDateRange[1] instanceof Date) {
+  if (
+      newDateRange && newDateRange.length === 2 &&
+      newDateRange[0] instanceof Date && newDateRange[1] instanceof Date
+  ) {
     if (JSON.stringify(dateRange.value) !== JSON.stringify(newDateRange)) {
       dateRange.value = newDateRange;
       emitFilters();
@@ -200,8 +188,6 @@ function handleDateApplied(newDateRange: [Date, Date]) {
   }
   showDateSelectModal.value = false;
 }
-
-// GuestSelectModal handler
 function handleGuestApplied(payload: { guests: number }) {
   if (selectedGuests.value !== payload.guests) {
     selectedGuests.value = payload.guests;
@@ -209,8 +195,6 @@ function handleGuestApplied(payload: { guests: number }) {
   }
   showGuestSelectModal.value = false;
 }
-
-// Emit all current filter states (정렬 정보 포함)
 function emitFilters() {
   emit("update-filters", {
     region: selectedRegion.value,
@@ -220,16 +204,12 @@ function emitFilters() {
     sortBy: currentSortValue.value,
   });
 }
-
-// 호텔 유형 선택 함수
 function selectAccommodationType(typeValue: string | null) {
   if (selectedAccommodationType.value !== typeValue) {
     selectedAccommodationType.value = typeValue;
     emitFilters();
   }
 }
-
-// 정렬 변경 함수 (새로 추가 또는 기존 UI에 연결)
 function selectSort(sortValue: string) {
   if (currentSortValue.value !== sortValue) {
     currentSortValue.value = sortValue;
@@ -237,29 +217,15 @@ function selectSort(sortValue: string) {
   }
 }
 
-// Watchers for modal states
-watch(showRegionModal, (newValue) => {
-  console.log("[FilterHeader] showRegionModal changed to " + newValue);
-  if (!newValue) {
-    isOpeningRegionModal = false;
-  }
-});
-
-watch(showDateSelectModal, (newValue) => {
-  console.log("[FilterHeader] showDateSelectModal changed to " + newValue);
-});
-
-watch(showGuestSelectModal, (newValue) => {
-  console.log("[FilterHeader] showGuestSelectModal changed to " + newValue);
+// Modal watchers for debug/log
+watch(showRegionModal, (val) => {
+  if (!val) isOpeningRegionModal = false;
 });
 </script>
 
 <style scoped>
-.scrollbar-hide::-webkit-scrollbar {
+/* 부트스트랩 사용 시 커스텀 스크롤 숨김(크롬/엣지 한정) */
+::-webkit-scrollbar {
   display: none;
-}
-.scrollbar-hide {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
 }
 </style>
