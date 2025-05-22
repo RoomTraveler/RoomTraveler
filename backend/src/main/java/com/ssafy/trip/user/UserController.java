@@ -1,5 +1,6 @@
 package com.ssafy.trip.user;
 
+import com.ssafy.trip.map.CurrentUserId;
 import com.ssafy.trip.security.jwt.JwtUtil;
 import io.jsonwebtoken.JwtException;
 import io.swagger.v3.oas.annotations.Operation;
@@ -13,6 +14,8 @@ import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -338,5 +341,27 @@ public class UserController {
 		user.setRefreshToken(null);
 
 		return ResponseEntity.status(HttpStatus.OK).body(Map.of("accessToken", jwtUtil.generateAccessToken(user)));
+	}
+
+	@GetMapping("/squads")
+	public ResponseEntity<?> getSquads(@CurrentUserId Long userId) {
+		return ResponseEntity.ok(userService.getSquadsByUserId(userId));
+	}
+
+	// squadId와 UserId로 postion 가져오는거...
+	@GetMapping("/position")
+	public ResponseEntity<?> getPosition(@CurrentUserId Long userId, @RequestParam Integer squadId) {
+		return ResponseEntity.ok(userService.getPostion(userId, squadId));
+	}
+
+	@PostMapping("/squads")
+	public ResponseEntity<?> insertSquads(@CurrentUserId Long userId, @RequestBody SquadCreateRequest squadCreateRequest) {
+		userService.insertSquad(userId, squadCreateRequest);
+		return ResponseEntity.ok("Squad created successfully");
+	}
+
+	@GetMapping("/friend/{keyword}")
+	public ResponseEntity<?> getFriends(@PathVariable("keyword") String keyword) {
+		return ResponseEntity.ok(userService.getUsersByKeyword(keyword));
 	}
 }

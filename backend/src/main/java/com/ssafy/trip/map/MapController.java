@@ -59,10 +59,24 @@ public class MapController {
         return ResponseEntity.ok(mapService.getPopularAttractions(page, size));
     }
 
-    @GetMapping("/users/{userId}/plans")
+    @GetMapping("/attractions/search/{keyword}")
+    public ResponseEntity<?> getAttractionsByKeyword(@PathVariable String keyword,
+                                            @RequestParam(defaultValue = "0") int page,
+                                            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(mapService.getAttractionsByKeyword(keyword, page, size));
+    }
+
+    @GetMapping("/users/attractions")
+    public ResponseEntity<?> getAttractions(@CurrentUserId Long userId,
+                                            @RequestParam(defaultValue = "0") int page,
+                                            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(mapService.getAttractionsByUserId(userId, page, size));
+    }
+
+    @GetMapping("/users/plans")
     @Operation(summary = "여행 계획 조회", description = "사용자의 여행 계획 조회")
     @ApiResponse(responseCode = "200", description = "여행 계획 조회 성공")
-    public ResponseEntity<?>  getUsersPlans(@PathVariable Long userId, //@CurrentUserId Long userId 이거 사용
+    public ResponseEntity<?>  getUsersPlans(@CurrentUserId Long userId,
                                             @RequestParam(defaultValue = "0") int page,
                                             @RequestParam(defaultValue = "10") int size) {
         return ResponseEntity.ok(mapService.getPlansByUserId(userId, page, size));

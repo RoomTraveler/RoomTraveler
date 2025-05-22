@@ -61,7 +61,7 @@
       </div>
 
       <div class="option-card with-friends">
-        <router-link to="/plan/together" class="router-link">
+        <router-link to="/plan/room" class="router-link">
           <div class="card-image">
             <img src="/img/withFriends.jpg" alt="친구와 여행" />
           </div>
@@ -142,6 +142,10 @@ const popularFivePlans = async () => {
 
 function goToPlanDetail(planId) {
   router.push(`/plans/${planId}`);
+}
+
+function goToPlaceDetail(attracionId) {
+  router.push(`/attractions/${attracionId}`);
 }
 
 function goToAllPlans() {

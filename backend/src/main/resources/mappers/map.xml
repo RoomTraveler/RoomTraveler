@@ -100,6 +100,45 @@
         LIMIT #{size} OFFSET #{offset}
     </select>
 
+    <select id="getAttractionsByUserId" resultMap="RegionTripResDtoMap">
+        SELECT no,
+            title,
+            first_image1 AS image,
+            first_image2 As image2,
+            addr1,
+            addr2,
+            tel,
+            latitude,
+            longitude,
+            content_type_id,
+            homepage,
+            overview,
+            likes
+        FROM attractions a
+        JOIN attraction_likes al ON a.no = al.attraction_id
+        WHERE user_id = #{userId}
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="getAttractionsByKeyword" resultMap="RegionTripResDtoMap">
+        SELECT no,
+            title,
+            first_image1 AS image,
+            first_image2 As image2,
+            addr1,
+            addr2,
+            tel,
+            latitude,
+            longitude,
+            content_type_id,
+            homepage,
+            overview,
+            likes
+        FROM attractions
+        WHERE title LIKE CONCAT('%', #{keyword}, '%')
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
     <select id="getPlanByPlanId" resultMap="PlanWithAttractions">
         SELECT
             p.plan_id        AS plan_id,

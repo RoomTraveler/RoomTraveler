@@ -68,6 +68,18 @@ public class MapServiceImpl implements MapService {
     }
 
     @Override
+    public List<RegionTripResDto> getAttractionsByUserId(Long userId, int page, int size) {
+        int offset = page * size;
+        return mapDAO.getAttractionsByUserId(userId, offset, size);
+    }
+
+    @Override
+    public List<RegionTripResDto> getAttractionsByKeyword(String keyword, int page, int size) {
+        int offset = page * size;
+        return mapDAO.getAttractionsByKeyword(keyword, offset, size);
+    }
+
+    @Override
     public List<MapDTO.PlanDTO> getSharedPlans(int page, int size) {
         int offset = page * size;
         return mapDAO.getSharedPlans(offset, size);

@@ -61,7 +61,7 @@ public class CustomSecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
         http.authorizeHttpRequests(authorize ->
-                authorize.requestMatchers("/api/user/auth/**", "/api/user/refresh", "/api/map/**", "/api/attractions/**", "/api/plans/**", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                authorize.requestMatchers("/api/user/auth/**", "/api/user/refresh", "/api/map/**", "/api/attractions/**", "/api/plans/**", "/swagger-ui/**", "/v3/api-docs/**", "/ws").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/host/**").hasAnyRole("HOST", "ADMIN")
                         .requestMatchers("/api/notifications/**", "/api/cart/**").hasAnyRole("USER", "HOST", "ADMIN")

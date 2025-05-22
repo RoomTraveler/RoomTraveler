@@ -23,6 +23,8 @@ public interface MapService {
     RegionTripResDto getAttractions(Long id);
 
     List<RegionTripResDto> getPopularAttractions(int page, int size);
+    List<RegionTripResDto> getAttractionsByUserId(Long userId, int page, int size);
+    List<RegionTripResDto> getAttractionsByKeyword (String keyword, int page, int size);
 
     List<MapDTO.PlanDTO> getSharedPlans(int page, int size);
 

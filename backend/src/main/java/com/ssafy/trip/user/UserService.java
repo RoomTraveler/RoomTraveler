@@ -62,4 +62,10 @@ public interface UserService {
     Optional<User> getUserByEmail(String email);
 
     int updateUserRefresh(Long userId, String refreshToken);
+
+    List<Squad> getSquadsByUserId(Long userId);
+    int getPostion(Long userId, Integer squadId);
+    int insertSquad(Long userId, SquadCreateRequest squadCreateRequest);
+    List<User> getUsersByKeyword(String keyword);
+
 }

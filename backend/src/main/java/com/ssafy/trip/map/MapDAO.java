@@ -46,6 +46,8 @@ public interface MapDAO{
 
     RegionTripResDto getAttractions(Long id);
     List<MapDTO.RegionTripResDto> getPopularAttractions(int offset, int size);
+    List<MapDTO.RegionTripResDto> getAttractionsByUserId(Long userId, int offset, int size);
+    List<MapDTO.RegionTripResDto> getAttractionsByKeyword(String keyword, int offset, int size);
     //Integer countRegionTrips(MapBound mapBound, int contentType, String keyword);
 
     List<PlanDTO> getSharedPlans(int offset, int size);

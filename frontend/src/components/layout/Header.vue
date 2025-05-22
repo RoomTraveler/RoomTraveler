@@ -21,11 +21,24 @@
           <!-- 검색 영역 -->
           <div class="search-area">
             <div class="search-input-wrapper">
-              <input v-if="selected !== '숙박'" type="text" placeholder="관광지" class="search-input" />
-              <input v-else type="text" placeholder="지역, 숙소명" class="search-input" />
-              <button class="search-button">
-                <i class="bi bi-search"></i>
-              </button>
+              <template v-if="selected !== '숙박'">
+                <input
+                  type="text"
+                  v-model="searchKeyword"
+                  placeholder="관광지"
+                  class="search-input"
+                  @keyup.enter="searchAttractions"
+                />
+                <button class="search-button" @click="searchAttractions">
+                  <i class="bi bi-search"></i>
+                </button>
+              </template>
+              <template v-else>
+                <input type="text" placeholder="지역, 숙소명" class="search-input" />
+                <button class="search-button">
+                  <i class="bi bi-search"></i>
+                </button>
+              </template>
             </div>
           </div>
 
@@ -42,14 +55,14 @@
             </router-link>
 
             <div v-if="isLoggedIn && selected !== '숙박'" class="user-dropdown">
-                <button class="user-dropdown-toggle" title="찜 목록">
-                  <i class="bi bi-heart"></i>
-                </button>
-                <div class="user-dropdown-menu">
-                  <li><router-link to="/attractions" class="dropdown-item">관광지</router-link></li>
-                  <li><router-link to="/plans" class="dropdown-item">여행 플랜</router-link></li>
-                </div>
+              <button class="user-dropdown-toggle" title="찜 목록">
+                <i class="bi bi-heart"></i>
+              </button>
+              <div class="user-dropdown-menu">
+                <li><router-link to="/attractions" class="dropdown-item">관광지</router-link></li>
+                <li><router-link to="/plans" class="dropdown-item">여행 플랜</router-link></li>
               </div>
+            </div>
 
             <!-- 장바구니 버튼 (로그인 시에만 보이도록) -->
             <router-link
@@ -106,188 +119,146 @@
   </div>
 </template>
 
-<script>
+<script setup>
+import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue";
+import { useRouter, useRoute } from "vue-router";
+import { storeToRefs } from "pinia";
 import { useUserStore } from "@/store/userStore";
 import { useNotificationStore } from "@/store/notificationStore";
 import { useCartStore } from "@/store/cartStore";
-import { storeToRefs } from "pinia";
-import api from "@/api/index";
+import api from "@/api/index"; // Axios wrapper
 
-/**
- * 헤더 컴포넌트
- *
- * 이 컴포넌트는 웹사이트의 공통 헤더 부분을 담당합니다.
- * 로그인 상태에 따라 다른 메뉴를 표시하며, 알림 기능을 포함합니다.
- */
-export default {
-  name: "Header",
-  setup() {
-    // Pinia 스토어 사용
-    const userStore = useUserStore();
-    const notificationStore = useNotificationStore();
-    const cartStore = useCartStore();
+// 📦 스토어
+const userStore = useUserStore();
+const notificationStore = useNotificationStore();
+const cartStore = useCartStore();
 
-    const { unreadCount: unreadNotificationCount } = storeToRefs(notificationStore);
-    const { fetchUnreadCount } = notificationStore;
-    const { fetchCart: fetchCartItems } = cartStore;
-    const { cart } = storeToRefs(cartStore);
+// 📦 스토어에서 필요한 state 꺼내기
+const { unreadCount: unreadNotificationCount } = storeToRefs(notificationStore);
+const { cart } = storeToRefs(cartStore);
+const { fetchUnreadCount } = notificationStore;
+const { fetchCart: fetchCartItems } = cartStore;
 
-    return {
-      userStore,
-      unreadNotificationCount,
-      fetchUnreadCount,
-      cart,
-      fetchCartItems,
-    };
-  },
-  data() {
-    return {
-      selected: "숙박",
-      notificationInterval: null,
-    };
-  },
-  computed: {
-    /**
-     * 토글 버튼 인디케이터 스타일
-     * @returns {Object} 인디케이터 위치 스타일 객체
-     */
-    indicatorStyle() {
-      return {
-        transform: this.selected === "숙박" ? "translateX(0%)" : "translateX(100%)",
-      };
-    },
-    /**
-     * 사용자 로그인 상태 확인
-     * @returns {boolean} 로그인 상태 여부
-     */
-    isLoggedIn() {
-      return this.userStore.isAuthenticated;
-    },
-    /**
-     * 장바구니 아이템 개수
-     * @returns {number} 장바구니 아이템 총 개수
-     */
-    cartItemCount() {
-      return this.cart ? this.cart.totalItems : 0;
-    },
-    /**
-     * 현재 로그인한 사용자 ID
-     * @returns {number|null} 사용자 ID 또는 null
-     */
-    userId() {
-      return this.userStore.user?.id;
-    },
-    /**
-     * 사용자가 관리자인지 확인
-     * @returns {boolean} 관리자 여부
-     */
-    isAdmin() {
-      return this.userStore.userRole === "ADMIN";
-    },
-    /**
-     * 사용자가 호스트인지 확인
-     * @returns {boolean} 호스트 여부
-     */
-    isHost() {
-      return this.userStore.userRole === "HOST";
-    },
-  },
-  mounted() {
-    // 로그인 상태일 때만 알림 카운트 로드 및 장바구니 정보 로드
-    if (this.isLoggedIn) {
-      this.loadInitialNotificationCount();
-      this.loadCartData();
-      // 30초마다 알림 카운트 갱신
-      this.notificationInterval = setInterval(this.loadNotificationCount, 30000);
-    }
+// 📍 Router 관련
+const router = useRouter();
+const route = useRoute();
 
-    if (this.$route.path.includes("/accommodation")) {
-      this.selected = "숙박";
-    } else if (this.$route.path.includes("/plan")) {
-      this.selected = "여행";
-    }
-  },
-  beforeUnmount() {
-    // 컴포넌트 제거 시 인터벌 정리
-    if (this.notificationInterval) {
-      clearInterval(this.notificationInterval);
-    }
-  },
-  watch: {
-    isLoggedIn(newVal) {
-      if (newVal) {
-        this.loadInitialNotificationCount();
-        this.loadCartData();
-        if (!this.notificationInterval) {
-          this.notificationInterval = setInterval(this.loadNotificationCount, 30000);
-        }
-      } else {
-        if (this.notificationInterval) {
-          clearInterval(this.notificationInterval);
-          this.notificationInterval = null;
-        }
-      }
-    },
-  },
-  methods: {
-    /**
-     * 토글 버튼 선택 함수
-     * @param {string} value - 선택된 값 ('숙박' 또는 '여행')
-     */
-    select(value) {
-      this.selected = value;
-      // 선택된 값에 따라 다른 페이지로 이동
-      setTimeout(() => {
-        this.$router.push(value === "숙박" ? "/accommodation" : "/plan");
-      }, 200);
-    },
-    /**
-     * 초기 알림 카운트 로드 함수 (컴포넌트 마운트 시)
-     */
-    async loadInitialNotificationCount() {
-      try {
-        await this.fetchUnreadCount();
-      } catch (error) {
-        console.error("초기 알림 카운트 로드 중 오류:", error);
-      }
-    },
-    /**
-     * 장바구니 데이터 로드 함수
-     */
-    async loadCartData() {
-      try {
-        await this.fetchCartItems();
-      } catch (error) {
-        console.error("장바구니 데이터 로드 중 오류:", error);
-      }
-    },
-    /**
-     * 주기적 알림 카운트 로드 함수
-     */
-    async loadNotificationCount() {
-      // 로그인 상태일 때만 실행 (로그아웃 후 인터벌이 계속 실행될 수 있으므로)
-      if (!this.isLoggedIn) {
-        if (this.notificationInterval) {
-          clearInterval(this.notificationInterval);
-          this.notificationInterval = null;
-        }
-        return;
-      }
-      try {
-        await this.fetchUnreadCount();
-      } catch (error) {
-        console.error("주기적 알림 카운트 로드 중 오류:", error);
-      }
-    },
-    /**
-     * 로그아웃 처리 함수
-     */
-    logout() {
-      this.userStore.logout();
-      this.$router.push("/");
-    },
-  },
+// 📌 상태 변수
+const selected = ref("숙박");
+const notificationInterval = ref(null);
+const searchKeyword = ref("");
+const attractions = ref([]); // 검색 결과 저장
+
+// ✅ Computed
+const isLoggedIn = computed(() => userStore.isAuthenticated);
+const cartItemCount = computed(() => cart.value?.totalItems || 0);
+const userId = computed(() => userStore.user?.id || null);
+const isAdmin = computed(() => userStore.userRole === "ADMIN");
+const isHost = computed(() => userStore.userRole === "HOST");
+
+const indicatorStyle = computed(() => ({
+  transform: selected.value === "숙박" ? "translateX(0%)" : "translateX(100%)",
+}));
+
+// ✅ 초기 알림 카운트 로드
+const loadInitialNotificationCount = async () => {
+  try {
+    await fetchUnreadCount();
+  } catch (error) {
+    console.error("초기 알림 카운트 로드 중 오류:", error);
+  }
 };
+
+// ✅ 장바구니 데이터 로드
+const loadCartData = async () => {
+  try {
+    await fetchCartItems();
+  } catch (error) {
+    console.error("장바구니 데이터 로드 중 오류:", error);
+  }
+};
+
+// ✅ 알림 카운트 주기적 로드
+const loadNotificationCount = async () => {
+  if (!isLoggedIn.value) {
+    if (notificationInterval.value) {
+      clearInterval(notificationInterval.value);
+      notificationInterval.value = null;
+    }
+    return;
+  }
+
+  try {
+    await fetchUnreadCount();
+  } catch (error) {
+    console.error("알림 카운트 주기 로드 중 오류:", error);
+  }
+};
+
+// ✅ 로그아웃
+const logout = () => {
+  userStore.logout();
+  router.push("/");
+};
+
+// ✅ 탭 전환
+const select = (value) => {
+  selected.value = value;
+  setTimeout(() => {
+    router.push(value === "숙박" ? "/accommodation" : "/plan");
+  }, 200);
+};
+
+// ✅ 검색 함수 (Enter 또는 버튼 클릭)
+const searchAttractions = () => {
+  if (!searchKeyword.value.trim()) {
+    alert("검색어를 입력해주세요.");
+    return;
+  }
+
+  router.push({
+    path: "/attraction/search",
+    query: { keyword: searchKeyword.value.trim() },
+  });
+};
+
+// ✅ 마운트
+onMounted(() => {
+  if (isLoggedIn.value) {
+    loadInitialNotificationCount();
+    loadCartData();
+    notificationInterval.value = setInterval(loadNotificationCount, 30000);
+  }
+
+  if (route.path.includes("/accommodation")) {
+    selected.value = "숙박";
+  } else if (route.path.includes("/plan")) {
+    selected.value = "여행";
+  }
+});
+
+// ✅ 언마운트
+onBeforeUnmount(() => {
+  if (notificationInterval.value) {
+    clearInterval(notificationInterval.value);
+  }
+});
+
+// ✅ 로그인 여부 변경 감지
+watch(isLoggedIn, (newVal) => {
+  if (newVal) {
+    loadInitialNotificationCount();
+    loadCartData();
+    if (!notificationInterval.value) {
+      notificationInterval.value = setInterval(loadNotificationCount, 30000);
+    }
+  } else {
+    if (notificationInterval.value) {
+      clearInterval(notificationInterval.value);
+      notificationInterval.value = null;
+    }
+  }
+});
 </script>
 
 <style scoped>

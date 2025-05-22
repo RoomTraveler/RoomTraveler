@@ -55,4 +55,10 @@ public interface UserDao {
     Optional<User> getUserByEmail(String email);
 
     int updateUserRefreshToken(Long userId, String refreshToken);
+
+    List<Squad> getSquadsByUserId(Long userId);
+    int getPosition(Long userId, Integer squadId);
+    int insertSquad(SquadInsertParam squadInsertParam);
+    int insertSquadMember(List<Long> invitedUserId, int squadId);
+    List<User> getUsersByKeyword(String keyword);
 }

@@ -40,6 +40,12 @@ public class JwtVerificationFilter extends OncePerRequestFilter {
         String authorizationHeader = request.getHeader("Authorization");
         log.debug("[JwtVerificationFilter] Authorization Header: {}", authorizationHeader);
 
+        if ("/api/user/auth/login".equals(request.getRequestURI()) && "POST".equalsIgnoreCase(request.getMethod())) {
+            log.debug("[JwtVerificationFilter] Skipping filter for /api/user/auth/login\"");
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         if ("/api/user/refresh".equals(request.getRequestURI()) && "POST".equalsIgnoreCase(request.getMethod())) {
             log.debug("[JwtVerificationFilter] Skipping filter for /api/user/refresh");
             filterChain.doFilter(request, response);

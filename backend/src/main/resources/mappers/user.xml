@@ -88,4 +88,43 @@
         WHERE user_id = #{userId}
     </update>
 
+    <resultMap id="SquadResultMap" type="com.ssafy.trip.user.Squad">
+        <id property="squadId" column="squad_id"/>
+        <result property="squadName" column="squad_name"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="createdBy" column="created_by"/>
+    </resultMap>
+
+    <select id="getSquadsByUserId" resultMap="SquadResultMap">
+        SELECT s.*
+        FROM squads s
+        JOIN squad_members sm ON s.squad_id = sm.squad_id
+        WHERE sm.user_id = #{userId};
+    </select>
+
+    <select id="getPosition" resultType="int">
+        SELECT position
+        FROM squad_members
+        WHERE squad_id = #{squadId}
+        AND user_id = #{userId}
+    </select>
+
+    <insert id="insertSquad" parameterType="com.ssafy.trip.user.SquadInsertParam" useGeneratedKeys="true" keyProperty="squadId">
+        INSERT INTO squads(squad_name, created_by) values(#{squadName}, #{userId})
+    </insert>
+
+    <insert id="insertSquadMember">
+        INSERT INTO squad_members(squad_id, user_id, index)
+        VALUES
+        <foreach collection="invitedUserId" item="userId" index="idx" separator=",">
+            (#{squadId}, #{userId}, #{idx})
+        </foreach>
+    </insert>
+
+    <select id="getUsersByKeyword" resultMap="userMap">
+        SELECT *
+        FROM users
+        WHERE username LIKE CONCAT('%', #{keyword}, '%')
+    </select>
+
 </mapper>

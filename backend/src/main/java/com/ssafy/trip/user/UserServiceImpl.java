@@ -1,13 +1,14 @@
 package com.ssafy.trip.user;
 
 import java.sql.SQLException;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Primary;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 사용자 서비스 구현 클래스
@@ -107,5 +108,37 @@ public class UserServiceImpl implements UserService {
     @Override
     public int updateUserRefresh(Long userId, String refreshToken) {
         return dao.updateUserRefreshToken(userId, refreshToken);
+    }
+
+    @Override
+    public List<Squad> getSquadsByUserId(Long userId) {
+        return dao.getSquadsByUserId(userId);
+    }
+
+    @Override
+    public int getPostion(Long userId, Integer squadId) {
+        return dao.getPosition(userId, squadId);
+    }
+
+    @Override
+    @Transactional
+    public int insertSquad(Long userId, SquadCreateRequest squadCreateRequest) {
+        log.debug("insertSquad {}", squadCreateRequest);
+        SquadInsertParam squadInsertParam = new SquadInsertParam();
+        squadInsertParam.setUserId(userId);
+        squadInsertParam.setSquadName(squadCreateRequest.getSquadName());
+        dao.insertSquad(squadInsertParam);
+        int squadId = squadInsertParam.getSquadId();
+        squadCreateRequest.getInvitedUserIds().add(userId);
+        List<Long> invitedUserIds = squadCreateRequest.getInvitedUserIds();
+
+        dao.insertSquadMember(invitedUserIds, squadId);
+
+        return squadId;
+    }
+
+    @Override
+    public List<User> getUsersByKeyword(String keyword) {
+        return dao.getUsersByKeyword(keyword);
     }
 }

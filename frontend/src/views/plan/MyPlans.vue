@@ -35,7 +35,7 @@
 <script setup>
 import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
-import axios from "axios";
+import api from "@/api/index";
 
 const router = useRouter();
 
@@ -63,8 +63,13 @@ const fetchPlans = async () => {
 
   loading.value = true;
   try {
-    const response = await axios.get("http://localhost:8080/api/map/users/1/plans", {
-      params: { page: page.value, size },
+    const response = await api.api({
+      url: "/api/map/users/plans",
+      method: "get",
+      params: {
+        page: page.value,
+        size,
+      },
     });
     const data = response.data;
 
