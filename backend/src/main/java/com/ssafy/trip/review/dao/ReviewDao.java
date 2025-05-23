@@ -45,6 +45,13 @@ public interface ReviewDao {
     Integer selectCountByAccommodationId(Long accommodationId) throws SQLException;
 
     /**
+     * 숙소 ID로 리뷰 통계(평균 별점, 리뷰 수)를 조회합니다.
+     * @param accommodationId 숙소 ID
+     * @return Map (keys: "avg_rating", "review_count")
+     */
+    Map<String, Object> selectReviewStatsByAccommodationId(Long accommodationId) throws SQLException;
+
+    /**
      * 리뷰를 업데이트합니다.
      */
     int update(Review review) throws SQLException;

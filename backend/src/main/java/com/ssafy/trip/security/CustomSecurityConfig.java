@@ -71,10 +71,12 @@ public class CustomSecurityConfig {
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
                         "/api/accommodations/**",
-                                "/api/region/**",
                                 "/api/reviews/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/events/**").permitAll()
-                        .requestMatchers("/api/admin/**", "/api/events/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/events/**",
+                                "/api/stats/**",
+                                "/api/region/**").permitAll()
+                        .requestMatchers("/api/admin/**", "/api/events/**","/api/stats/**","/api/region/**").hasRole("ADMIN")
                         .requestMatchers("/api/host/**").hasAnyRole("HOST", "ADMIN")
                         .requestMatchers("/api/notifications/**", "/api/cart","/api/cart/**").hasAnyRole("USER", "HOST", "ADMIN")
                         .requestMatchers("/api/**").authenticated()
@@ -90,13 +92,13 @@ public class CustomSecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList("*"));
+        configuration.setAllowedOrigins(Arrays.asList("http://localhost:5173", "http://localhost:3000"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
+        configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/api/**", configuration);
-        source.registerCorsConfiguration("/member/checkEmail", configuration);
+        source.registerCorsConfiguration("/**", configuration);
 
         return source;
     }

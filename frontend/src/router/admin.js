@@ -8,24 +8,28 @@ export const adminRoutes = [
     path: "/admin",
     name: "AdminDashboard",
     component: AdminDashboard,
-    meta: { title: "관리자 대시보드 - Room Traveler", requiresAuth: true, requiresAdmin: true },
+    meta: {
+      title: "관리자 대시보드 - Room Traveler",
+      requiresAuth: true,
+      roles: ["ADMIN"],
+    },
   },
   {
     path: "/admin/users",
     name: "AdminUsers",
     component: AdminUsers,
-    meta: { title: "사용자 관리 - Room Traveler", requiresAuth: true, requiresAdmin: true },
+    meta: { title: "사용자 관리 - Room Traveler", requiresAuth: true, roles: ["ADMIN"] },
   },
   {
     path: "/admin/accommodations",
     name: "AdminAccommodations",
     component: AdminAccommodations,
-    meta: { title: "숙소 관리 - Room Traveler", requiresAuth: true, requiresAdmin: true },
+    meta: { title: "숙소 관리 - Room Traveler", requiresAuth: true, roles: ["ADMIN"] },
   },
   {
     path: "/admin/regions",
     name: "AdminRegions",
     component: AdminRegions,
-    meta: { title: "지역 데이터 관리 - Room Traveler", requiresAuth: true, requiresAdmin: true },
+    meta: { title: "지역 데이터 관리 - Room Traveler", requiresAuth: true, roles: ["ADMIN"] },
   },
 ];

@@ -8,11 +8,12 @@
   <resultMap id="SidoMap" type="com.ssafy.trip.region.model.Sido">
     <result property="name" column="sido_name"/>
     <result property="code" column="sido_code"/>
+    <result property="sidoImgUrl" column="sido_img_url"/>
   </resultMap>
   
   <!-- 모든 시도 목록 조회 -->
   <select id="getSidos" resultMap="SidoMap">
-    SELECT DISTINCT sido_name, sido_code FROM sidos
+    SELECT DISTINCT sido_name, sido_code, sido_img_url FROM sidos
   </select>
 
   <!-- 구군 매핑 -->
@@ -28,5 +29,33 @@
     FROM guguns
     WHERE sido_code = #{sidoCode}
   </select>
+
+  <!-- 특정 시도 코드로 시도 정보 조회 -->
+  <select id="getSidoByCode" parameterType="int" resultMap="SidoMap">
+    SELECT sido_code, sido_name, sido_img_url 
+    FROM sidos
+    WHERE sido_code = #{sidoCode}
+  </select>
+
+  <!-- 새로운 시도 정보 등록 -->
+  <insert id="insertSido" parameterType="com.ssafy.trip.region.model.Sido">
+    INSERT INTO sidos (sido_code, sido_name, sido_img_url)
+    VALUES (#{code}, #{name}, #{sidoImgUrl, jdbcType=VARCHAR})
+  </insert>
+
+  <!-- 기존 시도 정보 수정 (sido_code 기준) -->
+  <update id="updateSido" parameterType="com.ssafy.trip.region.model.Sido">
+    UPDATE sidos
+    SET 
+      sido_name = #{name},
+      sido_img_url = #{sidoImgUrl, jdbcType=VARCHAR}
+    WHERE sido_code = #{code}
+  </update>
+
+  <!-- 특정 시도 정보 삭제 (sido_code 기준) -->
+  <delete id="deleteSido" parameterType="int">
+    DELETE FROM sidos
+    WHERE sido_code = #{sidoCode}
+  </delete>
 
 </mapper>

@@ -91,6 +91,15 @@
         ORDER BY r.created_at DESC
     </select>
 
+    <!-- 숙소 ID로 리뷰 통계(평균 별점, 리뷰 수) 조회 -->
+    <select id="selectReviewStatsByAccommodationId" resultType="java.util.Map">
+        SELECT
+            COALESCE(AVG(rating), 0.0) as avg_rating,
+            COUNT(review_id) as review_count
+        FROM reviews
+        WHERE accommodation_id = #{accommodationId} AND status = 'ACTIVE'
+    </select>
+
     <!-- 숙소 ID로 리뷰 평균 평점 조회 -->
     <select id="selectAverageRatingByAccommodationId" resultType="Double">
         SELECT AVG(rating)

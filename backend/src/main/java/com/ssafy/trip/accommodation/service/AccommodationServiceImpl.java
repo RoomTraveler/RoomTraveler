@@ -15,6 +15,7 @@ import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -66,6 +67,7 @@ public class AccommodationServiceImpl implements AccommodationService {
         // 객실 등록
         roomDao.insert(room);
         Long roomId = room.getRoomId();
+        Long accommodationId = room.getAccommodationId(); // 숙소 ID 가져오기
 
         // 이미지 등록
         if (images != null && !images.isEmpty()) {
@@ -73,10 +75,14 @@ public class AccommodationServiceImpl implements AccommodationService {
                 image.setReferenceId(roomId);
                 image.setReferenceType("ROOM");
                 image.setRoomId(roomId);
-                image.setAccommodationId(room.getAccommodationId());
+                image.setAccommodationId(accommodationId);
                 imageDao.insert(image);
             }
         }
+        
+        // 숙소의 객실 가격 통계 업데이트
+        updateAccommodationRoomPriceStats(accommodationId);
+        
         return roomId;
     }
 
@@ -361,18 +367,39 @@ public class AccommodationServiceImpl implements AccommodationService {
     @Override
     @Transactional
     public int updateRoom(Room room, List<Image> images) throws SQLException {
-        int result = roomDao.updateRoom(room);
-        if (images != null) {
+        // 기존 객실 정보 조회 (숙소 ID를 얻기 위함)
+        Room existingRoom = roomDao.getRoomById(room.getRoomId());
+        if (existingRoom == null) {
+            throw new SQLException("수정할 객실을 찾을 수 없습니다: " + room.getRoomId());
+        }
+        Long accommodationId = existingRoom.getAccommodationId();
+
+        // 객실 정보 업데이트
+        int updatedRows = roomDao.updateRoom(room);
+
+        // 이미지 업데이트 (기존 이미지 삭제 및 새 이미지 추가 로직)
+        // (이미지 관련 로직은 기존과 동일하게 유지하거나 필요에 따라 수정)
+        if (images != null) { // images 파라미터가 null이 아닐 때만 처리 (기존 이미지 유지 또는 변경)
+            // 1. 이 객실의 기존 이미지 전체 삭제 (간단한 방식)
             imageDao.deleteImagesByReference(room.getRoomId(), "ROOM");
-            for (Image image : images) {
-                image.setReferenceId(room.getRoomId());
-                image.setReferenceType("ROOM");
-                image.setRoomId(room.getRoomId());
-                image.setAccommodationId(room.getAccommodationId());
-                imageDao.insert(image);
+            // 2. 새 이미지 목록 등록
+            if (!images.isEmpty()) {
+                for (Image image : images) {
+                    image.setReferenceId(room.getRoomId());
+                    image.setReferenceType("ROOM");
+                    image.setRoomId(room.getRoomId());
+                    image.setAccommodationId(accommodationId);
+                    imageDao.insert(image);
+                }
             }
         }
-        return result;
+        
+        // 숙소의 객실 가격 통계 업데이트
+        if (updatedRows > 0) {
+            updateAccommodationRoomPriceStats(accommodationId);
+        }
+        
+        return updatedRows;
     }
 
     /**
@@ -413,8 +440,26 @@ public class AccommodationServiceImpl implements AccommodationService {
     @Override
     @Transactional
     public int deleteRoom(Long roomId) throws SQLException {
+        // 객실 정보 조회 (숙소 ID를 얻기 위함)
+        Room roomToDelete = roomDao.getRoomById(roomId);
+        if (roomToDelete == null) {
+            // 이미 삭제되었거나 없는 객실일 수 있으므로, 오류 대신 0 반환 또는 로깅 처리
+            log.warn("삭제할 객실을 찾을 수 없습니다: {}", roomId);
+            return 0; 
+        }
+        Long accommodationId = roomToDelete.getAccommodationId();
+
+        // 연결된 이미지 삭제
         imageDao.deleteImagesByReference(roomId, "ROOM");
-        return roomDao.deleteRoom(roomId);
+        // 객실 삭제
+        int deletedRows = roomDao.deleteRoom(roomId);
+        
+        // 숙소의 객실 가격 통계 업데이트
+        if (deletedRows > 0) {
+            updateAccommodationRoomPriceStats(accommodationId);
+        }
+        
+        return deletedRows;
     }
 
     /**
@@ -594,5 +639,31 @@ public class AccommodationServiceImpl implements AccommodationService {
     @Transactional
     public int deleteAllAccommodations() throws SQLException {
         return accommodationDao.deleteAllAccommodations();
+    }
+
+    // Helper method to update accommodation room price statistics
+    private void updateAccommodationRoomPriceStats(Long accommodationId) throws SQLException {
+        if (accommodationId == null) {
+            log.warn("Accommodation ID is null. Cannot update room price stats.");
+            return;
+        }
+
+        List<Double> prices = roomDao.selectActiveRoomPricesByAccommodationId(accommodationId);
+        Double minPrice = null;
+        Double maxPrice = null;
+
+        if (prices != null && !prices.isEmpty()) {
+            minPrice = Collections.min(prices);
+            maxPrice = Collections.max(prices);
+        } else {
+            // 활성 객실이 없는 경우, 가격을 0 또는 null로 설정할 수 있습니다.
+            // 여기서는 0.0으로 설정합니다.
+            minPrice = 0.0;
+            maxPrice = 0.0;
+        }
+        
+        accommodationDao.updateRoomPriceStats(accommodationId, minPrice, maxPrice);
+        log.info("Updated room price stats for accommodation {}: minPrice={}, maxPrice={}",
+                accommodationId, minPrice, maxPrice);
     }
 }

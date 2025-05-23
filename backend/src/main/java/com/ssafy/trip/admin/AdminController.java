@@ -351,7 +351,7 @@ public class AdminController {
                     int code = item.path("code").asInt();
                     String name = item.path("name").asText();
 
-                    Sido sido = new Sido(code, name);
+                    Sido sido = new Sido(code, name, null);
                     sidos.add(sido);
                 }
             }

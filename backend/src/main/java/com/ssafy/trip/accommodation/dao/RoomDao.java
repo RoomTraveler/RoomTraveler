@@ -96,4 +96,11 @@ public interface RoomDao {
      * @return 객실 목록
      */
     List<Room> getRoomsByHostId(Long hostId) throws SQLException;
+
+    /**
+     * 숙소 ID로 모든 활성 객실의 가격 목록을 조회합니다.
+     * @param accommodationId 숙소 ID
+     * @return 가격 목록
+     */
+    List<Double> selectActiveRoomPricesByAccommodationId(Long accommodationId) throws SQLException;
 }

@@ -1,18 +1,19 @@
 <template>
-  <div class="bg-white min-vh-100" style="font-family: 'Pretendard','Noto Sans KR',sans-serif;">
-    <div class="container" style="max-width:768px;">
+  <div class="bg-white min-vh-100" style="font-family: &quot;Pretendard&quot;, &quot;Noto Sans KR&quot;, sans-serif">
+    <div class="container" style="max-width: 768px">
       <!-- 필터 헤더 -->
       <FilterHeader @update-filters="handleFiltersUpdate" :initialFilters="currentFilters" :initialSort="currentSort" />
 
       <!-- 숙소 리스트 -->
       <div class="pb-5 px-2">
         <div v-if="!loading && totalAccommodationsCount > 0" class="px-2 pt-3 pb-1 text-muted small">
-          검색 결과 <span class="fw-semibold text-dark">{{ totalAccommodationsCount }}</span>건
+          검색 결과 <span class="fw-semibold text-dark">{{ totalAccommodationsCount }}</span
+          >건
         </div>
 
         <!-- 로딩 스피너 (초기 로딩) -->
         <div v-if="loading && accommodations.length === 0" class="text-center py-5">
-          <div class="spinner-border text-primary mb-3" role="status" style="width:2.5rem; height:2.5rem;"></div>
+          <div class="spinner-border text-primary mb-3" role="status" style="width: 2.5rem; height: 2.5rem"></div>
           <span class="text-muted small">숙소 정보를 찾고 있어요...</span>
         </div>
 
@@ -30,35 +31,34 @@
 
         <!-- 카드 2열 그리드 -->
         <div v-else class="row g-3">
-          <div
-              v-for="item in accommodations"
-              :key="item.accommodationId"
-              class="col-12 col-md-6 d-flex"
-          >
+          <div v-for="item in accommodations" :key="item.accommodationId" class="col-12 col-md-6 d-flex">
             <div
-                class="card shadow-sm w-100 mb-3 h-100 border border-light rounded-3 cursor-pointer"
-                style="min-height: 416.5px;"
-                @click="goToDetail(item.accommodationId)"
+              class="card shadow-sm w-100 mb-3 h-100 border border-light rounded-3 cursor-pointer"
+              style="min-height: 416.5px"
+              @click="goToDetail(item.accommodationId)"
             >
               <!-- 이미지 -->
-              <div class="position-relative mx-auto bg-light mt-4" style="width:calc(100% - 16px); height:167px; padding:8px;">
+              <div
+                class="position-relative mx-auto bg-light mt-4"
+                style="width: calc(100% - 16px); height: 167px; padding: 8px"
+              >
                 <RoundedImage
-                    :src="item.mainImageUrl || 'https://via.placeholder.com/300x200.png?text=NOLPLACE'"
-                    :alt="item.title"
-                    roundedClass="rounded-3"
-                    imgClass="object-fit-cover"
-                    containerClass="w-100 h-100"
+                  :src="item.mainImageUrl || 'https://via.placeholder.com/300x200.png?text=NOLPLACE'"
+                  :alt="item.title"
+                  roundedClass="rounded-3"
+                  imgClass="object-fit-cover"
+                  containerClass="w-100 h-100"
                 />
               </div>
 
               <!-- 설명영역 -->
-              <div class="card-body d-flex flex-column" style="padding-top:16px; padding-bottom:12px;">
+              <div class="card-body d-flex flex-column" style="padding-top: 16px; padding-bottom: 12px">
                 <AccommodationCardInfo :item="item" class="flex-grow-1" />
 
                 <!-- 체크인 시간 -->
                 <div
-                    v-if="item.checkInTime"
-                    class="text-end text-secondary small d-flex justify-content-end align-items-center mt-2 mb-1"
+                  v-if="item.checkInTime"
+                  class="text-end text-secondary small d-flex justify-content-end align-items-center mt-2 mb-1"
                 >
                   <i class="bi bi-clock-fill me-2"></i>
                   <span>{{ formatCheckInTime(item.checkInTime) }} ~</span>
@@ -67,16 +67,21 @@
                 <!-- 가격/할인 -->
                 <div class="mt-auto pt-2 text-end">
                   <div class="small text-muted mb-1">
-                    <template v-if="item.originalPrice && getMinPrice(item.rooms) < item.originalPrice && item.discountRate">
+                    <template
+                      v-if="item.originalPrice && getMinPrice(item.rooms) < item.originalPrice && item.discountRate"
+                    >
                       <span class="ms-2">{{ item.discountRate }}%</span>
-                      <span class="text-decoration-line-through ms-1">{{ formatPrice(item.originalPrice, false, false) }}</span>
+                      <span class="text-decoration-line-through ms-1">{{
+                        formatPrice(item.originalPrice, false, false)
+                      }}</span>
                     </template>
                   </div>
                   <div class="d-flex justify-content-end align-items-baseline">
                     <span
-                        class="small text-muted me-1"
-                        v-if="item.originalPrice && getMinPrice(item.rooms) < item.originalPrice && item.discountRate"
-                    >최대할인가</span>
+                      class="small text-muted me-1"
+                      v-if="item.originalPrice && getMinPrice(item.rooms) < item.originalPrice && item.discountRate"
+                      >최대할인가</span
+                    >
                     <span class="fs-5 fw-bold text-dark">{{ formatPrice(getMinPrice(item.rooms), false, false) }}</span>
                     <span class="ms-1 text-secondary small">원~</span>
                   </div>
@@ -85,8 +90,8 @@
 
               <!-- DayUse 객실 바 -->
               <div
-                  v-if="item.additionalBenefits && item.additionalBenefits.includes('DayUse 객실')"
-                  class="px-3 py-2 bg-light border-top border-light"
+                v-if="item.additionalBenefits && item.additionalBenefits.includes('DayUse 객실')"
+                class="px-3 py-2 bg-light border-top border-light"
               >
                 <span class="small text-secondary d-flex align-items-center">
                   <i class="bi bi-check-lg text-success me-2"></i>DayUse 객실
@@ -98,12 +103,12 @@
 
         <!-- 무한스크롤: 추가 로딩 스피너 -->
         <div v-if="loadingMore" class="text-center py-4">
-          <div class="spinner-border text-secondary" role="status" style="width:1.75rem; height:1.75rem;"></div>
+          <div class="spinner-border text-secondary" role="status" style="width: 1.75rem; height: 1.75rem"></div>
         </div>
 
         <div
-            v-if="!loading && !hasMoreData && accommodations.length > 0 && !error"
-            class="text-center text-muted py-4 small"
+          v-if="!loading && !hasMoreData && accommodations.length > 0 && !error"
+          class="text-center text-muted py-4 small"
         >
           마지막 숙소입니다.
         </div>
@@ -113,14 +118,12 @@
 </template>
 
 <script setup lang="ts">
-// (이 부분 그대로)
 import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import accommodationService from "../../api/accommodationApi.js";
 import FilterHeader from "../../components/accommodation/FilterHeader.vue";
 import AccommodationCardInfo from "../../components/accommodation/AccommodationCardInfo.vue";
 import RoundedImage from "../../components/common/RoundedImage.vue";
-// import router from "@/router"; // 주석 처리
 import { ElMessage } from "element-plus";
 
 interface Room {
@@ -149,7 +152,6 @@ interface Accommodation {
   thumbnailImageUrl?: string;
 }
 
-// FilterHeader로부터 받는 필터 값 타입 정의
 interface FilterValues {
   region: { sidoCode: number | null; gugunCode: number | null; name: string };
   dateRange: [Date, Date] | null;
@@ -190,16 +192,14 @@ const hasMoreData = ref(true);
 const loadingMore = ref(false);
 const totalAccommodationsCount = ref(0);
 
-// 초기 필터 값 (URL 쿼리로부터 설정될 수 있도록 기본값 제공)
 const currentFilters = ref<FilterValues>({
   region: { sidoCode: null, gugunCode: null, name: "전체 지역" },
   dateRange: null,
   guests: 2,
   accommodationType: null,
 });
-const currentSort = ref<string>("created_at_desc");
+const currentSort = ref<string>("recommendScoreDesc");
 
-// ---- 이하 모든 유틸/핸들러/함수, watch, 무한스크롤, onMounted 등 기존 코드 그대로 ----
 const formatDate = (date: Date | string | null): string => {
   if (!date) return "";
   const d = typeof date === "string" ? new Date(date) : date;
@@ -217,25 +217,28 @@ const parseDate = (dateStr: string | null | undefined): Date | null => {
 };
 
 watch(
-    [currentFilters, currentSort],
-    () => {
-      const query: UrlFilters = {};
+  [currentFilters, currentSort],
+  () => {
+    const query: UrlFilters = {};
 
-      if (currentFilters.value.region.sidoCode) query.sidoCode = currentFilters.value.region.sidoCode;
-      if (currentFilters.value.region.gugunCode) query.gugunCode = currentFilters.value.region.gugunCode;
-      if (currentFilters.value.region.name && currentFilters.value.region.name !== "전체 지역")
-        query.regionName = currentFilters.value.region.name;
-      if (currentFilters.value.dateRange && currentFilters.value.dateRange[0] && currentFilters.value.dateRange[1]) {
-        query.checkInDate = formatDate(currentFilters.value.dateRange[0]);
-        query.checkOutDate = formatDate(currentFilters.value.dateRange[1]);
-      }
-      if (currentFilters.value.guests > 0) query.guests = currentFilters.value.guests;
-      if (currentFilters.value.accommodationType) query.accommodationType = currentFilters.value.accommodationType;
-      if (currentSort.value) query.sortBy = currentSort.value;
+    if (currentFilters.value.region.sidoCode) query.sidoCode = currentFilters.value.region.sidoCode;
+    if (currentFilters.value.region.gugunCode) query.gugunCode = currentFilters.value.region.gugunCode;
+    if (currentFilters.value.region.name && currentFilters.value.region.name !== "전체 지역")
+      query.regionName = currentFilters.value.region.name;
+    if (currentFilters.value.dateRange && currentFilters.value.dateRange[0] && currentFilters.value.dateRange[1]) {
+      query.checkInDate = formatDate(currentFilters.value.dateRange[0]);
+      query.checkOutDate = formatDate(currentFilters.value.dateRange[1]);
+    }
+    if (currentFilters.value.guests > 0) query.guests = currentFilters.value.guests;
+    if (currentFilters.value.accommodationType) query.accommodationType = currentFilters.value.accommodationType;
 
-      router.replace({ query: query as any });
-    },
-    { deep: true }
+    if (currentSort.value && currentSort.value !== "recommendScoreDesc") {
+      query.sortBy = currentSort.value;
+    }
+
+    router.replace({ query: query as any });
+  },
+  { deep: true }
 );
 
 function handleFiltersUpdate(filters: FilterValues & { sortBy?: string }) {
@@ -245,7 +248,7 @@ function handleFiltersUpdate(filters: FilterValues & { sortBy?: string }) {
     guests: filters.guests,
     accommodationType: filters.accommodationType,
   };
-  if (filters.sortBy) {
+  if (filters.sortBy && filters.sortBy !== currentSort.value) {
     currentSort.value = filters.sortBy;
   }
   resetAndFetchAccommodations();
@@ -281,7 +284,7 @@ async function fetchAccommodations(loadMore = false) {
     const params: any = {
       page: pageToFetch,
       size: itemsPerPage.value,
-      sortBy: currentSort.value || "created_at_desc",
+      sortBy: currentSort.value || "recommendScoreDesc",
     };
 
     if (currentFilters.value.region.sidoCode) params.sidoCode = currentFilters.value.region.sidoCode;
@@ -296,7 +299,7 @@ async function fetchAccommodations(loadMore = false) {
     }
 
     const filteredParams = Object.fromEntries(
-        Object.entries(params).filter(([_, v]) => v !== undefined && v !== null && v !== "")
+      Object.entries(params).filter(([_, v]) => v !== undefined && v !== null && v !== "")
     );
     console.log("[AccommodationList] Fetching with params:", filteredParams);
 
@@ -313,9 +316,14 @@ async function fetchAccommodations(loadMore = false) {
         accommodations.value = newAccommodations;
         currentPage.value = 1;
       }
-      totalAccommodationsCount.value = response.data.totalItems || 0;
+      totalAccommodationsCount.value =
+        response.data.totalItems !== undefined
+          ? response.data.totalItems
+          : response.data.totalElements !== undefined
+            ? response.data.totalElements
+            : 0;
       hasMoreData.value =
-          pageToFetch * itemsPerPage.value < (response.data.totalItems || 0) && newAccommodations.length > 0;
+        pageToFetch * itemsPerPage.value < totalAccommodationsCount.value && newAccommodations.length > 0;
     } else {
       if (!loadMore) accommodations.value = [];
       hasMoreData.value = false;
@@ -323,6 +331,7 @@ async function fetchAccommodations(loadMore = false) {
     }
   } catch (err: any) {
     error.value = "숙소 정보를 불러오는 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
+    console.error("Error fetching accommodations:", err);
     if (!loadMore) accommodations.value = [];
     hasMoreData.value = false;
     if (!loadMore) totalAccommodationsCount.value = 0;
@@ -335,13 +344,12 @@ async function fetchAccommodations(loadMore = false) {
   }
 }
 
-// 무한 스크롤
 const handleScroll = () => {
   if (
-      window.innerHeight + window.scrollY >= document.documentElement.offsetHeight - 300 &&
-      hasMoreData.value &&
-      !loadingMore.value &&
-      !loading.value
+    window.innerHeight + window.scrollY >= document.documentElement.offsetHeight - 300 &&
+    hasMoreData.value &&
+    !loadingMore.value &&
+    !loading.value
   ) {
     fetchAccommodations(true);
   }
@@ -395,7 +403,8 @@ onMounted(() => {
   if (query.gugunCode) currentFilters.value.region.gugunCode = Number(query.gugunCode);
   if (query.regionName) currentFilters.value.region.name = query.regionName;
   else if (query.sidoCode && !query.gugunCode) {
-    // 필요 시 시/도만 있을 때 이름 업데이트
+    // TODO: 시/도 코드만 있을 경우, 시/도 이름을 조회하여 설정하는 로직 (예: API 호출 또는 미리 정의된 맵 사용)
+    // currentFilters.value.region.name = findSidoName(Number(query.sidoCode));
   } else if (!query.sidoCode) {
     currentFilters.value.region.name = "전체 지역";
   }
@@ -407,7 +416,12 @@ onMounted(() => {
   }
   if (query.guests) currentFilters.value.guests = Number(query.guests);
   if (query.accommodationType) currentFilters.value.accommodationType = query.accommodationType;
-  if (query.sortBy) currentSort.value = query.sortBy;
+
+  if (query.sortBy) {
+    currentSort.value = query.sortBy;
+  } else {
+    currentSort.value = "recommendScoreDesc";
+  }
 
   fetchAccommodations();
   window.addEventListener("scroll", handleScroll);
@@ -419,6 +433,10 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.cursor-pointer { cursor: pointer; }
-.object-fit-cover { object-fit: cover; }
+.cursor-pointer {
+  cursor: pointer;
+}
+.object-fit-cover {
+  object-fit: cover;
+}
 </style>

@@ -300,6 +300,7 @@ npm install bootstrap-icons
 npm install bootstrap
 npm install chart.js
 npm install @toast-ui/editor
+npm install swiper
 ```
 
 2. 개발 서버 실행:

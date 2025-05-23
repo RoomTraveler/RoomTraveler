@@ -28,7 +28,7 @@
           >
             <div class="card h-100 shadow-sm event-card border-0">
               <div class="ratio ratio-4x3">
-                <img :src="event.image" :alt="event.title" class="card-img-top object-fit-cover" />
+                <img :src="event.image" :alt="event.title" class="card-img-top" />
               </div>
               <div class="card-body">
                 <h5 class="card-title text-truncate" :title="event.title">
@@ -138,10 +138,11 @@ const filteredEvents = computed(() => {
 .event-card:hover {
   box-shadow: 0 0.5rem 1.5rem rgba(30, 60, 180, 0.1);
 }
-.card-img-top.object-fit-cover {
-  object-fit: cover;
+.card-img-top {
+  object-fit: contain;
   width: 100%;
   height: 100%;
+  background-color: #f8f9fa;
 }
 .text-truncate-2 {
   display: -webkit-box;

@@ -157,4 +157,12 @@
         </if>
         ORDER BY r.price_per_night ASC, r.name ASC
     </select>
+
+    <!-- 숙소 ID로 모든 활성 객실의 가격 목록을 조회합니다. -->
+    <select id="selectActiveRoomPricesByAccommodationId" resultType="java.lang.Double">
+        SELECT price_per_night 
+        FROM rooms 
+        WHERE accommodation_id = #{accommodationId} AND status = 'ACTIVE'
+    </select>
+
 </mapper>

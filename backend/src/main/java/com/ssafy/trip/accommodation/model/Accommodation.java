@@ -33,6 +33,11 @@ public class Accommodation {
     private LocalTime checkOutTime;   // 체크아웃 시간
     private String amenities;         // 편의시설
     private String status;            // 상태 (ACTIVE, INACTIVE, PENDING_REVIEW)
+    private Double avgReviewRating;   // 평균 리뷰 점수
+    private Integer reviewCount;      // 리뷰 개수
+    private Double recommendScore;    // 추천 점수
+    private Double minRoomPrice;      // 숙소 내 객실 최저가
+    private Double maxRoomPrice;      // 숙소 내 객실 최고가
     private LocalDateTime createdAt;  // 생성 시간
     private LocalDateTime updatedAt;  // 수정 시간
 

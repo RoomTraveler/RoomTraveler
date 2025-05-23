@@ -18,6 +18,7 @@ public class User {
     private String email;        // 로그인용 이메일
     private String password;     // 해시 처리된 비밀번호
     private String phone;        // 휴대폰 번호
+    private String profileImage; // 프로필 이미지 URL
     private String role;         // 권한 구분 (USER, HOST, ADMIN)
     private String status;       // 계정 상태 (ACTIVE, INACTIVE, SUSPENDED)
     private String refreshToken;

@@ -41,7 +41,13 @@
                     <img
                       :src="thumbnailPreview"
                       alt="썸네일 미리보기"
-                      style="width: 100%; max-height: 200px; object-fit: cover; border-radius: 0.25rem"
+                      style="
+                        width: 100%;
+                        max-height: 300px;
+                        object-fit: contain;
+                        border-radius: 0.25rem;
+                        background-color: #f8f9fa;
+                      "
                     />
                   </div>
                 </div>
@@ -120,6 +126,7 @@ const isUpdateMode = computed(() => !!eventId);
 
 const form = ref({
   title: "",
+  content: "",
   status: "ONGOING",
   startDate: "",
   endDate: "",
@@ -199,10 +206,28 @@ const fetchEventDataForUpdate = async () => {
       const response = await api.get(`/api/events/${eventId}`);
       if (response.data && response.data.success) {
         const eventData = response.data.result;
+        console.log("Received event data:", eventData); // 데이터 전체 확인
+        console.log("Start Date from API:", eventData.startDate);
+        console.log("End Date from API:", eventData.endDate);
+
         form.value.title = eventData.title || "";
         form.value.status = eventData.status || "ONGOING";
-        form.value.startDate = eventData.startDate || "";
-        form.value.endDate = eventData.endDate || "";
+
+        // 날짜 값 처리 수정: 배열을 YYYY-MM-DD 형식의 문자열로 변환
+        const formatDateArrayToString = (dateArray) => {
+          if (Array.isArray(dateArray) && dateArray.length === 3) {
+            const [year, month, day] = dateArray;
+            // 월과 일이 한 자리 수일 경우 앞에 0을 붙여 두 자리로 만듦
+            const formattedMonth = month < 10 ? `0${month}` : month;
+            const formattedDay = day < 10 ? `0${day}` : day;
+            return `${year}-${formattedMonth}-${formattedDay}`;
+          }
+          return ""; // 유효하지 않은 형식이면 빈 문자열 반환
+        };
+
+        form.value.startDate = formatDateArrayToString(eventData.startDate);
+        form.value.endDate = formatDateArrayToString(eventData.endDate);
+
         form.value.writer = eventData.writer || userStore.userInfo?.name || "관리자";
 
         // 에디터가 이미 초기화되었으면 내용 설정, 아니면 초기화 시 설정
@@ -210,7 +235,7 @@ const fetchEventDataForUpdate = async () => {
           editorInstance.setHTML(eventData.content || "");
         } else {
           // onMounted에서 initializeEditor를 호출할 때 이 내용이 사용됨
-          form.value.contentForEditor = eventData.content || "";
+          form.value.content = eventData.content || "";
         }
 
         // 기존 썸네일 URL 설정
@@ -229,7 +254,7 @@ const fetchEventDataForUpdate = async () => {
 onMounted(async () => {
   if (isUpdateMode.value) {
     await fetchEventDataForUpdate(); // 데이터 먼저 로드
-    initializeEditor(form.value.contentForEditor); // 로드된 content로 에디터 초기화
+    initializeEditor(form.value.content); // 로드된 content로 에디터 초기화
   } else {
     initializeEditor(); // 새 글 작성 시 빈 에디터 초기화
   }

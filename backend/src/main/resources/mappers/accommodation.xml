@@ -24,6 +24,11 @@
         <result property="checkOutTime" column="check_out_time" />
         <result property="amenities" column="amenities" />
         <result property="status" column="status" />
+        <result property="avgReviewRating" column="avg_review_rating" />
+        <result property="reviewCount" column="review_count" />
+        <result property="recommendScore" column="recommend_score" />
+        <result property="minRoomPrice" column="min_room_price" />
+        <result property="maxRoomPrice" column="max_room_price" />
         <result property="createdAt" column="created_at" />
         <result property="updatedAt" column="updated_at" />
         <result property="hostName" column="host_name" />
@@ -58,13 +63,19 @@
     <insert id="insert" useGeneratedKeys="true" keyProperty="accommodationId">
         INSERT INTO accommodations (
             host_id, title, description, address, sido_code, gugun_code, 
-            latitude, longitude, status, 
-            check_in_time, check_out_time, amenities, created_at, updated_at
+            latitude, longitude, accommodation_type, phone, email, website, status,
+            check_in_time, check_out_time, amenities, 
+            avg_review_rating, review_count, recommend_score,
+            min_room_price, max_room_price,
+            created_at, updated_at
         )
         VALUES (
             #{hostId}, #{title}, #{description}, #{address}, #{sidoCode}, #{gugunCode}, 
-            #{latitude}, #{longitude}, #{status}, 
-            #{checkInTime}, #{checkOutTime}, #{amenities}, NOW(), NOW()
+            #{latitude}, #{longitude}, #{accommodationType}, #{phone}, #{email}, #{website}, #{status}, 
+            #{checkInTime}, #{checkOutTime}, #{amenities}, 
+            0.0, 0, 0.0,
+            0.0, 0.0,
+            NOW(), NOW()
         )
     </insert>
 
@@ -108,9 +119,10 @@
             u.username as host_name
         FROM accommodations a
         LEFT JOIN users u ON a.host_id = u.user_id
-        WHERE a.title LIKE CONCAT('%', #{keyword}, '%')
+        WHERE (a.title LIKE CONCAT('%', #{keyword}, '%')
         OR a.description LIKE CONCAT('%', #{keyword}, '%')
-        OR a.address LIKE CONCAT('%', #{keyword}, '%')
+        OR a.address LIKE CONCAT('%', #{keyword}, '%'))
+        AND a.status = 'ACTIVE'
     </select>
 
     <!-- 숙소 정보를 업데이트합니다. -->
@@ -124,9 +136,14 @@
             gugun_code = #{gugunCode},
             latitude = #{latitude},
             longitude = #{longitude},
+            accommodation_type = #{accommodationType},
+            phone = #{phone},
+            email = #{email},
+            website = #{website},
             check_in_time = #{checkInTime},
             check_out_time = #{checkOutTime},
             amenities = #{amenities},
+            status = #{status},
             updated_at = NOW()
         WHERE accommodation_id = #{accommodationId}
     </update>
@@ -286,17 +303,18 @@
         <if test="sortBy != null and sortBy != ''">
             ORDER BY
             <choose>
-                <!-- <when test="sortBy == 'priceAsc'">a.min_price ASC</when> --> <!-- 임시 주석 처리 -->
-                <!-- <when test="sortBy == 'priceDesc'">a.min_price DESC</when> --> <!-- 임시 주석 처리 -->
-                <when test="sortBy == 'priceAsc'">a.title ASC</when> <!-- 임시로 title 정렬 사용 -->
-                <when test="sortBy == 'priceDesc'">a.title DESC</when> <!-- 임시로 title 정렬 사용 -->
-                <when test="sortBy == 'name'">a.title ASC</when>
+                <when test="sortBy == 'recommendScoreDesc'">a.recommend_score DESC, a.created_at DESC</when> 
+                <when test="sortBy == 'reviewCountDesc'">a.review_count DESC, a.recommend_score DESC, a.created_at DESC</when>
+                <when test="sortBy == 'reviewCountAsc'">a.review_count ASC, a.recommend_score DESC, a.created_at DESC</when>
+                <when test="sortBy == 'minPriceAsc'">a.min_room_price ASC, a.recommend_score DESC, a.created_at DESC</when>
+                <when test="sortBy == 'maxPriceDesc'">a.max_room_price DESC, a.recommend_score DESC, a.created_at DESC</when>
+                <when test="sortBy == 'name'">a.title ASC, a.recommend_score DESC, a.created_at DESC</when>
                 <when test="sortBy == 'created_at_desc'">a.created_at DESC</when>
-                <otherwise>a.created_at DESC</otherwise>
+                <otherwise>a.created_at DESC</otherwise> <!-- 기본값은 recommend_score DESC, created_at DESC 고려 -->
             </choose>
         </if>
-        <if test="sortBy == null or sortBy == ''"> <!-- 기본 정렬 추가 -->
-            ORDER BY a.created_at DESC
+        <if test="sortBy == null or sortBy == ''"> <!-- 기본 정렬: 추천순, 최신순 -->
+            ORDER BY a.recommend_score DESC, a.created_at DESC
         </if>
 
         <!-- 페이징 처리 -->
@@ -369,4 +387,25 @@
         ORDER BY RAND()
         LIMIT #{limit}
     </select>
+
+    <!-- 숙소 리뷰 통계 업데이트 -->
+    <update id="updateReviewStats">
+        UPDATE accommodations
+        SET
+            avg_review_rating = #{avgReviewRating, jdbcType=DECIMAL},
+            review_count = #{reviewCount, jdbcType=INTEGER},
+            recommend_score = #{recommendScore, jdbcType=DOUBLE},
+            updated_at = NOW()
+        WHERE accommodation_id = #{accommodationId}
+    </update>
+
+    <!-- 숙소 객실 가격 통계 업데이트 -->
+    <update id="updateRoomPriceStats">
+        UPDATE accommodations
+        SET
+            min_room_price = #{minRoomPrice, jdbcType=DECIMAL},
+            max_room_price = #{maxRoomPrice, jdbcType=DECIMAL},
+            updated_at = NOW()
+        WHERE accommodation_id = #{accommodationId}
+    </update>
 </mapper>

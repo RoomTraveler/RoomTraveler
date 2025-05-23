@@ -9,14 +9,19 @@ export const reviewRoutes = [
     name: "ReviewForm",
     component: ReviewForm,
     props: true,
-    meta: { title: "리뷰 작성" },
+    meta: { title: "리뷰 작성", requiresAuth: true },
   },
   {
     path: "/review/edit/:reviewId",
     name: "ReviewEditForm",
     component: ReviewEditForm,
     props: true,
-    meta: { title: "리뷰 수정" },
+    meta: { title: "리뷰 수정", requiresAuth: true },
   },
-  { path: "/review/my", name: "MyReviews", component: MyReviews, meta: { title: "내 리뷰 관리" } },
+  {
+    path: "/review/my",
+    name: "MyReviews",
+    component: MyReviews,
+    meta: { title: "내 리뷰 관리", requiresAuth: true },
+  },
 ];

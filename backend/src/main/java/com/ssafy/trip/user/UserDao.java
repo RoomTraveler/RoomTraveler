@@ -12,12 +12,12 @@ public interface UserDao {
     /**
      * 새 사용자를 등록합니다.
      */
-    int insert(User user);
+    void insert(User user);
 
     /**
      * 이메일과 비밀번호로 로그인합니다.
      */
-    User login(String email);
+    User login(String email, String password);
 
     /**
      * 모든 사용자 목록을 조회합니다.
@@ -27,22 +27,22 @@ public interface UserDao {
     /**
      * 사용자 정보를 업데이트합니다.
      */
-    int updateUser(String email, String username, String password);
+    void updateUserInfo(User user);
 
     /**
      * 사용자 상태를 업데이트합니다.
      */
-    int updateUserStatus(Long userId, String status);
+    void updateUserStatus(Long userId, String status);
 
     /**
      * 사용자 역할을 업데이트합니다.
      */
-    int updateUserRole(Long userId, String role);
+    void updateUserRole(Long userId, String role);
 
     /**
      * 사용자를 삭제합니다.
      */
-    int deleteUser(String email);
+    void deleteUser(String email);
 
     /**
      * 이름과 이메일로 비밀번호를 찾습니다.
@@ -52,7 +52,17 @@ public interface UserDao {
     /**
      * 이메일로 사용자를 조회합니다.
      */
-    Optional<User> getUserByEmail(String email);
+    User getUserByEmail(String email);
+
+    Long findUserIdByEmail(String email);
+
+    User selectUserById(Long userId);
+
+    void updateUserProfileImage(User user);
+
+    void updateUserPassword(User user);
 
     int updateUserRefreshToken(Long userId, String refreshToken);
+
+    int updateUserGeneral(User user);
 }

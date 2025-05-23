@@ -5,6 +5,7 @@ import com.ssafy.trip.review.model.Review;
 import com.ssafy.trip.review.model.ReviewImage;
 import com.ssafy.trip.s3.AWSS3Service;
 import com.ssafy.trip.accommodation.dao.ReservationDao;
+import com.ssafy.trip.accommodation.dao.AccommodationDao;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -28,6 +29,7 @@ public class ReviewServiceImpl implements ReviewService {
     private final ReviewDao reviewDao;
     private final AWSS3Service awsS3Service; // S3 서비스 주입
     private final ReservationDao reservationDao; // ReservationDao 주입
+    private final AccommodationDao accommodationDao; // AccommodationDao 주입
 
     @Value("${app.review.max-images-per-review:5}") // 기본값 5개
     private int maxImagesPerReview;
@@ -38,12 +40,14 @@ public class ReviewServiceImpl implements ReviewService {
      * @param reviewDao 리뷰 데이터 접근 객체
      * @param awsS3Service S3 서비스
      * @param reservationDao ReservationDao
+     * @param accommodationDao AccommodationDao
      */
     @Autowired
-    public ReviewServiceImpl(ReviewDao reviewDao, AWSS3Service awsS3Service, ReservationDao reservationDao) {
+    public ReviewServiceImpl(ReviewDao reviewDao, AWSS3Service awsS3Service, ReservationDao reservationDao, AccommodationDao accommodationDao) {
         this.reviewDao = reviewDao;
         this.awsS3Service = awsS3Service;
         this.reservationDao = reservationDao;
+        this.accommodationDao = accommodationDao;
     }
 
     /**
@@ -79,6 +83,7 @@ public class ReviewServiceImpl implements ReviewService {
 
         reviewDao.insert(review);
         Long reviewId = review.getReviewId();
+        Long accommodationId = review.getAccommodationId(); // 숙소 ID 가져오기
 
         if (imageFiles != null && !imageFiles.isEmpty()) {
             List<ReviewImage> reviewImages = new ArrayList<>();
@@ -101,6 +106,10 @@ public class ReviewServiceImpl implements ReviewService {
                 reviewDao.insertReviewImages(reviewImages);
             }
         }
+        
+        // 숙소 리뷰 통계 업데이트
+        updateAccommodationReviewStats(accommodationId);
+        
         return reviewId;
     }
 
@@ -192,6 +201,7 @@ public class ReviewServiceImpl implements ReviewService {
         if (!existingReview.getUserId().equals(userId)) {
             throw new SQLException("자신이 작성한 리뷰만 수정할 수 있습니다.");
         }
+        Long accommodationId = existingReview.getAccommodationId(); // 숙소 ID 가져오기
 
         // 이미지 개수 검증 (기존 이미지 + 새 이미지 - 삭제될 이미지)
         List<ReviewImage> currentImages = reviewDao.selectReviewImagesByReviewId(review.getReviewId());
@@ -207,9 +217,9 @@ public class ReviewServiceImpl implements ReviewService {
         review.setStatus(existingReview.getStatus()); // 상태는 이 메서드에서 변경하지 않음
         review.setIsVerified(existingReview.getIsVerified()); // 검증 상태는 이 메서드에서 변경하지 않음
         review.setCreatedAt(existingReview.getCreatedAt()); // 생성 시간은 유지
-        review.setAccommodationId(existingReview.getAccommodationId()); // 숙소 ID는 변경 불가
+        review.setAccommodationId(accommodationId); // 숙소 ID는 변경 불가
 
-        reviewDao.update(review); // 리뷰 텍스트 정보 업데이트
+        int updatedRows = reviewDao.update(review); // 리뷰 텍스트 정보 업데이트
 
         // 기존 이미지 삭제 처리
         if (deleteImageIds != null && !deleteImageIds.isEmpty()) {
@@ -255,7 +265,26 @@ public class ReviewServiceImpl implements ReviewService {
                 reviewDao.insertReviewImages(newReviewImages);
             }
         }
-        return true;
+
+        // 썸네일 재설정 로직 (필요 시)
+        // 만약 이미지 삭제/추가 후 썸네일이 없어졌다면, 남은 이미지 중 첫 번째를 썸네일로 설정
+        List<ReviewImage> finalImages = reviewDao.selectReviewImagesByReviewId(review.getReviewId());
+        if (finalImages != null && !finalImages.isEmpty()) {
+            boolean hasThumbnail = finalImages.stream().anyMatch(img -> img.getIsThumbnail() != null && img.getIsThumbnail());
+            if (!hasThumbnail) {
+                reviewDao.resetThumbnailStatusByReviewId(review.getReviewId()); // 모든 썸네일 false로
+                reviewDao.updateReviewImageThumbnailStatus(finalImages.get(0).getImageId(), true); // 첫 이미지 썸네일로
+            }
+        } else {
+             // 이미지가 모두 삭제된 경우 처리 (필요하다면)
+        }
+        
+        // 숙소 리뷰 통계 업데이트
+        if (updatedRows > 0) { // 리뷰 텍스트가 실제로 업데이트 되었을 때만 통계 업데이트 (선택적)
+            updateAccommodationReviewStats(accommodationId);
+        }
+        
+        return updatedRows > 0;
     }
 
     /**
@@ -302,18 +331,31 @@ public class ReviewServiceImpl implements ReviewService {
         if (review == null) {
             throw new SQLException("리뷰를 찾을 수 없습니다: " + reviewId);
         }
-        if (!review.getUserId().equals(userId) && !"ADMIN".equalsIgnoreCase(userRole)) {
-            throw new SQLException("자신이 작성한 리뷰만 삭제할 수 있습니다.");
-        }
 
-        List<ReviewImage> imagesToDelete = reviewDao.selectReviewImagesByReviewId(reviewId);
-        if (imagesToDelete != null && !imagesToDelete.isEmpty()) {
-            for (ReviewImage img : imagesToDelete) {
-                awsS3Service.deleteImage(img.getImageUrl());
+        // 관리자 또는 리뷰 작성자만 삭제 가능
+        if (!("ADMIN".equals(userRole) || review.getUserId().equals(userId))) {
+            throw new SQLException("리뷰를 삭제할 권한이 없습니다.");
+        }
+        
+        Long accommodationId = review.getAccommodationId(); // 숙소 ID 가져오기
+
+        // 연결된 이미지들 S3에서 삭제 및 DB에서 삭제
+        List<ReviewImage> images = reviewDao.selectReviewImagesByReviewId(reviewId);
+        if (images != null && !images.isEmpty()) {
+            for (ReviewImage image : images) {
+                awsS3Service.deleteImage(image.getImageUrl()); // S3에서 이미지 파일 삭제
             }
+            reviewDao.deleteReviewImagesByReviewId(reviewId); // DB에서 모든 이미지 정보 삭제
         }
 
-        return reviewDao.delete(reviewId) > 0;
+        int deletedRows = reviewDao.delete(reviewId); // 리뷰 삭제
+
+        // 숙소 리뷰 통계 업데이트
+        if (deletedRows > 0) {
+            updateAccommodationReviewStats(accommodationId);
+        }
+
+        return deletedRows > 0;
     }
 
     /**
@@ -444,5 +486,47 @@ public class ReviewServiceImpl implements ReviewService {
             throw new SQLException("해당 리뷰의 이미지를 찾을 수 없습니다.");
         }
         return reviewDao.updateReviewImageCaption(imageId, caption) > 0;
+    }
+
+    // Helper method to update accommodation review statistics
+    private void updateAccommodationReviewStats(Long accommodationId) throws SQLException {
+        if (accommodationId == null) {
+            // log.warn("Accommodation ID is null. Cannot update review stats.");
+            return;
+        }
+        Map<String, Object> stats = reviewDao.selectReviewStatsByAccommodationId(accommodationId);
+        Double avgRating = 0.0;
+        Integer reviewCount = 0;
+
+        if (stats != null) {
+            Object rawAvgRating = stats.get("avg_rating");
+            if (rawAvgRating instanceof Number) {
+                avgRating = ((Number) rawAvgRating).doubleValue();
+            }
+            
+            Object rawReviewCount = stats.get("review_count");
+            if (rawReviewCount instanceof Number) {
+                reviewCount = ((Number) rawReviewCount).intValue();
+            }
+        }
+
+        // 추천 점수 계산: avg_review_rating * LOG10(review_count + 1)
+        // 사용자가 SQL에서 LOG가 상용로그라고 언급했으므로 Math.log10 사용
+        double recommendScore = 0.0;
+        if (reviewCount > 0) { 
+            recommendScore = avgRating * Math.log10(reviewCount + 1);
+        } else {
+            // reviewCount가 0이면 reviewCount + 1 = 1, log10(1) = 0 이므로 recommendScore는 0이 됨.
+            // avgRating이 0이거나 reviewCount가 0이면 recommendScore는 자연스럽게 0이 됨.
+        }
+        
+        // 소수점 처리 (예: 둘째 자리까지 반올림)
+        recommendScore = Math.round(recommendScore * 100.0) / 100.0;
+        // avgRating은 DB에서 가져올 때 이미 DECIMAL(3,2) 등으로 처리될 수 있으나, 여기서 한 번 더 명시적으로 처리
+        avgRating = Math.round(avgRating * 100.0) / 100.0;
+
+        accommodationDao.updateReviewStats(accommodationId, avgRating, reviewCount, recommendScore);
+        // log.info("Updated review stats for accommodation {}: avgRating={}, reviewCount={}, recommendScore={}", 
+        // accommodationId, avgRating, reviewCount, recommendScore);
     }
 }

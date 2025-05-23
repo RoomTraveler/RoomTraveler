@@ -19,6 +19,12 @@ import "bootstrap-icons/font/bootstrap-icons.css"; // Bootstrap Icons CSS 추가
 import axios from "axios"; // axios import
 import piniaPersist from "pinia-plugin-persistedstate";
 
+// Swiper CSS 추가
+import "swiper/css";
+import "swiper/css/navigation";
+import "swiper/css/pagination";
+// import 'swiper/css/scrollbar'; // 필요 시 추가
+
 // Toast UI Editor CSS 추가
 import "@toast-ui/editor/dist/toastui-editor.css";
 
