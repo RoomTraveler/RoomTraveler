@@ -64,7 +64,7 @@ public interface UserService {
     int updateUserRefresh(Long userId, String refreshToken);
 
     List<Squad> getSquadsByUserId(Long userId);
-    int getPostion(Long userId, Integer squadId);
+    List<SquadUser> findUsersBySquadId(Integer squadId);
     int insertSquad(Long userId, SquadCreateRequest squadCreateRequest);
     List<User> getUsersByKeyword(String keyword);
 

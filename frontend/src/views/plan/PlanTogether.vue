@@ -1,6 +1,17 @@
 <template>
   <div class="container-fluid mt-4">
     <h2>Squad(ID: {{ squadId }})</h2>
+    <div class="d-flex flex-row flex-nowrap align-items-center">
+  <div v-for="member in squadMembers" :key="member.userId" class="d-flex align-items-center me-3">
+    <img
+      :src="cursorImageMap[member.position]"
+      alt="cursor"
+      style="width: 16px; height: 16px;"
+      class="me-1"
+    />
+    <span>{{ member.username }}</span>
+  </div>
+</div>
     <div class="row">
       <!-- LEFT: Filters, Search Results & Map -->
       <div class="col-lg-8">
@@ -126,6 +137,10 @@
       </div>
     </div>
 
+    <div v-if="joinMessage" class="join-popup">
+    {{ joinMessage }}
+  </div>
+
     <ModalWrapper v-if="showModal" :title="modalTitle" @close="showModal = false">
       <!-- AttractionDetail 컴포넌트를 슬롯에 넣고, id 전달 -->
       <AttractionDetail :id="modalSpotId" />
@@ -168,6 +183,7 @@ const imageSize = ref(null);
 const imageOption = ref(null);
 const likedAttractions = ref({});
 const likeCounts = ref({});
+const squadMembers = ref([]);
 
 // 상수 설정
 let map = null;
@@ -185,6 +201,13 @@ const markerIcons = {
   38: "/img/shoppingIcon.png",
   39: "/img/restaurantIcon.png",
 };
+
+const cursorImageMap = {
+    0: "/img/redCursor.png",
+    1: "/img/greenCursor.png",
+    2: "/img/blueCursor.png",
+    3: "/img/purpleCursor.png",
+  };
 
 // 계산된 속성들
 const startPage = computed(() => {
@@ -220,7 +243,7 @@ function triggerMarkerClick(index) {
 
 // 라이프사이클 훅
 onMounted(async () => {
-  await getPosition();
+  await getSquadMembers();
   setMinDate();
   await loadContentList();
   await loadKakaoMapScript();
@@ -245,15 +268,17 @@ onMounted(async () => {
   }, 100);
 });
 
-const getPosition = async () => {
+const getSquadMembers = async () => {
   const response = await apiGroup.api({
-    url: "/api/user/position",
+    url: "/api/user/squads/member",
     method: "GET",
     params: {
       squadId,
     },
   });
-  position = response.data;
+  squadMembers.value = response.data;
+  const userObj = squadMembers.value.find(member => member.userId === userId);
+  position = userObj.position;
 };
 
 // 초기화 함수들
@@ -302,6 +327,23 @@ const initKakaoMap = () => {
     lastLatLng = mouseEvent.latLng;
   });
 
+  mapContainer.value.addEventListener('mouseleave', function() {
+    lastLatLng = null;
+    stompClient.publish({
+        destination: "/app/squad/mouseMove",
+        body: JSON.stringify({
+          squadId,
+          messageType: "Mousemove",
+          userId,
+          content: {
+            latitude: null,
+            longitude: null,
+          },
+          position,
+        }),
+      });
+});
+
   if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition((pos) => {
       const { latitude, longitude } = pos.coords;
@@ -329,13 +371,6 @@ function updateUserCursor(userId, pos, lat, lng) {
   const latlng = new kakao.maps.LatLng(lat, lng);
   const bounds = map.getBounds();
 
-  const cursorImageMap = {
-    0: "/public/img/redCursor.png",
-    1: "/public/img/greenCursor.png",
-    2: "/public/img/blueCursor.png",
-    3: "/public/img/purpleCursor.png",
-  };
-
   const imageSrc = cursorImageMap[pos];
   const markerImage = new kakao.maps.MarkerImage(imageSrc, new kakao.maps.Size(32, 32));
 
@@ -362,6 +397,20 @@ function updateUserCursor(userId, pos, lat, lng) {
   }
 }
 
+const joinMessage = ref(null);
+let joinTimeout = null;
+
+function showJoinPopup(message) {
+  joinMessage.value = null;
+  setTimeout(() => {
+    joinMessage.value = message;
+  }, 0);
+  if (joinTimeout) clearTimeout(joinTimeout);
+  joinTimeout = setTimeout(() => {
+    joinMessage.value = null;
+  }, 3000);
+}
+
 const socketConfig = () => {
   const socket = new SockJS("http://localhost:8080/ws");
   stompClient = new Client({
@@ -372,13 +421,13 @@ const socketConfig = () => {
 
       stompClient.subscribe(`/topic/squad.${squadId}`, (msg) => {
         const body = JSON.parse(msg.body);
-        if (body.messageType === "SelectedPlaces") {
+        if (body.messageType === "JOIN") {
+          showJoinPopup(body.content)
+        } else if (body.messageType === "SelectedPlaces") {
           selectedPlaces.value = body.content;
         } else if (body.messageType === "Mousemove") {
           const userId = body.userId;
           const { latitude, longitude } = body.content;
-          console.log(102318549165198498);
-          console.log(body.position);
           updateUserCursor(userId, body.position, latitude, longitude);
         }
       });
@@ -390,7 +439,7 @@ const socketConfig = () => {
           squadId,
           messageType: "JOIN",
           userId,
-          content: `${userId}님이 입장했습니다.`,
+          content: `${userStore.user.username}님이 입장했습니다`,
         }),
       });
     },
@@ -747,5 +796,26 @@ const toggleLike = async (attractionId) => {
 }
 .spot-item:hover {
   background-color: #d9f99d;
+}
+.join-popup {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(50, 50, 50, 0.9);
+  color: white;
+  padding: 12px 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+  font-size: 16px;
+  animation: fadeInOut 3s ease-in-out;
+}
+
+@keyframes fadeInOut {
+  0% { opacity: 0; transform: translate(-50%, -10px); }
+  10% { opacity: 1; transform: translate(-50%, 0); }
+  90% { opacity: 1; transform: translate(-50%, 0); }
+  100% { opacity: 0; transform: translate(-50%, -10px); }
 }
 </style>

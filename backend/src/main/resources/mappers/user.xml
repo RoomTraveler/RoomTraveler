@@ -102,11 +102,17 @@
         WHERE sm.user_id = #{userId};
     </select>
 
-    <select id="getPosition" resultType="int">
-        SELECT position
-        FROM squad_members
-        WHERE squad_id = #{squadId}
-        AND user_id = #{userId}
+    <select id="findUsersBySquadId" resultType="com.ssafy.trip.user.SquadUser">
+        SELECT
+        u.user_id,
+        u.username,
+        sm.position
+        FROM
+        squad_members sm
+        JOIN users u ON sm.user_id = u.user_id
+        WHERE
+        sm.squad_id = #{squadId}
+        ORDER BY sm.position ASC
     </select>
 
     <insert id="insertSquad" parameterType="com.ssafy.trip.user.SquadInsertParam" useGeneratedKeys="true" keyProperty="squadId">
@@ -114,7 +120,7 @@
     </insert>
 
     <insert id="insertSquadMember">
-        INSERT INTO squad_members(squad_id, user_id, index)
+        INSERT INTO squad_members(squad_id, user_id, position)
         VALUES
         <foreach collection="invitedUserId" item="userId" index="idx" separator=",">
             (#{squadId}, #{userId}, #{idx})

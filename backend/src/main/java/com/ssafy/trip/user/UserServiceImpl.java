@@ -116,14 +116,14 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public int getPostion(Long userId, Integer squadId) {
-        return dao.getPosition(userId, squadId);
+    public List<SquadUser> findUsersBySquadId(Integer squadId) {
+        return dao.findUsersBySquadId(squadId);
     }
 
     @Override
     @Transactional
     public int insertSquad(Long userId, SquadCreateRequest squadCreateRequest) {
-        log.debug("insertSquad {}", squadCreateRequest);
+        log.info("insertSquad {}", squadCreateRequest);
         SquadInsertParam squadInsertParam = new SquadInsertParam();
         squadInsertParam.setUserId(userId);
         squadInsertParam.setSquadName(squadCreateRequest.getSquadName());
@@ -131,6 +131,7 @@ public class UserServiceImpl implements UserService {
         int squadId = squadInsertParam.getSquadId();
         squadCreateRequest.getInvitedUserIds().add(userId);
         List<Long> invitedUserIds = squadCreateRequest.getInvitedUserIds();
+        log.info("invitedUserIds {}", invitedUserIds);
 
         dao.insertSquadMember(invitedUserIds, squadId);
 

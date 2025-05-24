@@ -104,7 +104,7 @@ onMounted(() => {
 
 const popularFiveAttractions = async () => {
   try {
-    const res = await api.api({
+    const res = await api.apiNoAuth({
       url: "/api/map/attractions?size=5",
       method: "GET",
     });
@@ -116,7 +116,7 @@ const popularFiveAttractions = async () => {
 
 const popularFivePlans = async () => {
   try {
-    const res = await api.api({
+    const res = await api.apiNoAuth({
       url: "/api/map/plans?size=5",
       method: "GET",
     });

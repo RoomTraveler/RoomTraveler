@@ -348,10 +348,10 @@ public class UserController {
 		return ResponseEntity.ok(userService.getSquadsByUserId(userId));
 	}
 
-	// squadId와 UserId로 postion 가져오는거...
-	@GetMapping("/position")
-	public ResponseEntity<?> getPosition(@CurrentUserId Long userId, @RequestParam Integer squadId) {
-		return ResponseEntity.ok(userService.getPostion(userId, squadId));
+	// squadId로 모두의 position 가져와 보여주자
+	@GetMapping("/squads/member")
+	public ResponseEntity<?> getPosition(@RequestParam Integer squadId) {
+		return ResponseEntity.ok(userService.findUsersBySquadId(squadId));
 	}
 
 	@PostMapping("/squads")
