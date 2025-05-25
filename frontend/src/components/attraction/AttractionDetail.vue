@@ -1,54 +1,38 @@
 <template>
-  <div class="min-h-screen bg-gradient-to-b from-white to-gray-100 dark:from-gray-900 dark:to-gray-800 py-10 px-4">
+  <div class="container py-5">
+    <div v-if="attraction" class="card mx-auto shadow-lg" style="max-width: 800px;">
+      <div class="position-relative">
+    <!-- 이미지 -->
+    <img
+      :src="attraction.image2 && attraction.image2.trim().length !== 0 ? attraction.image2 : '/src/assets/no-image.jpg'"
+      :alt="attraction.title"
+      class="card-img-top object-fit-cover"
+      @load="imageLoaded = true"
+      v-show="imageLoaded"
+      style="height: 400px; object-fit: cover;"
+    />
+
     <div
-      v-if="attraction"
-      class="max-w-4xl mx-auto bg-white dark:bg-gray-900 rounded-3xl shadow-2xl p-8 space-y-8 transition-all duration-300"
+      v-if="!imageLoaded"
+      class="position-absolute top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center bg-light"
     >
-      <!-- 제목 및 유형 -->
-      <div>
-        <h1 class="text-4xl font-extrabold text-gray-900 dark:text-white mb-2">
-          {{ attraction.title }}
-        </h1>
-        <p class="text-sm text-indigo-600 dark:text-indigo-400">
-          🏷️ {{ contentTypeMap[attraction.contentTypeId] || "기타" }}
-        </p>
+      <div class="spinner-border text-secondary" role="status">
+        <span class="visually-hidden">Loading...</span>
       </div>
+    </div>
+  </div>
 
-      <!-- 이미지 -->
-      <div class="overflow-hidden rounded-2xl shadow-lg">
-        <div v-if="attraction.image2.trim().length !== 0">
-          <img
-            v-show="imageLoaded"
-            :src="attraction.image2"
-            alt="Attraction Image"
-            class="w-full h-80 object-cover transform hover:scale-105 transition-transform duration-500"
-            @load="imageLoaded = true"
-          />
-
-          <!-- 로딩 스피너 -->
-          <div v-if="!imageLoaded" class="w-full h-80 flex items-center justify-center bg-gray-200 dark:bg-gray-700">
-            <span class="text-gray-500 dark:text-gray-300 animate-pulse">🖼️ 이미지 로딩 중...</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- 개요 및 상세 정보 -->
-      <div class="space-y-4 text-gray-700 dark:text-gray-300">
-        <div v-if="attraction.homepage" class="text-blue-600 dark:text-blue-400 underline text-sm">
-          <span v-html="attraction.homepage"></span>
-        </div>
-        <p class="leading-relaxed text-lg">
-          {{ attraction.overview }}
-        </p>
-        <p class="text-sm text-gray-500 dark:text-gray-400">
-          📍 <span class="font-medium">위치:</span> {{ attraction.addr1 + " " + attraction.addr2 }}
-        </p>
+      <div class="card-body">
+        <h2 class="card-title fw-bold">{{ attraction.title }}</h2>
+        <p class="text-primary small">🏷️ {{ contentTypeMap[attraction.contentTypeId] || '기타' }}</p>
+        <p v-if="attraction.homepage" class="mt-2"><a v-html="attraction.homepage" class="text-decoration-underline"></a></p>
+        <p class="card-text mt-3">{{ attraction.overview }}</p>
+        <p class="text-muted small mt-4">📍 <strong>위치:</strong> {{ attraction.addr1 }} {{ attraction.addr2 }}</p>
       </div>
     </div>
 
-    <!-- 로딩 상태 -->
-    <div v-else class="text-center text-gray-500 dark:text-gray-400 mt-10">
-      <p class="text-lg animate-pulse">⏳ 여행지 정보를 불러오는 중...</p>
+    <div v-else class="text-center text-muted mt-5">
+      <p class="fs-5">⏳ 여행지 정보를 불러오는 중...</p>
     </div>
   </div>
 </template>
@@ -109,4 +93,14 @@ onMounted(async () => {
     color: #edf2f7;
   }
 }
+.object-fit-cover {
+  object-fit: cover;
+  height: 400px;
+  transition: transform 0.4s ease;
+}
+.object-fit-cover:hover {
+  transform: scale(1.05);
+}
 </style>
+
+

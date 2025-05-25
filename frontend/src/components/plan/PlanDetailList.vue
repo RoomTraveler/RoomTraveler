@@ -1,27 +1,52 @@
 <template>
-  <ul style="list-style: none; padding: 0">
-    <li v-for="(item, idx) in items" :key="item.order" class="mb-4">
-      <span class="font-semibold">{{ idx + 1 }}.</span>
-      <!-- 타이틀 클릭 시 이동 -->
-      <a
-        :href="`/attractions/${item.attractionId}`"
-        class="attraction-title"
-        @click.prevent="goToAttraction(item.attractionId)"
-      >
-        {{ item.title }}
-      </a>
-
-      <!-- 이미지 확대 효과 -->
-      <div class="image-wrapper">
-        <img :src="item.imageUrl.length === 0 ? '/src/assets/no-image.jpg': item.imageUrl" :alt="item.title" class="attraction-image" />
+  <div class="timeline-container">
+    <div
+      v-for="(item, idx) in items"
+      :key="item.order"
+      class="timeline-item d-flex"
+    >
+      <div class="timeline-left text-center">
+        <div class="circle-number" :class="`circle-${idx + 1}`">
+          {{ idx + 1 }}
+        </div>
+        <div class="line"></div>
       </div>
-    </li>
-  </ul>
+
+      <div class="timeline-card card shadow-sm">
+        <div class="card-body">
+          <h5 class="card-title mb-1">
+            <a
+              :href="`/attractions/${item.attractionId}`"
+              class="attraction-title"
+              @click.prevent="goToAttraction(item.attractionId)"
+            >
+              {{ item.title }}
+            </a>
+          </h5>
+          <p class="card-subtitle text-muted small">
+            {{ contentTypeMap[item.contentType] }}
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
 </template>
+
 
 <script setup>
 import { defineProps } from "vue";
 import { useRouter } from "vue-router";
+
+const contentTypeMap = {
+  12: "관광지",
+  14: "문화시설",
+  15: "축제공연행사",
+  25: "여행코스",
+  28: "레포츠",
+  32: "숙박",
+  38: "쇼핑",
+  39: "음식점",
+};
 
 const props = defineProps({
   items: {
@@ -29,6 +54,7 @@ const props = defineProps({
     default: () => [],
   },
 });
+console.log(props.items)
 const router = useRouter();
 
 const goToAttraction = (id) => {
@@ -37,34 +63,62 @@ const goToAttraction = (id) => {
 </script>
 
 <style scoped>
-.attraction-title {
-  margin-left: 0.5rem;
-  color: #007bff;
-  cursor: pointer;
-  text-decoration: none;
-  font-weight: bold;
-}
-.attraction-title:hover {
-  text-decoration: underline;
+.timeline-container {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  gap: 1.5rem;
+  position: relative;
 }
 
-.image-wrapper {
-  display: inline-block;
-  margin-top: 0.5rem;
-  transition: transform 0.3s ease;
-  overflow: hidden;
-  border-radius: 8px;
-  width: 150px;
-  height: 150px;
+.timeline-item {
+  display: flex;
+  align-items: flex-start;
 }
-.attraction-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.3s ease;
+
+.timeline-left {
+  width: 60px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
 }
-.image-wrapper:hover .attraction-image {
-  transform: scale(1.5);
-  z-index: 1;
+
+.circle-number {
+  width: 28px;
+  height: 28px;
+  background-color: #6c63ff;
+  color: white;
+  border-radius: 50%;
+  font-size: 14px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.line {
+  width: 2px;
+  flex-grow: 1;
+  background-color: #ddd;
+}
+
+.timeline-card {
+  flex-grow: 1;
+  margin-left: 16px;
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  background-color: #fff;
+}
+
+.attraction-title {
+  color: #212529;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.attraction-title:hover {
+  color: #0d6efd;
+  text-decoration: underline;
 }
 </style>

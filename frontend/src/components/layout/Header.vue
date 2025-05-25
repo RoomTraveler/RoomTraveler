@@ -13,7 +13,7 @@
             <!-- 토글 버튼 영역 -->
             <div class="toggle-wrapper">
               <div class="toggle-button" :class="{ active: selected === '숙박' }" @click="select('숙박')">숙박</div>
-              <div class="toggle-button" :class="{ active: selected === '여행' }" @click="select('여행')">여행</div>
+              <div class="toggle-button" :class="{ active: selected !== '숙박' }" @click="select('여행')">여행</div>
               <div class="toggle-indicator" :style="indicatorStyle"></div>
             </div>
           </div>
@@ -232,7 +232,7 @@ onMounted(() => {
 
   if (route.path.includes("/accommodation")) {
     selected.value = "숙박";
-  } else if (route.path.includes("/plan")) {
+  } else {
     selected.value = "여행";
   }
 });

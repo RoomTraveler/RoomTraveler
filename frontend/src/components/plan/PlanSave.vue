@@ -225,6 +225,20 @@ const setMinDate = () => {
 };
 
 const loadKakaoMapScript = async () => {
+  if (!window.kakao || !window.kakao.maps) {
+    await new Promise((resolve) => {
+      const script = document.createElement("script");
+      script.src = "https://dapi.kakao.com/v2/maps/sdk.js?appkey=a1b7d43f74e8d7c4fa60d02ce2c13f58&autoload=false";
+      script.onload = () => {
+        window.kakao.maps.load(() => {
+          resolve();
+        });
+      };
+      document.head.appendChild(script);
+    });
+  }
+
+  // 이 아래는 스크립트가 로드된 뒤 실행돼야 함
   const centerLatLng = { latitude: 35.205432, longitude: 126.811591 };
   const options = {
     center: new window.kakao.maps.LatLng(centerLatLng.latitude, centerLatLng.longitude),

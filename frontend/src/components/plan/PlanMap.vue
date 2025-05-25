@@ -1,6 +1,6 @@
 <template>
-  <div class="col-md-8">
-    <div ref="mapContainer" style="width: 100%; height: 400px" class="border"></div>
+  <div class="d-flex justify-content-center mt-5">
+    <div ref="mapContainer" class="map-container"></div>
   </div>
 </template>
 
@@ -102,3 +102,15 @@ const setMarkers = () => {
 
 const getColorByIndex = (i, total) => `hsl(${(i / total) * 360}, 80%, 60%)`
 </script>
+
+<style scoped>
+.map-container {
+  width: 100%;
+  max-width: 800px;
+  height: 400px;
+  border: 1px solid #dee2e6;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+</style>

@@ -1,4 +1,5 @@
 <template>
+  <Header/>
   <section class="search-result">
     <h2 class="title">🔍 '{{ keyword }}' 검색 결과</h2>
 
@@ -20,7 +21,7 @@
         />
         <h3>{{ item.title }}</h3>
         <p>{{ item.addr1 }}</p>
-        <p>{{ item.overview?.slice(0, 100) }}...</p>
+        <p>{{ item.overview?.slice(0, 20) }}...</p>
       </li>
     </ul>
 
@@ -30,9 +31,11 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted } from "vue";
+import { ref, watch, onMounted, onBeforeUnmount } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import api from "@/api/index";
+import Header from '@/components/layout/Header.vue'
+import { useScrollStore } from '@/store/useScrollStore'
 
 // 상태
 const route = useRoute();
@@ -44,6 +47,8 @@ const size = 10;
 const hasMore = ref(true);
 const lastElement = ref(null);
 const router = useRouter();
+
+const scrollStore = useScrollStore()
 
 // API 요청
 const fetchSearchResults = async () => {
@@ -77,6 +82,13 @@ const fetchSearchResults = async () => {
 };
 
 const goToDetail = (id) => {
+scrollStore.saveState({
+  keyword: keyword.value,
+  page:    page.value,
+  items:   attractions.value,
+  scrollY: window.scrollY
+  })
+
   router.push(`/attractions/${id}`);
 };
 
@@ -107,13 +119,23 @@ const observeLastElement = () => {
 };
 
 onMounted(() => {
-  resetSearch();
+  if (scrollStore.keyword === route.query.keyword) {
+    attractions.value = [...scrollStore.items]
+    page.value        = scrollStore.page
+    hasMore.value     = scrollStore.items.length % size === 0
+    
+    setTimeout(() => window.scrollTo(0, scrollStore.scrollY), 0)
+    } else {
+      scrollStore.clearState()
+      resetSearch()
+    }
   observeLastElement();
 });
 
 watch(
   () => route.query.keyword,
   (newKeyword) => {
+    scrollStore.clearState()
     keyword.value = newKeyword;
     resetSearch();
   }
@@ -145,17 +167,22 @@ const resetSearch = () => {
   margin: 2rem 0;
 }
 .attractions-list {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
   list-style: none;
   padding: 0;
+  margin: 0;
 }
+
 .attraction-card {
   border: 1px solid #ddd;
   border-radius: 8px;
   padding: 1rem;
-  margin-bottom: 1rem;
   background: #f9f9f9;
   cursor: pointer;
 }
+
 .preview-image {
   width: 100%;
   max-height: 200px;

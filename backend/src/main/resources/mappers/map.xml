@@ -229,13 +229,20 @@
             pa.order_num,
             a.title,
             a.content_type_id,
-            a.first_image2
-        FROM plan p
-                 JOIN plan_attraction pa  ON p.plan_id = pa.plan_id
-                 JOIN attractions    a    ON pa.attraction_id = a.no
-        WHERE p.is_shared = 1
-        ORDER BY p.likes DESC
-        LIMIT #{size} OFFSET #{offset}
+            a.first_image2,
+            a.latitude,
+            a.longitude
+        FROM (
+                 SELECT plan_id
+                 FROM plan
+                 WHERE is_shared = 1
+                 ORDER BY likes DESC
+                 LIMIT #{size} OFFSET #{offset}
+             ) limited_plans
+                 JOIN plan p ON p.plan_id = limited_plans.plan_id
+                 JOIN plan_attraction pa ON p.plan_id = pa.plan_id
+                 JOIN attractions a ON pa.attraction_id = a.no
+        ORDER BY p.likes DESC, pa.order_num ASC
     </select>
 
     <select id="findLikedAttractionsByUserId" resultMap="RegionTripResMap">

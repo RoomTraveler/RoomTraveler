@@ -1,7 +1,10 @@
 <template>
-  <div class="p-4">
+  <Header />
+  <div class="container py-4">
     <AttractionDetail @location-loaded="onLocationLoaded" />
-    <KakaoMapOneAttr :latitude="latitude" :longitude="longitude" />
+    <div class="d-flex justify-content-center mt-5">
+      <KakaoMapOneAttr :latitude="latitude" :longitude="longitude" />
+    </div>
   </div>
 </template>
 
@@ -9,6 +12,7 @@
 import { ref } from "vue";
 import AttractionDetail from "@/components/attraction/AttractionDetail.vue";
 import KakaoMapOneAttr from "@/components/attraction/KakaoMapOneAttr.vue";
+import Header from '@/components/layout/Header.vue'
 
 const latitude = ref(null);
 const longitude = ref(null);

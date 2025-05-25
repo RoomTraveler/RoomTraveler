@@ -111,27 +111,32 @@
           </div>
           <div class="card-body">
             <draggable
-              v-model="selectedPlaces"
-              class="list-group"
-              ghost-class="ghost"
-              @start="dragging = true"
-              @end="dragging = false"
-              item-key="title"
-            >
-              <template #item="{ element }">
-                <div class="list-group-item">
-                  {{ element.title }}
-                </div>
-              </template>
-            </draggable>
-            <label>
-              <input v-model="isShared" type="checkbox" name="is_shared" />
-              모두와 공유하기
-            </label>
-            <br />
-            <label for="datePicker">날짜 선택:</label>
-            <input type="date" id="datePicker" v-model="selectedDate" :min="minDate" />
-            <button type="button" class="btn btn-success w-100" @click="savePlan">선택한 장소 저장</button>
+  v-model="selectedPlaces"
+  class="list-group"
+  ghost-class="ghost"
+  @start="dragging = true"
+  @end="dragging = false"
+  item-key="title"
+>
+  <template #item="{ element, index }">
+    <div class="list-group-item d-flex justify-between items-center">
+      <span>{{ element.title }}</span>
+      <button @click="removePlace(index)" class="btn btn-danger btn-sm">
+        삭제
+      </button>
+    </div>
+  </template>
+</draggable>
+            <template v-if="squadMembers.length - 1 === position">
+              <label>
+                <input v-model="isShared" type="checkbox" name="is_shared" />
+                모두와 공유하기
+              </label>
+              <br />
+              <label for="datePicker">날짜 선택:</label>
+              <input type="date" id="datePicker" v-model="selectedDate" :min="minDate" />
+              <button type="button" class="btn btn-success w-100" @click="savePlan">선택한 장소 저장</button>
+            </template>
           </div>
         </div>
       </div>
@@ -153,7 +158,7 @@ import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue";
 import draggable from "vuedraggable";
 import ModalWrapper from "@/components/attraction/ModelWrapper.vue";
 import AttractionDetail from "@/components/attraction/AttractionDetail.vue";
-import { useRoute } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import SockJS from "sockjs-client/dist/sockjs.min.js";
 import { Client } from "@stomp/stompjs";
 import { useUserStore } from "@/store/userStore";
@@ -162,6 +167,7 @@ import apiGroup from "@/api/index";
 const userStore = useUserStore();
 const userId = userStore.user.userId;
 const route = useRoute();
+const router = useRouter();
 const squadId = route.query.squadId;
 let stompClient = null;
 
@@ -178,7 +184,7 @@ const keywordText = ref("");
 const spots = ref([]);
 const currentPage = ref(1);
 const totalPages = ref(0);
-const savePolyline = ref(null);
+const savePolyline = ref([]);
 const imageSize = ref(null);
 const imageOption = ref(null);
 const likedAttractions = ref({});
@@ -226,6 +232,19 @@ const pageNumbers = computed(() => {
   }
   return pages;
 });
+
+function removePlace(index) {
+  selectedPlaces.value.splice(index, 1)
+  stompClient.publish({
+    destination: "/app/squad/selectedPlaces",
+    body: JSON.stringify({
+      squadId,
+      messageType: "SelectedPlaces",
+      userId,
+      content: selectedPlaces.value,
+    }),
+  });
+}
 
 const showModal = ref(false);
 const modalSpotId = ref(null);
@@ -279,6 +298,9 @@ const getSquadMembers = async () => {
   squadMembers.value = response.data;
   const userObj = squadMembers.value.find(member => member.userId === userId);
   position = userObj.position;
+  console.log(1248109501)
+  console.log(squadMembers.value.length, position)
+  console.log(1248124234209501)
 };
 
 // 초기화 함수들
@@ -330,18 +352,18 @@ const initKakaoMap = () => {
   mapContainer.value.addEventListener('mouseleave', function() {
     lastLatLng = null;
     stompClient.publish({
-        destination: "/app/squad/mouseMove",
-        body: JSON.stringify({
-          squadId,
-          messageType: "Mousemove",
-          userId,
-          content: {
-            latitude: null,
-            longitude: null,
-          },
-          position,
-        }),
-      });
+      destination: "/app/squad/mouseMove",
+      body: JSON.stringify({
+        squadId,
+        messageType: "Mousemove",
+        userId,
+        content: {
+          latitude: null,
+          longitude: null,
+        },
+        position,
+      }),
+    });
 });
 
   if (navigator.geolocation) {
@@ -426,9 +448,12 @@ const socketConfig = () => {
         } else if (body.messageType === "SelectedPlaces") {
           selectedPlaces.value = body.content;
         } else if (body.messageType === "Mousemove") {
-          const userId = body.userId;
           const { latitude, longitude } = body.content;
-          updateUserCursor(userId, body.position, latitude, longitude);
+          if (body.userId != userId) {
+            updateUserCursor(body.userId, body.position, latitude, longitude);
+          }
+        } else if (body.messageType === "savePlan") {
+          router.push('/plans')
         }
       });
 
@@ -621,105 +646,75 @@ const updateMap = (spots) => {
   }
 };
 
-// const panTo = (latitude, longitude) => {
-//   if (!window.kakao || !window.kakao.maps || !map.value) return
+const setMarkers = () => {
+  // 기존 마커/선 제거
+  savePolyline.value.forEach(o => o.setMap(null))
+  savePolyline.value = []
 
-//   const moveLatLon = new window.kakao.maps.LatLng(latitude, longitude)
-//   map.value.panTo(moveLatLon)
-// }
+  const bounds = new window.kakao.maps.LatLngBounds()
 
-// const selectSpot = (spot) => {
-//   // 이미 선택된 장소인지 확인
-//   const alreadySelected = selectedPlaces.value.some((place) => place.id === spot.contentId)
-//   if (alreadySelected) {
-//     alert('이미 선택된 장소입니다.')
-//     return
-//   }
+  selectedPlaces.value.forEach((item, index) => {
+    const position = new window.kakao.maps.LatLng(item.latitude, item.longitude)
 
-//   selectedPlaces.value.push({
-//     id: spot.contentId,
-//     title: spot.title,
-//     latitude: spot.latitude,
-//     longitude: spot.longitude,
-//   })
+    const content = `<div style="
+      background: #3f51b5;
+      color: white;
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      line-height: 30px;
+      text-align: center;
+      font-weight: bold;
+      box-shadow: 0 0 5px rgba(0,0,0,0.3);
+    ">
+      ${index + 1}
+    </div>`
 
-//   // 경로 선 그리기
-//   drawLines()
-// }
+    const customOverlay = new window.kakao.maps.CustomOverlay({
+      position,
+      content,
+      xAnchor: 0.5,
+      yAnchor: 0.5,
+    })
 
-// const toggleSpotSelection = (spot, event) => {
-//   const isChecked = event.target.checked
+    customOverlay.setMap(map)
+    savePolyline.value.push(customOverlay)
+    bounds.extend(position)
 
-//   if (isChecked) {
-//     // 이미 선택된 장소인지 확인
-//     const alreadySelected = selectedPlaces.value.some((place) => place.id === spot.contentId)
-//     if (alreadySelected) {
-//       event.target.checked = false
-//       alert('이미 선택된 장소입니다.')
-//       return
-//     }
+    if (index < selectedPlaces.value.length - 1) {
+      const next = selectedPlaces.value[index + 1]
+      const linePath = [
+        position,
+        new window.kakao.maps.LatLng(next.latitude, next.longitude),
+      ]
 
-//     // 선택된 장소에 추가
-//     selectedPlaces.value.push({
-//       id: spot.contentId,
-//       title: spot.title,
-//       latitude: spot.latitude,
-//       longitude: spot.longitude,
-//     })
-//   } else {
-//     // 선택된 장소에서 제거
-//     selectedPlaces.value = selectedPlaces.value.filter((place) => place.id !== spot.contentId)
-//   }
+      const polyline = new window.kakao.maps.Polyline({
+        path: linePath,
+        strokeWeight: 4,
+        strokeColor: getColorByIndex(index, selectedPlaces.value.length),
+        strokeOpacity: 0.8,
+        strokeStyle: 'solid',
+        map: map,
+      })
 
-//   // 경로 선 그리기
-//   drawLines()
-// }
+      savePolyline.value.push(polyline)
+    }
+  })
 
-// const addToSelectedPlaces = (id, title, latitude, longitude) => {
-//   // 이미 선택된 장소인지 확인
-//   const alreadySelected = selectedPlaces.value.some((place) => place.id === id)
-//   if (alreadySelected) {
-//     alert('이미 선택된 장소입니다.')
-//     return
-//   }
+  if (selectedPlaces.value.length > 0) {
+    map.setBounds(bounds)
+  }
+}
 
-//   selectedPlaces.value.push({
-//     id,
-//     title,
-//     latitude,
-//     longitude,
-//   })
+// 색상 구하는 함수
+const getColorByIndex = (i, total) => `hsl(${(i / total) * 360}, 80%, 60%)`
 
-//   // 경로 선 그리기
-//   drawLines()
-// }
-
-// const drawLines = () => {
-//   if (!window.kakao || !window.kakao.maps || !map.value) return
-
-//   // 기존 선이 있으면 제거
-//   if (savePolyline.value) {
-//     savePolyline.value.setMap(null)
-//   }
-
-//   // 선택된 장소가 2개 이상일 때만 선 그리기
-//   if (selectedPlaces.value.length >= 2) {
-//     const linePath = selectedPlaces.value.map(
-//       (place) => new window.kakao.maps.LatLng(place.latitude, place.longitude),
-//     )
-
-//     const polyline = new window.kakao.maps.Polyline({
-//       path: linePath,
-//       strokeWeight: 3,
-//       strokeColor: '#005666',
-//       strokeOpacity: 0.7,
-//       strokeStyle: 'solid',
-//     })
-
-//     polyline.setMap(map.value)
-//     savePolyline.value = polyline
-//   }
-// }
+// selectedPlaces가 변경될 때 마커 다시 그림
+watch(selectedPlaces, () => {
+  if (mapContainer.value) {
+    setMarkers()
+  }
+}, { deep: true })
 
 const savePlan = async () => {
   if (selectedPlaces.value.length === 0) {
@@ -728,8 +723,24 @@ const savePlan = async () => {
   }
 
   try {
+    squadMembers.value.forEach(async (member) => {
+      if (member.position === squadMembers.value.length - 1) return;
+
+      const planData = {
+        userId: member.userId,
+        travelDate: selectedDate.value,
+        isShared: 0,
+        attractionIds: selectedPlaces.value.map((place) => place.no),
+      };
+
+      await apiGroup.api({
+        url: "/api/map/plans",
+        method: "POST",
+        data: planData,
+      });
+    })
     const planData = {
-      userId: userId.value,
+      userId,
       travelDate: selectedDate.value,
       isShared: isShared.value ? 1 : 0,
       attractionIds: selectedPlaces.value.map((place) => place.no),
@@ -741,21 +752,25 @@ const savePlan = async () => {
       data: planData,
     });
 
-    if (!response.ok) throw new Error("여행 계획 저장 실패");
-
     const result = await response.text();
     alert(result);
+
+    stompClient.publish({
+      destination: "/app/squad/savePlan",
+      body: JSON.stringify({
+        squadId,
+        messageType: "savePlan"
+      }),
+    });
 
     // 저장 후 선택 목록 초기화
     selectedPlaces.value = [];
 
     // 경로선 제거
     if (savePolyline.value) {
-      savePolyline.value.setMap(null);
-      savePolyline.value = null;
+      savePolyline.value.forEach(polyline => polyline.setMap(null));
+      savePolyline.value = [];
     }
-
-    fetchTourSpots(0);
   } catch (error) {
     console.error("여행 계획 저장 중 오류 발생:", error);
     alert("여행 계획 저장에 실패했습니다.");

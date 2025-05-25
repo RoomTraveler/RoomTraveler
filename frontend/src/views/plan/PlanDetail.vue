@@ -1,11 +1,14 @@
 <template>
-  <div class="p-4">
-    <h1 class="text-xl font-bold mb-4">여행 계획 상세</h1>
+  <Header/>
+  <div class="container mt-5">
+    <h1 class="text-center mb-4">여행 계획 상세</h1>
     <div v-if="loaded">
-      <PlanDetailList :items="plan.planAttractions" />
-      <PlanMapView :items="plan.planAttractions" />
+      <div class="detail-wrapper">
+        <PlanDetailList :items="plan.planAttractions" />
+      </div>
+      <PlanMap :items="plan.planAttractions" />
     </div>
-    <div v-else>
+    <div v-else class="text-center text-muted">
       <p>로딩 중...</p>
     </div>
   </div>
@@ -16,7 +19,8 @@ import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import axios from 'axios'
 import PlanDetailList from '@/components/plan/PlanDetailList.vue'
-import PlanMapView from '@/components/plan/PlanMap.vue'
+import PlanMap from '@/components/plan/PlanMap.vue'
+import Header from '@/components/layout/Header.vue'
 
 const route = useRoute()
 const plan = ref({})
@@ -33,3 +37,10 @@ onMounted(async () => {
   }
 })
 </script>
+
+<style scoped>
+.detail-wrapper {
+  display: flex;
+  justify-content: center;
+}
+</style>

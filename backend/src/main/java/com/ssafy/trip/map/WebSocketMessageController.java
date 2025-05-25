@@ -33,4 +33,9 @@ public class WebSocketMessageController {
         log.info("Squad MouseMove: " + message.getContent());
         messagingTemplate.convertAndSend("/topic/squad." + message.getSquadId(), message);
     }
+
+    @MessageMapping("/squad/savePlan")
+    public void savePlan(SaveMessage message) {
+        messagingTemplate.convertAndSend("/topic/squad." + message.getSquadId(), message);
+    }
 }
