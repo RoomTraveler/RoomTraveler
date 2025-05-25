@@ -430,6 +430,15 @@ public class ReviewServiceImpl implements ReviewService {
         return reviewDao.selectByReservationId(reservationId);
     }
 
+    @Override
+    public List<Review> getReviewsByHostId(Long hostId, Integer rating) throws SQLException {
+        List<Review> reviews = reviewDao.selectByHostId(hostId);
+        if (rating != null && reviews != null && !reviews.isEmpty()) {
+            reviews.removeIf(review -> !rating.equals(review.getRating()));
+        }
+        return reviews;
+    }
+
     // --- 요청하신 추가 기능 메서드들 --- 
 
     @Override

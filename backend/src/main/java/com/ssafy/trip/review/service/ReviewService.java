@@ -164,6 +164,18 @@ public interface ReviewService {
     Review getReviewByReservationId(Long reservationId) throws SQLException;
 
     /**
+     * 호스트 ID로 해당 호스트가 관리하는 모든 숙소의 리뷰 목록을 조회합니다.
+     * 각 리뷰에는 이미지 정보가 포함될 수 있습니다.
+     * 필요한 경우 rating으로 필터링합니다.
+     *
+     * @param hostId 호스트 ID
+     * @param rating 필터링할 별점 (선택 사항, null이면 모든 별점)
+     * @return 리뷰 목록
+     * @throws SQLException 데이터베이스 오류 발생 시
+     */
+    List<Review> getReviewsByHostId(Long hostId, Integer rating) throws SQLException;
+
+    /**
      * 특정 리뷰 이미지의 썸네일 상태를 설정합니다.
      * 해당 리뷰의 다른 이미지들은 썸네일 상태가 해제됩니다.
      *

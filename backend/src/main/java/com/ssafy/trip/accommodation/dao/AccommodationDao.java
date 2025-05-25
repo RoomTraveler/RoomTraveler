@@ -30,6 +30,9 @@ public interface AccommodationDao {
      */
     Accommodation getAccommodationById(Long accommodationId) throws SQLException;
 
+
+    //타입별 카운트
+    List<Map<String, Object>> selectAccommodationTypeCounts() throws SQLException;
     /**
      * 호스트 ID로 숙소 목록을 조회합니다.
      * @param hostId 호스트 ID
@@ -153,4 +156,9 @@ public interface AccommodationDao {
     int updateRoomPriceStats(@Param("accommodationId") Long accommodationId,
                              @Param("minRoomPrice") Double minRoomPrice,
                              @Param("maxRoomPrice") Double maxRoomPrice) throws SQLException;
+
+    int getFilteredAccommodationsCount(Map<String, Object> filters) throws SQLException;
+
+    // 숙소 등록을 위한 메소드. 생성된 숙소의 ID를 반환하거나 Accommodation 객체에 ID가 설정되도록 함
+    void insertAccommodation(Accommodation accommodation) throws SQLException;
 }

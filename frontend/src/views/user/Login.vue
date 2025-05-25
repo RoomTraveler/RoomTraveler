@@ -2,7 +2,7 @@
   <div class="login-container">
     <div class="login-form">
       <!-- 동적 타이틀 -->
-      <h1>{{ isHostMode ? "호스트 회원 로그인" : "로그인" }}</h1>
+      <h1>로그인</h1>
 
       <div v-if="error" class="error-message">
         {{ error }}
@@ -16,7 +16,7 @@
             id="email"
             v-model="email"
             required
-            :placeholder="isHostMode ? '호스트 이메일을 입력하세요' : '이메일 주소를 입력하세요'"
+            placeholder="이메일 주소를 입력하세요"
           />
         </div>
 
@@ -34,14 +34,12 @@
         </div>
 
         <button type="submit" class="login-button" :disabled="loading">
-          {{
-            loading ? (isHostMode ? "호스트 로그인 중..." : "로그인 중...") : isHostMode ? "호스트 로그인" : "로그인"
-          }}
+          {{ loading ? "로그인 중..." : "로그인" }}
         </button>
       </form>
 
-      <!-- 기본 모드에서만 소셜 로그인 보여줌 -->
-      <div v-if="!isHostMode" class="social-login">
+      <!-- 소셜 로그인 보여줌 -->
+      <div class="social-login">
         <p>또는 소셜 계정으로 로그인</p>
         <div class="social-buttons">
           <button class="social-button google">Google로 로그인</button>
@@ -53,16 +51,9 @@
       <!-- 회원가입 링크 -->
       <div class="register-link">
         계정이 없으신가요?
-        <router-link :to="isHostMode ? '/host/register' : '/register'">
-          {{ isHostMode ? "비즈니스 회원가입" : "회원가입" }}
+        <router-link to="/register">
+          회원가입
         </router-link>
-      </div>
-
-      <!-- 모드 토글 버튼 -->
-      <div class="mode-toggle">
-        <button type="button" @click="toggleMode">
-          {{ isHostMode ? "일반 로그인/회원가입" : "호스트 로그인/회원가입" }}
-        </button>
       </div>
     </div>
   </div>
@@ -72,7 +63,8 @@
 import { ref, computed, onMounted, nextTick } from "vue";
 import { useUserStore } from "@/store/userStore";
 import { useRouter, useRoute } from "vue-router";
-import api from "@/api/index";
+// api 임포트는 현재 사용되지 않으므로 주석 처리 또는 제거 가능
+// import api from "@/api/index";
 
 export default {
   name: "LoginView",
@@ -84,33 +76,37 @@ export default {
     const email = ref("");
     const password = ref("");
     const rememberMe = ref(false);
-    const isHostMode = ref(false);
+    // isHostMode 제거
     const fromTab = ref(null); // Header에서 전달된 탭 정보 저장
 
     const loading = computed(() => userStore.loading);
-    const componentError = ref(null); // 스토어의 error와 구분하기 위해 componentError 사용
+    const componentError = ref(null);
 
     async function handleLogin() {
       componentError.value = null;
+      // login 메소드 호출 시 isHostMode 인자 제거 (userStore.login 시그니처 확인 필요)
       const result = await userStore.login(email.value, password.value);
 
       if (result && result.success) {
-        const userRole = result.user?.role;
-        let redirectPath = route.query.redirect?.toString() || "/"; // 기본 리다이렉션 경로
+        const userRole = result.user?.role; // 역할은 계속 사용될 수 있음
+        let redirectPath = route.query.redirect?.toString() || "/";
 
-        // fromTab 값과 userRole에 따라 리다이렉션 경로 우선순위 결정
         if (fromTab.value === "숙박") {
-          redirectPath = "/accommodation"; // AccommodationHome.vue의 라우트 경로로 수정 필요
+          redirectPath = "/accommodation";
         } else if (fromTab.value === "여행") {
-          redirectPath = "/plan"; // Plan.vue의 라우트 경로로 수정 필요
+          redirectPath = "/plan";
         }
 
-        // 역할별 우선 리다이렉션 (선택적: 위의 탭 기반 리다이렉션보다 우선할 경우)
-        if (userRole === "HOST") {
-          redirectPath = route.query.redirect?.toString() || "/host";
-        } else if (userRole === "ADMIN") {
+        // 역할별 리다이렉션은 유지하되, HOST 관련 특별 처리는 일반 사용자 경로로 변경하거나 제거
+        // 예시: ADMIN만 특별 취급하고, HOST는 일반 사용자와 동일하게 처리
+        if (userRole === "ADMIN") {
           redirectPath = route.query.redirect?.toString() || "/admin";
+        } else if (userRole === "HOST") {
+          // 호스트도 일반 사용자처럼 메인 페이지 또는 이전 페이지로 리다이렉션
+          // 혹은 호스트 전용 대시보드가 있다면 그 경로로 설정
+           redirectPath = route.query.redirect?.toString() || "/"; // 예: 일반 사용자와 동일
         }
+
 
         console.log(
           "[Login.vue] Login successful. Preparing to redirect to:",
@@ -121,52 +117,32 @@ export default {
           userRole
         );
 
-        // nextTick을 사용하여 상태 업데이트가 DOM 및 다른 시스템에 전파될 시간을 줍니다.
         await nextTick();
 
         console.log("[Login.vue] Redirecting now...");
         router.push(redirectPath);
       } else {
+        // 에러 메시지 일반화
         componentError.value = result.error || "이메일 또는 비밀번호가 올바르지 않습니다.";
       }
     }
 
-    function toggleMode() {
-      isHostMode.value = !isHostMode.value;
-      componentError.value = null;
-      email.value = "";
-      password.value = "";
-      if (userStore.error) {
-        // 스토어의 에러도 있다면 초기화
-        userStore.error = null;
-      }
-    }
+    // toggleMode 함수 제거
 
     onMounted(() => {
-      // URL 쿼리에서 from 값 읽기
       if (route.query.from) {
         fromTab.value = route.query.from;
         console.log("[Login.vue] Mounted. Received fromTab:", fromTab.value);
       }
 
-      // 예시: URL 경로에 따라 isHostMode 기본값 설정
-      if (route.path.toLowerCase().includes("host")) {
-        isHostMode.value = true;
-      }
-      // 컴포넌트 마운트 시 userStore의 loading 상태를 false로 초기화
+      // isHostMode 관련 로직 제거
+      // if (route.path.toLowerCase().includes("host")) {
+      //   isHostMode.value = true;
+      // }
+
       if (userStore.loading) {
         userStore.loading = false;
       }
-
-      // 이미 로그인된 경우 리다이렉트 (선택적: UX에 따라 로그인 페이지를 보여줄 수도 있음)
-      // if (userStore.isAuthenticated) {
-      //   console.log('Already logged in, redirecting...');
-      //   const userRole = userStore.user?.role;
-      //   let redirectPath = '/';
-      //   if (userRole === 'HOST') redirectPath = '/host';
-      //   else if (userRole === 'ADMIN') redirectPath = '/admin';
-      //   router.push(redirectPath);
-      // }
     });
 
     return {
@@ -174,11 +150,11 @@ export default {
       password,
       rememberMe,
       loading,
-      error: componentError, // 템플릿에서 'error'로 사용하도록 componentError를 error로 반환
-      isHostMode,
+      error: componentError,
+      // isHostMode 제거
       login: handleLogin,
-      toggleMode,
-      userStore, // 디버깅 또는 추가적인 스토어 상태 접근을 위해 (선택적)
+      // toggleMode 제거
+      userStore, // 디버깅용
     };
   },
 };
@@ -328,6 +304,8 @@ input[type="password"]:focus {
   color: white;
 }
 
+/* .mode-toggle 관련된 스타일은 제거하거나 주석 처리 */
+/*
 .mode-toggle {
   margin-top: 1.5rem;
   text-align: center;
@@ -341,6 +319,7 @@ input[type="password"]:focus {
   font-size: 0.95rem;
   text-decoration: underline;
 }
+*/
 
 .register-link {
   margin-top: 1rem;

@@ -1,164 +1,110 @@
 <template>
-  <div class="container">
-    <!-- 호스트 메인 배너 -->
-    <div class="hero-section text-center">
-      <h1 class="display-4">호스트 포털에 오신 것을 환영합니다</h1>
-      <p class="lead">숙소를 등록하고 관리하세요. 새로운 호스트가 되어보세요!</p>
+  <div class="host-layout container-fluid mt-3">
+    <el-tabs v-model="activeTab" type="border-card" @tab-click="handleTabClick">
+      <el-tab-pane label="대시보드" name="HostDashboard">
+        <template #label>
+          <span><i class="bi bi-speedometer2"></i> 대시보드</span>
+        </template>
+      </el-tab-pane>
+      <el-tab-pane label="숙소 관리" name="HostAccommodations">
+        <template #label>
+          <span><i class="bi bi-house-gear-fill"></i> 숙소 관리</span>
+        </template>
+      </el-tab-pane>
+      <el-tab-pane label="예약 관리" name="HostReservations">
+        <template #label>
+          <span><i class="bi bi-calendar-check"></i> 예약 관리</span>
+        </template>
+      </el-tab-pane>
+      <el-tab-pane label="리뷰 관리" name="HostReviews">
+        <template #label>
+          <span><i class="bi bi-chat-left-text"></i> 리뷰 관리</span>
+        </template>
+      </el-tab-pane>
+      <!-- 필요시 추가 탭 (예: 정산, 프로필 수정 등) -->
+    </el-tabs>
 
-      <div v-if="!isLoggedIn" class="mt-4">
-        <router-link to="/host/login-form" class="btn btn-primary me-2">로그인</router-link>
-        <router-link to="/host/regist-user-form" class="btn btn-success">호스트 가입하기</router-link>
-      </div>
-    </div>
-
-    <div v-if="isLoggedIn">
-      <!-- 로그인한 호스트를 위한 대시보드 -->
-      <div class="row mb-4">
-        <div class="col-md-12">
-          <div class="card">
-            <div class="card-body">
-              <h3 class="card-title">안녕하세요, {{ username }}님!</h3>
-              <p class="card-text">오늘도 좋은 하루 되세요. 아래에서 호스트 관련 기능을 이용하실 수 있습니다.</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 호스트 기능 카드 -->
-      <div class="row">
-        <div class="col-md-4">
-          <div class="card h-100">
-            <div class="card-body text-center">
-              <h5 class="card-title">내 호스트 정보</h5>
-              <p class="card-text">호스트 정보를 확인하고 수정합니다.</p>
-              <router-link :to="`/host/detail/${userId}`" class="btn btn-primary w-100">호스트 정보 관리</router-link>
-            </div>
-          </div>
-        </div>
-
-        <div class="col-md-4">
-          <div class="card h-100">
-            <div class="card-body text-center">
-              <h5 class="card-title">내 숙소 관리</h5>
-              <p class="card-text">등록한 숙소를 관리합니다.</p>
-              <router-link to="/accommodation/host/accommodations" class="btn btn-success w-100">숙소 관리</router-link>
-            </div>
-          </div>
-        </div>
-
-        <div class="col-md-4">
-          <div class="card h-100">
-            <div class="card-body text-center">
-              <h5 class="card-title">예약 관리</h5>
-              <p class="card-text">숙소 예약 현황을 확인합니다.</p>
-              <router-link to="/reservation/host-reservations" class="btn btn-info w-100">예약 관리</router-link>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="row mt-4">
-        <div class="col-md-6">
-          <div class="card h-100">
-            <div class="card-body text-center">
-              <h5 class="card-title">새 숙소 등록</h5>
-              <p class="card-text">새로운 숙소를 등록합니다.</p>
-              <router-link to="/host/register-accommodation" class="btn btn-warning w-100">숙소 등록</router-link>
-            </div>
-          </div>
-        </div>
-
-        <div class="col-md-6">
-          <div class="card h-100">
-            <div class="card-body text-center">
-              <h5 class="card-title">호스트 대시보드</h5>
-              <p class="card-text">숙소 예약 및 수익 통계를 확인합니다.</p>
-              <router-link to="/host/dashboard" class="btn btn-success w-100">대시보드 보기</router-link>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 호스트 혜택 소개 -->
-    <div class="row mt-5">
-      <div class="col-md-12">
-        <h3 class="text-center mb-4">호스트가 되면 누릴 수 있는 혜택</h3>
-      </div>
-      <div class="col-md-4">
-        <div class="card h-100">
-          <div class="card-body text-center">
-            <h5 class="card-title">추가 수입</h5>
-            <p class="card-text">여분의 공간을 활용하여 추가 수입을 올릴 수 있습니다.</p>
-          </div>
-        </div>
-      </div>
-      <div class="col-md-4">
-        <div class="card h-100">
-          <div class="card-body text-center">
-            <h5 class="card-title">유연한 일정</h5>
-            <p class="card-text">원하는 날짜와 시간에 맞춰 숙소를 운영할 수 있습니다.</p>
-          </div>
-        </div>
-      </div>
-      <div class="col-md-4">
-        <div class="card h-100">
-          <div class="card-body text-center">
-            <h5 class="card-title">새로운 만남</h5>
-            <p class="card-text">다양한 게스트를 만나고 새로운 경험을 쌓을 수 있습니다.</p>
-          </div>
-        </div>
-      </div>
+    <div class="host-content mt-4 p-3 bg-light border rounded">
+      <router-view v-slot="{ Component }">
+        <transition name="fade" mode="out-in">
+          <component :is="Component" />
+        </transition>
+      </router-view>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, watch } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
+import { ElTabs, ElTabPane } from 'element-plus';
 
-const isLoggedIn = ref(false)
-const username = ref('')
-const userId = ref(null)
-const router = useRouter()
+const router = useRouter();
+const route = useRoute();
+const activeTab = ref('HostDashboard'); // 기본 활성 탭
 
-const loadUserInfo = async () => {
-  try {
-    // 실제 배포환경에서는 /api/users/me 를 자신의 API 규격에 맞게 수정!
-    const response = await fetch('/api/users/me', {
-      credentials: 'include', // 세션 쿠키 인증 필요시
-    })
-    if (!response.ok) {
-      isLoggedIn.value = false
-      return
+// 현재 라우트에 따라 activeTab 설정
+watch(
+  () => route.name,
+  (routeName) => {
+    if (routeName && typeof routeName === 'string' && 
+        (routeName.startsWith('HostDashboard') || 
+         routeName.startsWith('HostAccommodations') || 
+         routeName.startsWith('HostAccommodation') || // New, Edit, Detail 포함
+         routeName.startsWith('HostReservations') ||
+         routeName.startsWith('HostReviews'))) {
+      
+      if (routeName.includes('Accommodation')) {
+        activeTab.value = 'HostAccommodations';
+      } else if (routeName.includes('Dashboard')) {
+        activeTab.value = 'HostDashboard';
+      } else if (routeName.includes('Reservations')) {
+        activeTab.value = 'HostReservations';
+      } else if (routeName.includes('Reviews')) {
+        activeTab.value = 'HostReviews';
+      } else {
+         activeTab.value = 'HostDashboard';
+      }
     }
-    const user = await response.json()
-    isLoggedIn.value = true
-    username.value = user.name
-    userId.value = user.id
-  } catch (err) {
-    isLoggedIn.value = false
-    username.value = ''
-    userId.value = null
-  }
-}
+  },
+  { immediate: true }
+);
 
-onMounted(loadUserInfo)
+const handleTabClick = (tab) => {
+  if (tab.props.name) {
+    router.push({ name: tab.props.name });
+  }
+};
 </script>
 
 <style scoped>
-.hero-section {
-  background-color: #f8f9fa;
-  padding: 60px 0;
-  margin-bottom: 30px;
-  border-radius: 10px;
+.host-layout {
+  max-width: 1400px; /* 전체 레이아웃 너비 제한 */
+  margin-left: auto;
+  margin-right: auto;
 }
-.card {
-  transition: transform 0.3s;
-  margin-bottom: 20px;
+
+.host-content {
+  min-height: 500px; /* 컨텐츠 영역 최소 높이 */
 }
-.card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+
+/* 탭 아이콘과 텍스트 정렬 */
+.el-tabs__item .bi {
+  margin-right: 6px;
+  vertical-align: middle;
 }
-</style>
+.el-tabs__item span {
+  vertical-align: middle;
+}
+
+/* 트랜지션 효과 */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+</style> 

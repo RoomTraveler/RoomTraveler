@@ -23,6 +23,7 @@ public class Room {
     private String description;       // 객실 설명
     private BigDecimal price;         // 최종 판매가
     private Integer capacity;         // 수용 인원
+    private Integer maxCapacity;      // 최대 수용 인원 (추가)
     private Integer roomCount;        // 객실 수
     private BigDecimal roomSize;      // 객실 크기
     private String roomType;          // 객실 유형

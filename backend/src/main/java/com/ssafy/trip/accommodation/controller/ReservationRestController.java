@@ -1,10 +1,9 @@
 package com.ssafy.trip.accommodation.controller;
 
-import com.ssafy.trip.accommodation.model.CartItem;
+import com.ssafy.trip.cart.model.CartItem;
 import com.ssafy.trip.accommodation.model.Reservation;
-import com.ssafy.trip.accommodation.model.Room;
 import com.ssafy.trip.accommodation.service.AccommodationService;
-import com.ssafy.trip.accommodation.service.CartService;
+import com.ssafy.trip.cart.service.CartService;
 import com.ssafy.trip.accommodation.service.ReservationService;
 
 import org.springframework.format.annotation.DateTimeFormat;
@@ -18,7 +17,6 @@ import lombok.RequiredArgsConstructor;
 import java.math.BigDecimal;
 import java.sql.SQLException;
 import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 /**
@@ -375,7 +373,7 @@ public class ReservationRestController {
         }
 
         try {
-            List<CartItem> cartItems = cartService.getCartItems(userId);
+            List<CartItem> cartItems = cartService.getCartItemsByUserId(userId);
             if (cartItems.isEmpty()) {
                 return ResponseEntity.badRequest().body(Map.of("message", "장바구니가 비어있습니다."));
             }
@@ -415,7 +413,7 @@ public class ReservationRestController {
         }
 
         try {
-            List<CartItem> cartItemsFromService = cartService.getCartItems(userId);
+            List<CartItem> cartItemsFromService = cartService.getCartItemsByUserId(userId);
             if (cartItemsFromService == null || cartItemsFromService.isEmpty()) {
                 return ResponseEntity.badRequest().body(Map.of("error", "장바구니가 비어있습니다."));
             }

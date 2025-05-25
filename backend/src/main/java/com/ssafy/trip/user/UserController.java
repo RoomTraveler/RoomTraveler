@@ -54,16 +54,10 @@ public class UserController {
 		Map<String, Object> response = new HashMap<>();
 
 		try {
-			int result = userService.registUser(user);
-			if (result > 0) {
-				response.put("success", true);
-				response.put("message", "사용자가 성공적으로 등록되었습니다.");
-				return new ResponseEntity<>(response, HttpStatus.CREATED);
-			} else {
-				response.put("success", false);
-				response.put("message", "사용자 등록에 실패했습니다.");
-				return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
-			}
+			userService.registUser(user);
+			response.put("success", true);
+			response.put("message", "사용자가 성공적으로 등록되었습니다.");
+			return new ResponseEntity<>(response, HttpStatus.CREATED);
 		} catch (IllegalArgumentException e) {
 			response.put("success", false);
 			response.put("message", e.getMessage());

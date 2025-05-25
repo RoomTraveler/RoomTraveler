@@ -7,23 +7,41 @@
 
     <!-- 새 사용자 등록 -->
     <insert id="insert" useGeneratedKeys="true" keyProperty="userId">
-        INSERT INTO users (username, email, password, phone, profile_image, role, status, refresh)
-        VALUES (#{username}, #{email}, #{password}, #{phone}, #{profileImage}, 
-                <if test="role == null">'USER'</if><if test="role != null">#{role}</if>, 
-                <if test="status == null">'ACTIVE'</if><if test="status != null">#{status}</if>,
-                #{refreshToken}
+        INSERT INTO users (
+            username, email, password, phone, profile_image, 
+            role, status, refresh, created_at, updated_at
+        )
+        VALUES (
+            #{username}, #{email}, #{password}, #{phone}, #{profileImage}, 
+            <if test="role == null">'USER'</if><if test="role != null">#{role}</if>, 
+            <if test="userAccountStatus == null">'ACTIVE'</if><if test="userAccountStatus != null">#{userAccountStatus}</if>,
+            #{refreshToken},
+            NOW(), NOW()  <!-- 또는 데이터베이스 시스템에 따라 CURRENT_TIMESTAMP -->
         )
     </insert>
 
     <!-- 로그인 -->
     <select id="login" resultMap="userMap">
-        SELECT user_id, username, email, password, phone, profile_image, role, status, created_at, updated_at, refresh 
-        FROM users WHERE email = #{email} AND status = 'ACTIVE'
+        SELECT 
+            u.user_id, u.username, u.email, u.password, u.phone, u.profile_image, u.role, u.status, u.created_at, u.updated_at, u.refresh,
+            h.host_id, h.business_name, h.business_number, h.status AS host_registration_status
+        FROM users u
+        LEFT JOIN hosts h ON u.user_id = h.user_id
+        WHERE u.email = #{email} AND u.status = 'ACTIVE'
     </select>
 
     <!-- 이메일로 사용자 ID 찾기 -->
     <select id="findUserIdByEmail" resultType="long">
         SELECT user_id FROM users WHERE email = #{email} AND status = 'ACTIVE'
+    </select>
+
+    <select id="findByRole" resultMap="userMap">
+        SELECT 
+            u.user_id, u.username, u.email, u.password, u.phone, u.profile_image, u.role, u.status, u.created_at, u.updated_at, u.refresh,
+            h.host_id, h.business_name, h.business_number, h.status AS host_registration_status
+        FROM users u
+        LEFT JOIN hosts h ON u.user_id = h.user_id
+        WHERE u.role = #{role}
     </select>
 
     <resultMap id="userMap" type="com.ssafy.trip.user.User">
@@ -34,28 +52,42 @@
         <result property="phone" column="phone" />
         <result property="profileImage" column="profile_image" />
         <result property="role" column="role" />
-        <result property="status" column="status" />
+        <result property="userAccountStatus" column="status" />
         <result property="createdAt" column="created_at" />
         <result property="updatedAt" column="updated_at" />
         <result property="refreshToken" column="refresh" />
+        <result property="hostId" column="host_id" />
+        <result property="businessName" column="business_name" />
+        <result property="businessNumber" column="business_number" />
+        <result property="hostRegistrationStatus" column="host_registration_status" />
     </resultMap>
 
     <select id="getUserByEmail" resultMap="userMap">
-        SELECT user_id, username, email, password, phone, profile_image, role, status, created_at, updated_at, refresh 
-        FROM users WHERE email = #{email}
+        SELECT 
+            u.user_id, u.username, u.email, u.password, u.phone, u.profile_image, u.role, u.status, u.created_at, u.updated_at, u.refresh,
+            h.host_id, h.business_name, h.business_number, h.status AS host_registration_status
+        FROM users u
+        LEFT JOIN hosts h ON u.user_id = h.user_id
+        WHERE u.email = #{email}
     </select>
 
     <!-- 사용자 ID로 사용자 정보 조회 -->
     <select id="selectUserById" resultMap="userMap">
-        SELECT user_id, username, email, phone, profile_image, role, status, created_at, updated_at, refresh
-        FROM users
-        WHERE user_id = #{userId}
+        SELECT 
+            u.user_id, u.username, u.email, u.phone, u.profile_image, u.role, u.status, u.created_at, u.updated_at, u.refresh,
+            h.host_id, h.business_name, h.business_number, h.status AS host_registration_status
+        FROM users u
+        LEFT JOIN hosts h ON u.user_id = h.user_id
+        WHERE u.user_id = #{userId}
     </select>
 
     <!-- 모든 사용자 조회 -->
     <select id="getUsers" resultMap="userMap">
-        SELECT user_id, username, email, phone, profile_image, role, status, created_at, updated_at, refresh 
-        FROM users
+        SELECT 
+            u.user_id, u.username, u.email, u.phone, u.profile_image, u.role, u.status, u.created_at, u.updated_at, u.refresh,
+            h.host_id, h.business_name, h.business_number, h.status AS host_registration_status
+        FROM users u
+        LEFT JOIN hosts h ON u.user_id = h.user_id
     </select>
 
     <!-- 사용자 정보 업데이트 (이름, 전화번호) -->
@@ -94,7 +126,7 @@
             <if test="phone != null">phone = #{phone},</if>
             <if test="profileImage != null">profile_image = #{profileImage},</if>
             <if test="role != null and role != ''">role = #{role},</if>
-            <if test="status != null and status != ''">status = #{status},</if>
+            <if test="userAccountStatus != null and userAccountStatus != ''">status = #{userAccountStatus},</if>
             <if test="refreshToken != null">refresh = #{refreshToken},</if>
             updated_at = CURRENT_TIMESTAMP
         </set>

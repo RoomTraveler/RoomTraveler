@@ -65,4 +65,6 @@ public interface UserDao {
     int updateUserRefreshToken(Long userId, String refreshToken);
 
     int updateUserGeneral(User user);
+
+    List<User> findByRole(String role);
 }

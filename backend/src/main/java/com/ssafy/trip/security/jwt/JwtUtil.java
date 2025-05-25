@@ -7,6 +7,7 @@ import java.util.Map;
 import javax.crypto.SecretKey;
 import io.jsonwebtoken.security.Keys;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -38,11 +39,29 @@ public class JwtUtil {
     private int refreshExpire;
 
     public String generateAccessToken(User user) {
-        return create("accessToken", accessExpire, Map.of("email", user.getEmail(), "id", user.getUserId(), "name", user.getUsername(),"role",user.getRole()));
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("id", user.getUserId());
+        claims.put("email", user.getEmail());
+        claims.put("name", user.getUsername());
+        claims.put("role", user.getRole());
+        if (user.getHostId() != null) {
+            claims.put("hostId", user.getHostId());
+        }
+        log.debug("[JwtUtil] Access Token 생성. User ID: {}, Email: {}, Role: {}, Host ID: {}", user.getUserId(), user.getEmail(), user.getRole(), user.getHostId());
+        return create("accessToken", accessExpire, claims);
     }
 
     public String generateRefreshToken(User user) {
-        return create("refreshToken", refreshExpire, Map.of("email", user.getEmail(), "id", user.getUserId(), "name", user.getUsername(),"role",user.getRole()));
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("id", user.getUserId());
+        claims.put("email", user.getEmail());
+        claims.put("name", user.getUsername());
+        claims.put("role", user.getRole());
+        if (user.getHostId() != null) {
+            claims.put("hostId", user.getHostId());
+        }
+        log.debug("[JwtUtil] Refresh Token 생성. User ID: {}, Email: {}, Role: {}, Host ID: {}", user.getUserId(), user.getEmail(), user.getRole(), user.getHostId());
+        return create("refreshToken", refreshExpire, claims);
     }
 
     private String create(String subject, long expiration, Map<String, Object> claims) {

@@ -31,10 +31,10 @@ public class AWSS3Service {
     @Value("${app.file.upload-max-size-mb:5}")
     private long maxFileSizeMb;
 
-    // 단일 파일 업로드
+    // 단일 파일 업로드 (원래 로직으로 복원)
     public String uploadFile(MultipartFile file) throws IOException {
         checkFileSize(file);
-        String fileName = createFileName(file.getOriginalFilename());
+        String fileName = createFileName(file.getOriginalFilename()); // 내부에서 S3 저장용 파일명 생성
 
         try (InputStream inputStream = file.getInputStream()) {
             ObjectMetadata metadata = new ObjectMetadata();
@@ -42,6 +42,7 @@ public class AWSS3Service {
             metadata.setContentType(file.getContentType());
 
             amazonS3.putObject(new PutObjectRequest(bucket, fileName, inputStream, metadata));
+            log.info("S3 파일 업로드 성공: bucket={}, key={}", bucket, fileName);
         } catch (AmazonServiceException e) {
             log.error("S3 업로드 AmazonServiceException: {}", e.getMessage());
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "S3 서비스 오류로 이미지 업로드에 실패했습니다.");
@@ -56,7 +57,7 @@ public class AWSS3Service {
     public List<String> uploadFiles(List<MultipartFile> files) throws IOException {
         List<String> urls = new ArrayList<>();
         for (MultipartFile file : files) {
-            urls.add(uploadFile(file));
+            urls.add(uploadFile(file)); // 복원된 단일 파일 업로드 메소드 호출
         }
         return urls;
     }
@@ -104,9 +105,10 @@ public class AWSS3Service {
         }
     }
 
-    // 파일명 생성
+    // 파일명 생성 (S3 저장 키 생성)
     private String createFileName(String originalFilename) {
-        return "trip/" + UUID.randomUUID().toString().concat(getFileExtension(originalFilename));
+        // "trip/general/" 디렉토리 하위에 UUID와 확장자로 파일명 생성
+        return "trip/general/" + UUID.randomUUID().toString().concat(getFileExtension(originalFilename));
     }
 
     // 확장자 추출
@@ -118,7 +120,7 @@ public class AWSS3Service {
         }
     }
 
-    // S3 URL에서 객체 키 추출
+    // S3 URL에서 객체 키 추출 (비공개 헬퍼)
     private String extractObjectKeyFromUrl(String fileUrl) {
         try {
             URL url = new URL(fileUrl);
@@ -127,10 +129,22 @@ public class AWSS3Service {
             return path;
         } catch (Exception e) {
             log.error("extractObjectKeyFromUrl 에러: {}", fileUrl, e);
+            // Fallback 로직 (기존과 동일하게 유지)
             int lastSlashIndex = fileUrl.lastIndexOf('/');
-            if (lastSlashIndex != -1 && lastSlashIndex < fileUrl.length() - 1) {
-                return fileUrl.substring(lastSlashIndex + 1);
+            if (lastSlashIndex != -1 && fileUrl.startsWith("https://" + bucket + ".s3.")) {
+                String domainPart = bucket + ".s3.";
+                int domainEndIndex = fileUrl.indexOf(domainPart);
+                if (domainEndIndex != -1) {
+                    int keyStartIndex = fileUrl.indexOf('/', domainEndIndex + domainPart.length());
+                    if (keyStartIndex != -1 && keyStartIndex < fileUrl.length() -1) {
+                         return fileUrl.substring(keyStartIndex + 1);
+                    }
+                }
             }
+            if (lastSlashIndex != -1 && lastSlashIndex < fileUrl.length() - 1) {
+                 return fileUrl.substring(lastSlashIndex + 1); 
+            }
+            log.warn("URL에서 객체 키를 정확히 추출하지 못했습니다: {}", fileUrl);
             return null;
         }
     }

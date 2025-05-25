@@ -210,22 +210,6 @@
     <section v-if="isLoggedIn" class="section">
       <div class="section-title">내 계정</div>
       <div class="user-menu-grid">
-        <router-link to="/user/profile" class="user-menu-item">
-          <i class="bi bi-person-circle"></i>
-          <span>내 정보</span>
-        </router-link>
-        <router-link to="/reservation/my-reservations" class="user-menu-item">
-          <i class="bi bi-calendar-check"></i>
-          <span>예약 내역</span>
-        </router-link>
-        <router-link to="/accommodation/favorites" class="user-menu-item">
-          <i class="bi bi-heart"></i>
-          <span>찜 목록</span>
-        </router-link>
-        <router-link to="/review/my-reviews" class="user-menu-item">
-          <i class="bi bi-star"></i>
-          <span>내 리뷰</span>
-        </router-link>
         <router-link v-if="isHost || isAdmin" to="/accommodation/my-accommodations" class="user-menu-item">
           <i class="bi bi-house"></i>
           <span>내 숙소</span>

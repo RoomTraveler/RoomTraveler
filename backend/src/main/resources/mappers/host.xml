@@ -3,37 +3,131 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.ssafy.trip.host.HostDao">
+<mapper namespace="com.ssafy.trip.host.dao.HostDao">
+
+    <resultMap id="hostWithUserResultMap" type="com.ssafy.trip.host.model.Host">
+        <id property="hostId" column="host_id"/>
+        <result property="userId" column="user_id_from_hosts"/> <!-- hosts 테이블의 user_id 명시 -->
+        <result property="businessNumber" column="business_number"/>
+        <result property="businessName" column="business_name"/>
+        <result property="ceoName" column="ceo_name"/>
+        <result property="businessAddress" column="business_address"/>
+        <result property="businessPhone" column="business_phone"/>
+        <result property="businessLicense" column="business_license"/>
+        <result property="businessLicenseExpire" column="business_license_expire"/>
+        <result property="licenseResubmitUrl" column="license_resubmit_url"/>
+        <result property="licenseResubmittedAt" column="license_resubmitted_at"/>
+        <result property="bankName" column="bank_name"/>
+        <result property="bankAccount" column="bank_account"/>
+        <result property="bankOwner" column="bank_owner"/>
+        <result property="description" column="description"/>
+        <result property="latitude" column="latitude"/>
+        <result property="longitude" column="longitude"/>
+        <result property="status" column="status"/>
+        <result property="adminComment" column="admin_comment"/>
+        <result property="approvedAt" column="approved_at"/>
+        <result property="rejectedAt" column="rejected_at"/>
+        <result property="businessType" column="business_type"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+        <association property="user" javaType="com.ssafy.trip.user.User">
+            <id property="userId" column="user_id_from_users"/> <!-- users 테이블의 user_id 명시 -->
+            <result property="username" column="user_username"/>
+            <result property="email" column="user_email"/>
+            <result property="role" column="user_role"/>
+            <!-- 필요한 User 필드 추가 -->
+        </association>
+    </resultMap>
 
     <!-- 새 호스트 등록 -->
-    <insert id="insert">
-        INSERT INTO hosts (host_id, business_name, business_reg_no, bank_name, bank_account, bank_owner, profile_text)
-        VALUES (#{userId}, #{host.businessName}, #{host.businessRegNo}, #{host.bankName}, #{host.bankAccount}, #{host.bankOwner}, #{host.profileText})
+    <insert id="insert" useGeneratedKeys="true" keyProperty="hostId">
+        INSERT INTO hosts (
+            user_id, business_number, business_name, ceo_name, business_address, business_phone,
+            business_license, business_license_expire, bank_name, bank_account, bank_owner, description,
+            latitude, longitude, status, business_type, created_at, updated_at
+            <if test="licenseResubmitUrl != null">, license_resubmit_url</if>
+            <if test="licenseResubmittedAt != null">, license_resubmitted_at</if>
+            <if test="adminComment != null">, admin_comment</if>
+            <if test="approvedAt != null">, approved_at</if>
+            <if test="rejectedAt != null">, rejected_at</if>
+        )
+        VALUES (
+            #{userId}, #{businessNumber}, #{businessName}, #{ceoName}, #{businessAddress}, #{businessPhone},
+            #{businessLicense}, #{businessLicenseExpire}, #{bankName}, #{bankAccount}, #{bankOwner}, #{description},
+            #{latitude}, #{longitude}, #{status}, #{businessType}, NOW(), NOW()
+            <if test="licenseResubmitUrl != null">, #{licenseResubmitUrl}</if>
+            <if test="licenseResubmittedAt != null">, #{licenseResubmittedAt}</if>
+            <if test="adminComment != null">, #{adminComment}</if>
+            <if test="approvedAt != null">, #{approvedAt}</if>
+            <if test="rejectedAt != null">, #{rejectedAt}</if>
+        )
     </insert>
 
-    <!-- 호스트 ID로 호스트 조회 -->
-    <select id="getHostById" resultType="com.ssafy.trip.host.Host">
-        SELECT h.*, u.username, u.email, u.role
+    <!-- 호스트 ID로 호스트 조회 (User 정보 포함) -->
+    <select id="getHostById" resultMap="hostWithUserResultMap">
+        SELECT
+            h.host_id, h.user_id AS user_id_from_hosts, h.business_number, h.business_name, h.ceo_name, h.business_address, h.business_phone,
+            h.business_license, h.business_license_expire, h.license_resubmit_url, h.license_resubmitted_at,
+            h.bank_name, h.bank_account, h.bank_owner, h.description, h.latitude, h.longitude, h.status,
+            h.admin_comment, h.approved_at, h.rejected_at, h.business_type, h.created_at, h.updated_at,
+            u.user_id AS user_id_from_users, u.username AS user_username, u.email AS user_email, u.role AS user_role
         FROM hosts h
-        JOIN users u ON h.host_id = u.user_id
+        LEFT JOIN users u ON h.user_id = u.user_id
         WHERE h.host_id = #{hostId}
     </select>
 
-    <!-- 모든 호스트 조회 -->
-    <select id="getHosts" resultType="com.ssafy.trip.host.Host">
-        SELECT h.*, u.username, u.email, u.role
+    <!-- 모든 호스트 조회 (User 정보 포함) -->
+    <select id="getHosts" resultMap="hostWithUserResultMap">
+        SELECT
+            h.host_id, h.user_id AS user_id_from_hosts, h.business_number, h.business_name, h.ceo_name, h.business_address, h.business_phone,
+            h.business_license, h.business_license_expire, h.license_resubmit_url, h.license_resubmitted_at,
+            h.bank_name, h.bank_account, h.bank_owner, h.description, h.latitude, h.longitude, h.status,
+            h.admin_comment, h.approved_at, h.rejected_at, h.business_type, h.created_at, h.updated_at,
+            u.user_id AS user_id_from_users, u.username AS user_username, u.email AS user_email, u.role AS user_role
         FROM hosts h
-        JOIN users u ON h.host_id = u.user_id
+        LEFT JOIN users u ON h.user_id = u.user_id
+    </select>
+
+    <!-- 특정 상태의 호스트 목록 조회 (User 정보 포함) -->
+    <select id="getHostsByStatus" parameterType="string" resultMap="hostWithUserResultMap">
+        SELECT
+            h.host_id, h.user_id AS user_id_from_hosts, h.business_number, h.business_name, h.ceo_name, h.business_address, h.business_phone,
+            h.business_license, h.business_license_expire, h.license_resubmit_url, h.license_resubmitted_at,
+            h.bank_name, h.bank_account, h.bank_owner, h.description, h.latitude, h.longitude, h.status,
+            h.admin_comment, h.approved_at, h.rejected_at, h.business_type, h.created_at, h.updated_at,
+            u.user_id AS user_id_from_users, u.username AS user_username, u.email AS user_email, u.role AS user_role
+        FROM hosts h
+        LEFT JOIN users u ON h.user_id = u.user_id
+        WHERE h.status = #{status}
+        ORDER BY h.created_at DESC
     </select>
 
     <!-- 호스트 정보 업데이트 -->
     <update id="updateHost">
         UPDATE hosts
-        SET business_name = #{businessName},
-        business_reg_no = #{businessRegNo},
-        bank_name = #{bankName},
-        bank_account = #{bankAccount},
-        profile_text = #{profileText}
+        <set>
+            <if test="businessNumber != null">business_number = #{businessNumber},</if>
+            <if test="businessName != null">business_name = #{businessName},</if>
+            <if test="ceoName != null">ceo_name = #{ceoName},</if>
+            <if test="businessAddress != null">business_address = #{businessAddress},</if>
+            <if test="businessPhone != null">business_phone = #{businessPhone},</if>
+            <if test="businessLicense != null">business_license = #{businessLicense},</if>
+            <if test="businessLicenseExpire != null">business_license_expire = #{businessLicenseExpire},</if>
+            <if test="licenseResubmitUrl != null">license_resubmit_url = #{licenseResubmitUrl},</if>
+            <if test="licenseResubmittedAt != null">license_resubmitted_at = #{licenseResubmittedAt},</if>
+            <if test="bankName != null">bank_name = #{bankName},</if>
+            <if test="bankAccount != null">bank_account = #{bankAccount},</if>
+            <if test="bankOwner != null">bank_owner = #{bankOwner},</if>
+            <if test="description != null">description = #{description},</if>
+            <if test="latitude != null">latitude = #{latitude},</if>
+            <if test="longitude != null">longitude = #{longitude},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="adminComment != null">admin_comment = #{adminComment},</if>
+            <if test="approvedAt != null">approved_at = #{approvedAt},</if>
+            <if test="rejectedAt != null">rejected_at = #{rejectedAt},</if>
+            <if test="businessType != null">business_type = #{businessType},</if>
+            updated_at = NOW()
+        </set>
         WHERE host_id = #{hostId}
     </update>
 
@@ -42,19 +136,104 @@
         DELETE FROM hosts WHERE host_id = #{hostId}
     </delete>
 
-    <!-- 호스트 상태 업데이트 -->
+    <!-- 호스트 상태 업데이트 (status와 updated_at만 변경) -->
     <update id="updateHostStatus">
         UPDATE hosts
-        SET host_status = #{param2}
-        WHERE host_id = #{param1}
+        SET status = #{status},
+            updated_at = NOW()
+        WHERE host_id = #{hostId}
     </update>
 
-    <!-- 사용자 ID로 호스트 조회 -->
-    <select id="getHostByUserId" resultType="com.ssafy.trip.host.Host">
-        SELECT h.*, u.username, u.email, u.role
+    <!-- 호스트 상태와 거절/승인 사유 업데이트 -->
+    <update id="updateHostStatusAndReason">
+        UPDATE hosts
+        SET 
+            status = #{status},
+            admin_comment = #{reason},
+            <if test="status == 'APPROVED'">
+                approved_at = NOW(),
+                rejected_at = NULL,
+            </if>
+            <if test="status == 'REJECTED'">
+                rejected_at = NOW(),
+                approved_at = NULL,
+            </if>
+            updated_at = NOW()
+        WHERE user_id = #{hostId} <!-- 여기도 user_id 기준일 가능성 높음 -->
+    </update>
+
+    <!-- 사용자 ID로 호스트 조회 (User 정보 포함) -->
+    <select id="getHostByUserId" resultMap="hostWithUserResultMap">
+        SELECT
+            h.host_id, h.user_id AS user_id_from_hosts, h.business_number, h.business_name, h.ceo_name, h.business_address, h.business_phone,
+            h.business_license, h.business_license_expire, h.license_resubmit_url, h.license_resubmitted_at,
+            h.bank_name, h.bank_account, h.bank_owner, h.description, h.latitude, h.longitude, h.status,
+            h.admin_comment, h.approved_at, h.rejected_at, h.business_type, h.created_at, h.updated_at,
+            u.user_id AS user_id_from_users, u.username AS user_username, u.email AS user_email, u.role AS user_role
         FROM hosts h
-        JOIN users u ON h.host_id = u.user_id
-        WHERE h.host_id = #{userId}
+        LEFT JOIN users u ON h.user_id = u.user_id
+        WHERE h.user_id = #{userId}
+    </select>
+
+    <!-- 사업자 번호로 호스트 조회 (User 정보 포함) -->
+    <select id="getHostByBusinessNumber" parameterType="string" resultMap="hostWithUserResultMap">
+        SELECT
+            h.host_id, h.user_id AS user_id_from_hosts, h.business_number, h.business_name, h.ceo_name, h.business_address, h.business_phone,
+            h.business_license, h.business_license_expire, h.license_resubmit_url, h.license_resubmitted_at,
+            h.bank_name, h.bank_account, h.bank_owner, h.description, h.latitude, h.longitude, h.status,
+            h.admin_comment, h.approved_at, h.rejected_at, h.business_type, h.created_at, h.updated_at,
+            u.user_id AS user_id_from_users, u.username AS user_username, u.email AS user_email, u.role AS user_role
+        FROM hosts h
+        LEFT JOIN users u ON h.user_id = u.user_id
+        WHERE h.business_number = #{businessNumber}
+    </select>
+
+    <!-- 상태 및 페이징 조건에 따라 호스트 목록 조회 (User 정보 포함) -->
+    <select id="getHostsWithPaginationAndStatus" parameterType="map" resultMap="hostWithUserResultMap">
+        SELECT
+            h.host_id, h.user_id AS user_id_from_hosts, h.business_number, h.business_name, h.ceo_name, h.business_address, h.business_phone,
+            h.business_license, h.business_license_expire, h.license_resubmit_url, h.license_resubmitted_at,
+            h.bank_name, h.bank_account, h.bank_owner, h.description, h.latitude, h.longitude, h.status,
+            h.admin_comment, h.approved_at, h.rejected_at, h.business_type, h.created_at, h.updated_at,
+            u.user_id AS user_id_from_users, u.username AS user_username, u.email AS user_email, u.role AS user_role
+        FROM hosts h
+        LEFT JOIN users u ON h.user_id = u.user_id
+        <where>
+            <if test="status != null and status != ''">
+                AND h.status = #{status}
+            </if>
+            <!-- 추가적인 검색 조건이 있다면 여기에 추가 (예: business_name LIKE CONCAT('%', #{keyword}, '%')) -->
+        </where>
+        <if test="sortBy != null and sortBy != ''">
+            ORDER BY
+            <choose>
+                <when test="sortBy == 'createdAt'">h.created_at</when>
+                <when test="sortBy == 'businessName'">h.business_name</when>
+                <!-- 다른 정렬 기준 추가 가능 -->
+                <otherwise>h.created_at</otherwise>
+            </choose>
+            <if test="sortDirection != null and sortDirection == 'ASC'">ASC</if>
+            <if test="sortDirection != null and sortDirection == 'DESC'">DESC</if>
+            <if test="sortDirection == null">DESC</if> <!-- 기본 정렬 방향 -->
+        </if>
+        <if test="sortBy == null or sortBy == ''">
+            ORDER BY h.created_at DESC <!-- 기본 정렬 -->
+        </if>
+        <if test="limit != null and offset != null">
+            LIMIT #{limit} OFFSET #{offset}
+        </if>
+    </select>
+
+    <!-- 상태 조건에 맞는 호스트의 총 수를 조회 -->
+    <select id="countHostsWithStatus" parameterType="map" resultType="int">
+        SELECT COUNT(*)
+        FROM hosts h
+        <where>
+            <if test="status != null and status != ''">
+                AND h.status = #{status}
+            </if>
+            <!-- getHostsWithPaginationAndStatus와 동일한 검색 조건이 있다면 여기에 추가 -->
+        </where>
     </select>
 
 </mapper>

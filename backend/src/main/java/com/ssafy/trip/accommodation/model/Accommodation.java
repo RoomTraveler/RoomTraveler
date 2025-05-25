@@ -16,6 +16,14 @@ import java.time.LocalTime;
 @AllArgsConstructor
 @Builder
 public class Accommodation {
+
+    public enum AccommodationStatus {
+        ACTIVE,
+        INACTIVE,
+        PENDING_REVIEW,
+        REJECTED
+    }
+
     private Long accommodationId;     // 숙소 ID
     private Long hostId;              // 호스트 ID
     private String title;             // 숙소 이름
@@ -32,7 +40,7 @@ public class Accommodation {
     private LocalTime checkInTime;    // 체크인 시간
     private LocalTime checkOutTime;   // 체크아웃 시간
     private String amenities;         // 편의시설
-    private String status;            // 상태 (ACTIVE, INACTIVE, PENDING_REVIEW)
+    private AccommodationStatus status; // 상태 (ACTIVE, INACTIVE, PENDING_REVIEW, REJECTED)
     private Double avgReviewRating;   // 평균 리뷰 점수
     private Integer reviewCount;      // 리뷰 개수
     private Double recommendScore;    // 추천 점수
@@ -41,7 +49,6 @@ public class Accommodation {
     private LocalDateTime createdAt;  // 생성 시간
     private LocalDateTime updatedAt;  // 수정 시간
 
-
     // 추가 필드 - 조인 시 사용
     private String sidoName;          // 시도 이름
     private String gugunName;         // 구군 이름
@@ -49,6 +56,9 @@ public class Accommodation {
     private String mainImageUrl;      // 대표 이미지 URL
     private String thumbnailImageUrl; // 썸네일 이미지 URL
     private String tel; // 전화번호
+
+    // phoneNumber 필드 추가 시 getter/setter 필요
+    private String phoneNumber;
 
     public String getMainImageUrl() {
         return mainImageUrl;
@@ -68,5 +78,13 @@ public class Accommodation {
 
     public String getTel() {
         return tel;
+    }
+
+    public String getPhoneNumber() {
+        return phoneNumber;
+    }
+
+    public void setPhoneNumber(String phoneNumber) {
+        this.phoneNumber = phoneNumber;
     }
 }

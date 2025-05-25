@@ -13,8 +13,11 @@ public interface UserService {
 
     /**
      * 새 사용자를 등록합니다.
+     *
+     * @param user 등록할 사용자 정보
+     * @throws SQLException SQL 예외 발생 시
      */
-    int registUser(User user) throws SQLException;
+    void registUser(User user) throws SQLException;
 
     /**
      * 이메일과 비밀번호로 로그인합니다.
@@ -89,4 +92,6 @@ public interface UserService {
     void saveRefreshToken(Long userId, String refreshToken);
 
     String getRefreshToken(Long userId);
+
+    List<User> getAdminUsers();
 }

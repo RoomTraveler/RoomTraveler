@@ -76,6 +76,7 @@ public class CustomSecurityConfig {
                                 "/api/events/**",
                                 "/api/stats/**",
                                 "/api/region/**").permitAll()
+                        .requestMatchers("/api/host/register").hasRole("USER")
                         .requestMatchers("/api/admin/**", "/api/events/**","/api/stats/**","/api/region/**").hasRole("ADMIN")
                         .requestMatchers("/api/host/**").hasAnyRole("HOST", "ADMIN")
                         .requestMatchers("/api/notifications/**", "/api/cart","/api/cart/**").hasAnyRole("USER", "HOST", "ADMIN")

@@ -2,6 +2,10 @@ package com.ssafy.trip.admin;
 
 import com.ssafy.trip.region.model.Sido;
 import com.ssafy.trip.region.model.Gugun;
+import com.ssafy.trip.accommodation.model.Accommodation;
+import com.ssafy.trip.user.User;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 import java.util.Map;
@@ -69,4 +73,34 @@ public interface AdminService {
      * @return 저장된 구군 수
      */
     int importGuguns(int sidoCode, List<Gugun> guguns) throws Exception;
+
+    // 관리자용 필터링 및 페이지네이션된 숙소 목록 조회
+    Page<Accommodation> getAdminAccommodations(Map<String, Object> params, Pageable pageable);
+
+    // 관리자용 사용자 목록 조회 (페이지네이션)
+    Page<User> getAdminUsers(String role, String status, String keyword, Pageable pageable);
+
+    /**
+     * 관리자가 사용자의 역할을 변경합니다.
+     * @param userId 대상 사용자의 ID
+     * @param newRole 새로운 역할 (USER, HOST, ADMIN 중 하나)
+     * @return 역할 변경 성공 여부
+     */
+    boolean updateUserRoleByAdmin(Long userId, String newRole);
+
+    // 여기부터 추가된 메서드들 (이전 코드에서 발견, 중복 제거됨)
+    Map<String, Object> getAccommodationTypeChartData(); // 실제 반환 타입은 Long으로 되어있을 수 있음, AdminController와 통일 필요
+    List<Map<String, Object>> getMonthlyChartData();
+    List<Accommodation> getRecentAccommodations(int limit);
+    List<User> getRecentUsers(int limit);
+    Map<String, Object> getSystemStatus();
+
+    /**
+     * 필터링 및 페이징 조건에 맞는 전체 호스트 목록을 조회합니다.
+     * @param status 호스트 상태 (옵션)
+     * @param keyword 검색어 (옵션, 사용자명, 이메일 등)
+     * @param pageable 페이징 정보
+     * @return 페이징된 호스트(User) 목록
+     */
+    Page<User> getAllHostsPage(String status, String keyword, Pageable pageable);
 }

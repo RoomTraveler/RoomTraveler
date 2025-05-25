@@ -9,7 +9,7 @@
       <router-link to="/login" class="action-link">로그인 페이지로</router-link>
     </div>
 
-    <div v-else-if="currentUser && !isLoadingUser" :key="currentUserKey" class="profile-content">
+    <div v-else-if="currentUser && !isLoadingUser" class="profile-content">
       <div class="profile-header">
         <div class="profile-avatar">
           <img :src="currentUser.profileImage || defaultProfileImage" alt="프로필 이미지" @error="handleImageError" />
@@ -86,6 +86,14 @@
               {{ isChangingPassword ? "변경 중..." : "비밀번호 변경" }}
             </button>
           </form>
+        </div>
+
+        <!-- 호스트 등록 제안 섹션 -->
+        <div v-if="userStore.userRole === 'USER'" class="host-registration-section">
+          <p class="host-prompt-message">호스트로 등록하시고 싶으신가요?</p>
+          <router-link :to="{ name: 'HostRegister' }" class="action-link">
+            호스트 등록하기!
+          </router-link>
         </div>
       </div>
 
@@ -255,44 +263,35 @@ watch(
 );
 
 onMounted(async () => {
-  console.log("UserProfile.vue: Mounted. Attempting to load user from storage.");
-  userStore.loadUserFromStorage();
+  console.log("UserProfile.vue: Mounted. Attempting to load user data.");
+  userStore.loadUserFromStorage(); // 항상 스토리지에서 먼저 로드 시도
 
-  if (!userStore.isAuthenticated) {
-    console.log("UserProfile.vue: Not authenticated, redirecting to login.");
+  if (!tokens.value?.access_token) {
+    console.log("UserProfile.vue: No access token found, redirecting to login.");
     router.push("/login");
     return;
   }
 
-  if (!currentUser.value) {
-    console.log("UserProfile.vue: Authenticated but no user data in store, fetching from server.");
+  const userFromStorage = currentUser.value;
+  // 스토리지에 사용자 정보가 없거나, id가 없거나, createdAt 또는 phone 정보가 없을 경우 서버에서 fetch
+  if (!userFromStorage || !userFromStorage.id || !userFromStorage.createdAt || userFromStorage.phone === undefined) {
+    console.log("UserProfile.vue: User data from storage is incomplete (e.g., missing createdAt or phone) or user ID missing. Fetching from server.");
     const result = await userStore.fetchCurrentUser();
     if (!result.success) {
       console.error("UserProfile.vue: fetchCurrentUser failed.", result.error);
       showMessage(result.error || "사용자 정보를 불러오는데 실패했습니다.", "danger");
-      if (
-        result.error?.includes("401") ||
-        result.error?.includes("403") ||
-        result.error?.toLowerCase().includes("token")
-      ) {
-        console.log("UserProfile.vue: Auth error during fetch, redirecting to login.");
+      if (result.error?.includes("401") || result.error?.includes("403")) {
+        console.log("UserProfile.vue: Auth error during fetch, logging out and redirecting to login.");
+        await userStore.logout();
         router.push("/login");
       }
-    } else {
-      if (userStore.user) {
-        console.log("UserProfile.vue: fetchCurrentUser successful. Updating profileForm and forcing re-render.");
-        profileForm.username = userStore.user.name || userStore.user.username || "";
-        profileForm.phone = userStore.user.phone || "";
-        currentUserKey.value++;
-      } else {
-        console.warn("UserProfile.vue: fetchCurrentUser succeeded, but userStore.user is still null/undefined.");
-      }
+    } else if (userStore.user) {
+      console.log("UserProfile.vue: fetchCurrentUser successful after finding incomplete/missing data in storage.");
+      // currentUser가 업데이트되면 watch 콜백이 profileForm을 갱신하고, Vue가 UI를 업데이트합니다.
     }
   } else {
-    console.log("UserProfile.vue: User data already available in store. Updating profileForm and forcing re-render.");
-    profileForm.username = currentUser.value.name || currentUser.value.username || "";
-    profileForm.phone = currentUser.value.phone || "";
-    currentUserKey.value++;
+    console.log("UserProfile.vue: User data already available in store and seems complete (includes ID, createdAt, and phone defined).");
+    // 이미 완전한 정보가 있으므로 profileForm은 watch에 의해 채워져 있을 것임
   }
 });
 
@@ -838,5 +837,26 @@ input[type="password"] {
   border: 0;
   font-size: 1.2rem;
   cursor: pointer;
+}
+
+.host-registration-section {
+  margin-top: 3rem;
+  padding-top: 2rem;
+  border-top: 1px solid #eee;
+  text-align: center;
+}
+
+.host-prompt-message {
+  color: #555;
+  margin-bottom: 1.5rem;
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+
+/* action-link 스타일은 이미 정의되어 있으므로 대부분 재사용됩니다. */
+/* 필요에 따라 아래에서 크기나 마진 등을 조정할 수 있습니다. */
+.host-registration-section .action-link {
+  padding: 0.9rem 1.8rem; /* 버튼 크기를 약간 키움 (선택 사항) */
+  font-size: 1rem; /* 버튼 내 텍스트 크기 (선택 사항) */
 }
 </style>

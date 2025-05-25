@@ -463,4 +463,26 @@ public class ApiReviewController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "데이터베이스 오류: " + e.getMessage()));
         }
     }
+
+    /**
+     * 호스트 ID로 해당 호스트가 관리하는 모든 숙소의 리뷰 목록을 조회합니다.
+     * 각 리뷰에는 이미지 정보가 포함될 수 있습니다.
+     * 선택적으로 rating으로 필터링할 수 있습니다.
+     *
+     * @param hostId 호스트 ID
+     * @param rating 필터링할 별점 (선택 사항)
+     * @return 성공 시 리뷰 목록과 HTTP 200 OK, 실패 시 오류 메시지와 HTTP 500 Internal Server Error
+     */
+    @GetMapping("/host/{hostId}")
+    public ResponseEntity<?> getReviewsByHostId(
+            @PathVariable Long hostId,
+            @RequestParam(required = false) Integer rating) { // rating은 Integer로 받아 null 처리 용이
+        try {
+            List<Review> reviews = reviewService.getReviewsByHostId(hostId, rating);
+            return ResponseEntity.ok(reviews);
+        } catch (SQLException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "호스트의 리뷰 목록을 불러오는 중 오류가 발생했습니다: " + e.getMessage()));
+        }
+    }
 }

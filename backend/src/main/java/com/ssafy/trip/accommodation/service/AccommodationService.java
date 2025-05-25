@@ -3,6 +3,13 @@ package com.ssafy.trip.accommodation.service;
 import com.ssafy.trip.accommodation.model.Accommodation;
 import com.ssafy.trip.accommodation.model.Room;
 import com.ssafy.trip.accommodation.model.Image;
+import com.ssafy.trip.dto.request.AccommodationRequestDto;
+import com.ssafy.trip.dto.response.AccommodationResponseDto;
+import com.ssafy.trip.dto.request.RoomRequestDto;
+import com.ssafy.trip.dto.response.RoomResponseDto;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.sql.SQLException;
 import java.util.List;
@@ -28,6 +35,10 @@ public interface AccommodationService {
      * @return 생성된 객실의 ID
      */
     Long registerRoom(Room room, List<Image> images) throws SQLException;
+
+
+    //타입별 카운트
+    Map<String, Long> getAccommodationTypeCounts() throws SQLException;
 
     /**
      * 숙소 ID로 숙소를 조회합니다.
@@ -98,7 +109,7 @@ public interface AccommodationService {
      * @param status 새 상태
      * @return 업데이트된 행 수
      */
-    int updateAccommodationStatus(Long accommodationId, String status) throws SQLException;
+    int updateAccommodationStatus(Long accommodationId, Accommodation.AccommodationStatus status) throws SQLException;
 
     /**
      * 객실 상태를 업데이트합니다.
@@ -167,4 +178,62 @@ public interface AccommodationService {
      * @return 삭제된 행 수
      */
     int deleteAllAccommodations() throws SQLException;
+
+    /**
+     * 승인 대기 중인 숙소 목록을 페이징하여 조회합니다.
+     * @param pageable 페이징 정보
+     * @return 페이징된 승인 대기 숙소 목록
+     */
+    Page<Accommodation> getPendingReviewAccommodations(Pageable pageable) throws SQLException;
+
+    /**
+     * 숙소 등록 신청을 승인합니다.
+     * @param accommodationId 승인할 숙소 ID
+     */
+    void approveAccommodation(Long accommodationId) throws SQLException;
+
+    /**
+     * 숙소 등록 신청을 거절합니다. (알림 발송 포함)
+     * @param accommodationId 거절할 숙소 ID
+     * @param reason 거절 사유
+     */
+    void rejectAccommodation(Long accommodationId, String reason) throws SQLException;
+
+    /**
+     * 새 숙소를 등록합니다. (파일 업로드 포함)
+     * @param requestDto 숙소 등록 요청 정보 (이미지 파일 포함)
+     * @param hostId 호스트 ID (인증된 사용자로부터 획득)
+     * @return 생성된 숙소 정보 DTO
+     * @throws Exception 예외 처리
+     */
+    AccommodationResponseDto createAccommodationAndImages(com.ssafy.trip.dto.request.AccommodationRequestDto requestDto, Long hostId) throws Exception;
+
+    /**
+     * 기존 숙소 정보를 수정합니다. (파일 업로드/삭제 포함)
+     * @param accommodationId 수정할 숙소 ID
+     * @param requestDto 숙소 수정 요청 정보 (이미지 파일 포함)
+     * @param hostId 호스트 ID (인증된 사용자로부터 획득, 숙소 소유주 확인용)
+     * @return 수정된 숙소 정보 DTO
+     * @throws Exception 예외 처리
+     */
+    AccommodationResponseDto updateAccommodationAndImages(Long accommodationId, com.ssafy.trip.dto.request.AccommodationRequestDto requestDto, Long hostId) throws Exception;
+
+    /**
+     * 숙소 상세 정보를 조회합니다. (이미지 포함)
+     * @param accommodationId 조회할 숙소 ID
+     * @return 숙소 상세 정보 DTO
+     * @throws Exception 예외 처리
+     */
+    AccommodationResponseDto getAccommodationDetails(Long accommodationId) throws Exception;
+
+    // Room Management for Host
+    RoomResponseDto createRoomAndImages(Long accommodationId, com.ssafy.trip.dto.request.RoomRequestDto requestDto, Long hostId) throws Exception;
+
+    RoomResponseDto updateRoomAndImages(Long roomId, com.ssafy.trip.dto.request.RoomRequestDto requestDto, Long hostId) throws Exception;
+
+    RoomResponseDto getRoomDetailsForHost(Long roomId, Long hostId) throws Exception;
+
+    List<RoomResponseDto> getRoomsForHost(Long accommodationId, Long hostId) throws Exception;
+
+    void deleteRoomAndImages(Long roomId, Long hostId) throws Exception;
 }

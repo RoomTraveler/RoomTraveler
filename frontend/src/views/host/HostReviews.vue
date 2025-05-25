@@ -152,110 +152,191 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, watch, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import apiUtils from '@/api/index'
+import { useUserStore } from '@/store/userStore'
+import { getHostAccommodations } from "@/api/hostApi.js"
+
+const { api } = apiUtils
+const userStore = useUserStore()
+const route = useRoute()
+const router = useRouter()
 
 const message = ref('')
+const loadingAccommodations = ref(false)
+const loadingReviews = ref(false)
 
 const accommodations = ref([])
 const reviews = ref([])
-
-const totalReviews = ref(0)
-const averageRating = ref(0)
+const allHostReviews = ref([])
 
 const filters = ref({
   accommodationId: '',
   rating: '',
 })
 
-// 라우터
-const route = useRoute()
-const router = useRouter()
-
 // 별점 아이콘 클래스
 function getStarClass(index, rating) {
-  if (index <= Math.floor(rating)) return 'bi bi-star-fill'
-  if (index - rating <= 0.5 && index > rating) return 'bi bi-star-half'
+  const roundedRating = Math.round(rating * 2) / 2
+  if (index <= roundedRating) return 'bi bi-star-fill'
+  if (index - 0.5 === roundedRating) return 'bi bi-star-half'
   return 'bi bi-star'
 }
 
 // 날짜 포맷팅
 function formatDate(dateString) {
   if (!dateString) return '-'
-  const date = new Date(dateString)
-  return new Intl.DateTimeFormat('ko-KR', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(date)
-}
-
-// 숙소 목록 불러오기
-async function loadAccommodations() {
   try {
-    const res = await fetch('/api/host/accommodations/list')
-    if (!res.ok) throw new Error('숙소 목록을 불러오는데 실패했습니다.')
-    accommodations.value = await res.json()
-  } catch (error) {
-    console.error('숙소 목록 로드 오류:', error)
+    const date = new Date(dateString)
+    return new Intl.DateTimeFormat('ko-KR', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(date)
+  } catch (e) {
+    return dateString
   }
 }
 
-// 리뷰 목록 불러오기
-async function loadReviews() {
+function resetData() {
+  accommodations.value = []
+  allHostReviews.value = []
+  reviews.value = []
+}
+
+// 호스트의 숙소 목록 불러오기 (필터 옵션용)
+async function loadHostAccommodationsData() {
+  const hostId = userStore.user?.hostId
+  if (!hostId) {
+    accommodations.value = []
+    return
+  }
+
+  loadingAccommodations.value = true
   try {
-    let url = '/api/host/reviews'
-    const params = new URLSearchParams()
-    if (filters.value.accommodationId)
-      params.append('accommodationId', filters.value.accommodationId)
-    if (filters.value.rating)
-      params.append('rating', filters.value.rating)
-    if (params.toString()) url += `?${params.toString()}`
-    const res = await fetch(url)
-    if (!res.ok) throw new Error('리뷰 목록을 불러오는데 실패했습니다.')
-    const data = await res.json()
-    reviews.value = data.reviews
-    totalReviews.value = data.totalReviews
-    averageRating.value = data.averageRating
+    const response = await getHostAccommodations(hostId, 1, 1000)
+
+    if (response && Array.isArray(response.accommodations)) {
+      accommodations.value = response.accommodations
+    } else if (response && Array.isArray(response.content)) {
+      accommodations.value = response.content
+    } else if (Array.isArray(response)) {
+      accommodations.value = response
+    } else {
+      accommodations.value = []
+      console.warn('숙소 목록 API 응답 형식이 예상과 다릅니다:', response)
+    }
+  } catch (error) {
+    console.error('숙소 목록 로드 오류:', error)
+    message.value = '숙소 목록을 불러오는데 실패했습니다.'
+    accommodations.value = []
+  } finally {
+    loadingAccommodations.value = false
+  }
+}
+
+// 호스트의 모든 리뷰 또는 특정 숙소의 리뷰 불러오기
+async function loadHostReviewsData() {
+  const hostId = userStore.user?.hostId
+
+  if (!hostId) {
+    message.value = '호스트 정보를 불러올 수 없어 리뷰를 로드할 수 없습니다.'
+    allHostReviews.value = []
+    reviews.value = []
+    return
+  }
+
+  loadingReviews.value = true
+  try {
+    const response = await api.get(`/api/reviews/host/${hostId}`)
+    allHostReviews.value = Array.isArray(response.data) ? response.data : []
+    applyClientSideFilters()
   } catch (error) {
     console.error('리뷰 목록 로드 오류:', error)
     message.value = '리뷰 목록을 불러오는데 실패했습니다.'
+    allHostReviews.value = []
     reviews.value = []
-    totalReviews.value = 0
-    averageRating.value = 0
+  } finally {
+    loadingReviews.value = false
   }
 }
 
-// 필터 적용 및 쿼리 파라미터 동기화
-function applyFilters() {
-  const query = {}
-  if (filters.value.accommodationId)
-    query.accommodationId = filters.value.accommodationId
-  if (filters.value.rating)
-    query.rating = filters.value.rating
-  router.replace({ query })
-  loadReviews()
+// 클라이언트 사이드 필터링 (숙소 ID 및 별점)
+function applyClientSideFilters() {
+  let filtered = [...allHostReviews.value]
+
+  if (filters.value.accommodationId) {
+    filtered = filtered.filter(review => review.accommodationId?.toString() === filters.value.accommodationId)
+  }
+
+  if (filters.value.rating) {
+    filtered = filtered.filter(review => review.rating?.toString() === filters.value.rating)
+  }
+  reviews.value = filtered
 }
 
-// 라우터 쿼리 동기화
-onMounted(() => {
-  const query = route.query
-  if (query.accommodationId) filters.value.accommodationId = query.accommodationId
-  if (query.rating) filters.value.rating = query.rating
-  if (query.message) message.value = query.message
-  loadAccommodations()
-  loadReviews()
+// 필터 적용 버튼 클릭 시 (URL 쿼리 업데이트)
+function applyFilters() {
+  const query = {}
+  if (filters.value.accommodationId) query.accommodationId = filters.value.accommodationId
+  if (filters.value.rating) query.rating = filters.value.rating
+  router.push({ query: Object.keys(query).length > 0 ? query : {} })
+}
+
+// 리뷰 통계 계산
+const totalReviews = computed(() => reviews.value.length)
+const averageRating = computed(() => {
+  if (reviews.value.length === 0) return 0
+  const sum = reviews.value.reduce((acc, review) => acc + (review.rating || 0), 0)
+  return parseFloat((sum / reviews.value.length).toFixed(1))
 })
 
-// 쿼리 파라미터 변화 감지(뒤로가기 등 대응)
-watch(
-    () => route.query,
-    (query) => {
-      filters.value.accommodationId = query.accommodationId || ''
-      filters.value.rating = query.rating || ''
-      loadReviews()
-    }
-)
+async function initializePageData() {
+  if (userStore.isAuthenticated && userStore.user?.hostId) {
+    message.value = ''
+    await loadHostAccommodationsData()
+    await loadHostReviewsData()
+  } else if (userStore.isAuthenticated && !userStore.user?.hostId) {
+    resetData()
+    message.value = '호스트 계정으로 로그인해야 리뷰를 관리할 수 있습니다.'
+  } else {
+    resetData()
+    message.value = '리뷰를 보려면 먼저 로그인해주세요.'
+  }
+}
+
+// Lifecycle hooks and watchers
+onMounted(() => {
+  filters.value.accommodationId = route.query.accommodationId || ''
+  filters.value.rating = route.query.rating || ''
+  initializePageData()
+})
+
+watch(() => userStore.user, (newUser, oldUser) => {
+  if (newUser?.id !== oldUser?.id || newUser?.hostId !== oldUser?.hostId) {
+    initializePageData()
+  }
+}, { deep: true })
+
+watch(() => route.query, (newQuery, oldQuery) => {
+  const newAccommodationId = newQuery.accommodationId || ''
+  const newRating = newQuery.rating || ''
+
+  let filtersChanged = false
+  if (filters.value.accommodationId !== newAccommodationId) {
+    filters.value.accommodationId = newAccommodationId
+    filtersChanged = true
+  }
+  if (filters.value.rating !== newRating) {
+    filters.value.rating = newRating
+    filtersChanged = true
+  }
+
+  if (filtersChanged && userStore.user?.hostId) {
+    applyClientSideFilters()
+  }
+}, { deep: true })
 </script>
 
 <style scoped>
@@ -276,3 +357,4 @@ watch(
   margin-bottom: 20px;
 }
 </style>
+

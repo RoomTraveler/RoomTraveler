@@ -1,390 +1,285 @@
 <template>
-  <div class="container mt-4">
-    <h2 class="mb-4">호스트 대시보드</h2>
+  <div class="container mt-4 mb-5">
+    <div v-if="loading && !stats" class="text-center py-5"> <!-- stats가 없을 때만 전체 로딩 표시 -->
+      <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
+        <span class="visually-hidden">대시보드 로딩 중...</span>
+      </div>
+      <p class="mt-2 text-muted">데이터를 불러오고 있습니다.</p>
+    </div>
+    <div v-else-if="error" class="alert alert-danger">
+      <h4 class="alert-heading">오류 발생</h4>
+      <p>{{ error }}</p>
+      <hr>
+      <p class="mb-0">페이지를 새로고침하거나 잠시 후 다시 시도해주세요.</p>
+    </div>
+    <div v-else-if="stats">
+      <h2 class="mb-4">호스트 대시보드: {{ stats.host?.businessName || '호스트' }}</h2>
 
-    <!-- 호스트 정보 -->
-    <div v-if="host" class="row mb-4">
-      <div class="col-md-12">
-        <div class="card dashboard-card">
-          <div class="card-body">
-            <h3 class="card-title">안녕하세요, {{ host.businessName }}님!</h3>
-            <p class="card-text">호스트 대시보드에서 숙소 및 예약 현황을 확인하세요.</p>
-            <p class="card-text">
-              <strong>사업자명:</strong> {{ host.businessName }}<br>
-              <strong>사업자 등록번호:</strong> {{ host.businessRegNo }}<br>
-              <strong>호스트 상태:</strong> {{ host.hostStatus }}
-            </p>
+      <!-- 통계 요약 -->
+      <div class="row g-4 mb-4">
+        <div class="col-md-3 col-6">
+          <SummaryCard title="총 숙소 수" :value="stats.accommodationCount" icon="bi-house-door-fill" color="primary" />
+        </div>
+        <div class="col-md-3 col-6">
+          <SummaryCard title="총 예약 건수" :value="stats.totalReservations" icon="bi-calendar-check-fill" color="info" />
+        </div>
+        <div class="col-md-3 col-6">
+          <SummaryCard title="확정/완료된 예약" :value="(stats.confirmedReservations || 0) + (stats.completedReservations || 0)" icon="bi-patch-check-fill" color="success" />
+        </div>
+        <div class="col-md-3 col-6">
+          <SummaryCard title="총 예상 수익" :value="formatCurrency(stats.totalRevenue)" icon="bi-cash-coin" color="warning" />
+        </div>
+      </div>
+
+      <!-- 숙소 목록 -->
+      <div class="card shadow-sm">
+        <div class="card-header bg-light">
+          <h5 class="mb-0"><i class="bi bi-list-ul me-2"></i>내 숙소 목록 ({{ accommodations.length }}개)</h5>
+        </div>
+        <div class="card-body">
+          <div v-if="accommodationsLoading" class="text-center">
+            <div class="spinner-border spinner-border-sm text-secondary" role="status"></div>
+            <span class="ms-2 text-muted">숙소 목록 로딩 중...</span>
+          </div>
+          <div v-else-if="accommodationsError" class="alert alert-light text-danger py-2">{{ accommodationsError }}</div>
+          <div v-else-if="accommodations.length === 0" class="text-center text-muted py-3">
+            등록된 숙소가 없습니다.
+            <!-- 호스트 상태가 APPROVED일 때만 새 숙소 등록 버튼 표시 (stats.host.status 확인) -->
+            <RouterLink v-if="stats.host && stats.host.status === 'APPROVED'" to="/host/accommodations/new" class="btn btn-sm btn-primary mt-2">새 숙소 등록하기</RouterLink>
+          </div>
+          <div class="table-responsive" v-else>
+            <table class="table table-hover align-middle">
+              <thead class="table-light">
+              <tr>
+                <th scope="col">숙소명</th>
+                <th scope="col">주소</th>
+                <th scope="col">상태</th>
+                <th scope="col">총 예약</th> <!-- 이 부분은 stats.reservations 를 파싱해야 함 -->
+                <th scope="col">확정/완료</th> <!-- 이 부분은 stats.reservations 를 파싱해야 함 -->
+                <th scope="col">객실 관리</th>
+                <th scope="col">통계/수정</th>
+              </tr>
+              </thead>
+              <tbody>
+              <tr v-for="acc in accommodations" :key="acc.accommodationId">
+                <td><strong>{{ acc.title }}</strong></td>
+                <td>{{ acc.address }}</td>
+                <td><span :class="getAccommodationStatusBadge(acc.status)">{{ getAccommodationStatusText(acc.status) }}</span></td>
+                <td>{{ getReservationCountForAccommodation(acc.accommodationId, null) }}건</td>
+                <td>{{ getReservationCountForAccommodation(acc.accommodationId, ['CONFIRMED', 'COMPLETED']) }}건</td>
+                <td>
+                  <RouterLink :to="{ name: 'HostRoomList', params: { accommodationId: acc.accommodationId } }" class="btn btn-sm btn-outline-info">
+                    <i class="bi bi-door-open"></i> 객실
+                  </RouterLink>
+                </td>
+                <td>
+                  <RouterLink :to="`/host/dashboard/accommodation/${acc.accommodationId}`" class="btn btn-sm btn-outline-primary me-1">
+                    <i class="bi bi-bar-chart-steps"></i> 통계
+                  </RouterLink>
+                   <RouterLink :to="{ name: 'HostAccommodationEdit', params: { accommodationId: acc.accommodationId } }" class="btn btn-sm btn-outline-warning">
+                    <i class="bi bi-pencil-square"></i> 수정
+                  </RouterLink>
+                </td>
+              </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
     </div>
-
-    <!-- 통계 요약 -->
-    <div class="row">
-      <div class="col-md-3">
-        <div class="stat-card bg-light-blue dashboard-card">
-          <div class="stat-number">{{ accommodationCount }}</div>
-          <div class="stat-label">등록된 숙소</div>
-        </div>
-      </div>
-      <div class="col-md-3">
-        <div class="stat-card bg-light-green dashboard-card">
-          <div class="stat-number">{{ totalReservations }}</div>
-          <div class="stat-label">총 예약 수</div>
-        </div>
-      </div>
-      <div class="col-md-3">
-        <div class="stat-card bg-light-yellow dashboard-card">
-          <div class="stat-number">{{ confirmedReservations + completedReservations }}</div>
-          <div class="stat-label">확정/완료된 예약</div>
-        </div>
-      </div>
-      <div class="col-md-3">
-        <div class="stat-card bg-light-red dashboard-card">
-          <div class="stat-number">{{ formatCurrency(totalRevenue) }}</div>
-          <div class="stat-label">총 수익</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 차트 -->
-    <div class="row mt-4">
-      <div class="col-md-6">
-        <div class="card dashboard-card">
-          <div class="card-body">
-            <h5 class="card-title">월별 예약 현황</h5>
-            <div class="chart-container">
-              <canvas ref="reservationsChart"></canvas>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="col-md-6">
-        <div class="card dashboard-card">
-          <div class="card-body">
-            <h5 class="card-title">월별 수익 현황</h5>
-            <div class="chart-container">
-              <canvas ref="revenueChart"></canvas>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 예약 상태 분포 -->
-    <div class="row mt-4">
-      <div class="col-md-6">
-        <div class="card dashboard-card">
-          <div class="card-body">
-            <h5 class="card-title">예약 상태 분포</h5>
-            <div class="chart-container">
-              <canvas ref="reservationStatusChart"></canvas>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="col-md-6">
-        <div class="card dashboard-card">
-          <div class="card-body">
-            <h5 class="card-title">숙소별 예약 현황</h5>
-            <div class="chart-container">
-              <canvas ref="accommodationReservationsChart"></canvas>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 숙소 목록 -->
-    <div class="row mt-4">
-      <div class="col-md-12">
-        <div class="card dashboard-card">
-          <div class="card-body">
-            <h5 class="card-title">내 숙소 목록</h5>
-            <div class="table-responsive">
-              <table class="table table-striped">
-                <thead>
-                <tr>
-                  <th>숙소명</th>
-                  <th>주소</th>
-                  <th>상태</th>
-                  <th>예약 수</th>
-                  <th>상세 통계</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr v-for="accommodation in accommodations" :key="accommodation.accommodationId">
-                  <td>{{ accommodation.title }}</td>
-                  <td>{{ accommodation.address }}</td>
-                  <td>
-                      <span :class="getStatusBadgeClass(accommodation.status)">
-                        {{ getStatusText(accommodation.status) }}
-                      </span>
-                  </td>
-                  <td>
-                    {{ getReservationCount(accommodation.accommodationId) }}
-                  </td>
-                  <td>
-                    <router-link
-                        :to="`/host/dashboard/accommodation?accommodationId=${accommodation.accommodationId}`"
-                        class="btn btn-sm btn-primary"
-                    >상세 통계</router-link>
-                  </td>
-                </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div v-else-if="!loading && !stats && !error" class="alert alert-info">
+      대시보드 정보를 표시할 수 없습니다. 호스트로 등록되어 있고 승인되었는지 확인해주세요.
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick } from 'vue'
-import Chart from 'chart.js/auto'
+import { ref, onMounted, computed } from "vue";
+import { useUserStore } from "@/store/userStore";
+import { useRouter } from "vue-router"; // Vue Router import
+import SummaryCard from "@/components/common/SummaryCard.vue";
+import "bootstrap-icons/font/bootstrap-icons.css";
+// Element Plus 컴포넌트는 현재 직접 사용하지 않으므로 주석 처리 또는 필요시 추가
+// import { ElRow, ElCol, ElCard, ElSkeleton, ElEmpty, ElButton, ElProgress, ElAvatar } from "element-plus";
 
-const host = ref(null)
 
-const accommodationCount = ref(0)
-const totalReservations = ref(0)
-const confirmedReservations = ref(0)
-const pendingReservations = ref(0)
-const cancelledReservations = ref(0)
-const completedReservations = ref(0)
-const totalRevenue = ref(0)
+const userStore = useUserStore();
+const router = useRouter(); // router 인스턴스 사용
 
-const monthlyReservations = ref({})
-const monthlyRevenue = ref({})
-const accommodations = ref([])
-const reservations = ref([])
+// 상태 변수들
+const loading = ref(true); // 전체 대시보드 로딩 상태
+const error = ref(''); // 전체 대시보드 에러 메시지
+const stats = ref(null); // 대시보드 통계 데이터 (DashboardStats 객체)
 
-// 차트 레퍼런스
-const reservationsChart = ref(null)
-const revenueChart = ref(null)
-const reservationStatusChart = ref(null)
-const accommodationReservationsChart = ref(null)
+const accommodations = ref([]); // 숙소 목록
+const accommodationsLoading = ref(false); // 숙소 목록 로딩 상태
+const accommodationsError = ref(''); // 숙소 목록 에러 메시지
 
-// 차트 인스턴스 저장
-let charts = {
-  reservationsChart: null,
-  revenueChart: null,
-  reservationStatusChart: null,
-  accommodationReservationsChart: null
-}
-
-// 공통 함수: 금액 포맷팅
+// 헬퍼 함수: 통화 형식 변환
 const formatCurrency = (amount) =>
-    new Intl.NumberFormat('ko-KR', {
-      style: 'currency',
-      currency: 'KRW',
-      maximumFractionDigits: 0
-    }).format(amount ?? 0)
+    new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW', maximumFractionDigits: 0 }).format(amount || 0);
 
-// 숙소별 예약 수 계산
-const getReservationCount = (accommodationId) =>
-    reservations.value.filter(r => r.accommodationId === accommodationId).length
+// 헬퍼 함수: 숙소 상태에 따른 배지 클래스 반환
+const getAccommodationStatusBadge = (status) => {
+  const map = {
+    ACTIVE: 'bg-success text-white',
+    INACTIVE: 'bg-secondary text-white',
+    PENDING_REVIEW: 'bg-warning text-dark',
+    REJECTED: 'bg-danger text-white',
+    USER_REQUESTED_DELETION: 'bg-dark text-white',
+    ADMIN_DELETED: 'bg-dark text-white'
+  };
+  return `badge ${map[status] || 'bg-light text-dark'}`;
+};
 
-// 숙소 상태에 따른 배지 클래스
-const getStatusBadgeClass = (status) => {
-  switch (status) {
-    case 'ACTIVE': return 'badge bg-success'
-    case 'INACTIVE': return 'badge bg-secondary'
-    case 'PENDING_REVIEW': return 'badge bg-warning'
-    default: return 'badge bg-secondary'
+// 헬퍼 함수: 숙소 상태 텍스트 반환
+const getAccommodationStatusText = (status) => {
+  const map = {
+    ACTIVE: '운영중',
+    INACTIVE: '비활성',
+    PENDING_REVIEW: '검토중',
+    REJECTED: '반려됨',
+    USER_REQUESTED_DELETION: '삭제 요청됨',
+    ADMIN_DELETED: '관리자 삭제'
+  };
+  return map[status] || status;
+};
+
+// 특정 숙소의 예약 건수 계산 (stats.reservations가 API 응답에 포함되어야 함)
+function getReservationCountForAccommodation(accommodationId, targetStatuses = null) {
+  if (!stats.value || !stats.value.reservations || !Array.isArray(stats.value.reservations)) {
+    // console.warn("[HostDashboard] stats.reservations is not available or not an array.");
+    return 0;
   }
+  return stats.value.reservations.filter(r =>
+      r.accommodationId === accommodationId &&
+      (!targetStatuses || targetStatuses.includes(r.status))
+  ).length;
 }
-const getStatusText = (status) => {
-  switch (status) {
-    case 'ACTIVE': return '활성'
-    case 'INACTIVE': return '비활성'
-    case 'PENDING_REVIEW': return '검토중'
-    default: return status
+
+// 대시보드 데이터 로드 함수
+async function loadDashboardData() {
+  console.log("[HostDashboard] loadDashboardData 진입, authStore:", userStore.isAuthenticated, userStore.user?.id);
+  if (!userStore.isAuthenticated || !userStore.user?.id) {
+    error.value = "로그인이 필요합니다. 다시 로그인해주세요.";
+    loading.value = false;
+    console.log("[HostDashboard] loadDashboardData 종료 - 로그인 필요");
+    return;
   }
-}
+  loading.value = true;
+  stats.value = null;
+  accommodations.value = [];
+  error.value = '';
+  accommodationsError.value = '';
+  console.log("[HostDashboard] loadDashboardData 시작 - loading.value: true");
 
-// 차트 초기화
-const initCharts = async () => {
-  // 기존 차트 제거
-  Object.values(charts).forEach(chart => {
-    if (chart) chart.destroy()
-  })
-
-  // 월별 예약 차트
-  charts.reservationsChart = new Chart(reservationsChart.value, {
-    type: 'line',
-    data: {
-      labels: Object.keys(monthlyReservations.value),
-      datasets: [{
-        label: '월별 예약 수',
-        data: Object.values(monthlyReservations.value),
-        borderColor: 'rgba(75, 192, 192, 1)',
-        backgroundColor: 'rgba(75, 192, 192, 0.2)',
-        tension: 0.1
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      scales: {
-        y: { beginAtZero: true, ticks: { precision: 0 } }
-      }
-    }
-  })
-
-  // 월별 수익 차트
-  charts.revenueChart = new Chart(revenueChart.value, {
-    type: 'bar',
-    data: {
-      labels: Object.keys(monthlyRevenue.value),
-      datasets: [{
-        label: '월별 수익 (원)',
-        data: Object.values(monthlyRevenue.value),
-        backgroundColor: 'rgba(54, 162, 235, 0.5)',
-        borderColor: 'rgba(54, 162, 235, 1)',
-        borderWidth: 1
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      scales: {
-        y: { beginAtZero: true }
-      }
-    }
-  })
-
-  // 예약 상태 분포 차트
-  charts.reservationStatusChart = new Chart(reservationStatusChart.value, {
-    type: 'pie',
-    data: {
-      labels: ['확정', '대기중', '취소', '완료'],
-      datasets: [{
-        data: [
-          confirmedReservations.value,
-          pendingReservations.value,
-          cancelledReservations.value,
-          completedReservations.value
-        ],
-        backgroundColor: [
-          'rgba(54, 162, 235, 0.5)',
-          'rgba(255, 206, 86, 0.5)',
-          'rgba(255, 99, 132, 0.5)',
-          'rgba(75, 192, 192, 0.5)'
-        ],
-        borderColor: [
-          'rgba(54, 162, 235, 1)',
-          'rgba(255, 206, 86, 1)',
-          'rgba(255, 99, 132, 1)',
-          'rgba(75, 192, 192, 1)'
-        ],
-        borderWidth: 1
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false
-    }
-  })
-
-  // 숙소별 예약 현황 차트
-  charts.accommodationReservationsChart = new Chart(accommodationReservationsChart.value, {
-    type: 'bar',
-    data: {
-      labels: accommodations.value.map(acc => acc.title),
-      datasets: [{
-        label: '예약 수',
-        data: accommodations.value.map(acc => getReservationCount(acc.accommodationId)),
-        backgroundColor: 'rgba(153, 102, 255, 0.5)',
-        borderColor: 'rgba(153, 102, 255, 1)',
-        borderWidth: 1
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      scales: {
-        y: { beginAtZero: true, ticks: { precision: 0 } }
-      }
-    }
-  })
-}
-
-// 대시보드 데이터 로드
-const loadDashboardData = async () => {
   try {
-    const res = await fetch('/api/host/dashboard')
-    if (!res.ok) throw new Error('대시보드 데이터를 불러오는데 실패했습니다.')
-    const data = await res.json()
-    host.value = data.host
-    accommodationCount.value = data.accommodationCount
-    totalReservations.value = data.totalReservations
-    confirmedReservations.value = data.confirmedReservations
-    pendingReservations.value = data.pendingReservations
-    cancelledReservations.value = data.cancelledReservations
-    completedReservations.value = data.completedReservations
-    totalRevenue.value = data.totalRevenue
-    monthlyReservations.value = data.monthlyReservations
-    monthlyRevenue.value = data.monthlyRevenue
-    accommodations.value = data.accommodations
-    reservations.value = data.reservations
+    const accessToken = userStore.tokens?.access_token; // Pinia 스토어에서 직접 접근
+    if (!accessToken) {
+      throw new Error("액세스 토큰이 없습니다. 다시 로그인해주세요.");
+    }
+    
+    const response = await fetch('/api/host/dashboard', { // vite.config.js 프록시 사용 가정
+      headers: { 'Authorization': `Bearer ${accessToken}` }
+    });
+    console.log("[HostDashboard] fetch /api/host/dashboard 응답 상태:", response.status);
 
-    // nextTick 후 차트 초기화 (DOM 반영 보장)
-    await nextTick()
-    await initCharts()
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({ error: '서버 응답 JSON 파싱 실패: ' + response.statusText }));
+      throw new Error(errData.error || errData.message || `대시보드 데이터를 불러오는데 실패했습니다. 상태: ${response.status}`);
+    }
+    stats.value = await response.json();
+    console.log("[HostDashboard] stats.value 할당됨:", JSON.parse(JSON.stringify(stats.value)));
+
+    if (stats.value && stats.value.host && stats.value.host.hostId) {
+      console.log("[HostDashboard] loadAccommodations 호출 예정, hostId:", stats.value.host.hostId);
+      await loadAccommodations(stats.value.host.hostId);
+    } else {
+      console.warn("[HostDashboard] stats.value.host.hostId 없음. stats:", JSON.parse(JSON.stringify(stats.value)));
+      // 호스트 정보가 없으면 숙소 로딩을 시도하지 않음.
+      accommodationsLoading.value = false; 
+    }
   } catch (e) {
-    // 실제 서비스에서는 Toast나 에러 바인딩 필요
-    alert('대시보드 데이터 로드 중 오류: ' + e.message)
-    console.error(e)
+    console.error("[HostDashboard] Error loading dashboard data:", e);
+    error.value = e.message;
+  } finally {
+    loading.value = false; // 전체 대시보드 로딩 완료
+    console.log("[HostDashboard] loadDashboardData finally 종료 - loading.value:", loading.value, "error:", error.value);
   }
 }
 
-// 최초 진입 시 데이터 로드
+// 호스트의 숙소 목록 로드 함수
+async function loadAccommodations(hostId) {
+  console.log("[HostDashboard] loadAccommodations 호출됨, hostId:", hostId);
+  accommodationsLoading.value = true;
+  accommodationsError.value = '';
+  console.log("[HostDashboard] loadAccommodations 시작 - accommodationsLoading.value: true");
+
+  try {
+    const accessToken = userStore.tokens?.access_token;
+     if (!accessToken) {
+      throw new Error("숙소 목록 조회 중 액세스 토큰이 없습니다. 다시 로그인해주세요.");
+    }
+    // 백엔드 HostController.java의 페이징 미지원 버전에 맞춰 URL 사용
+    const apiUrl = `/api/host/${hostId}/accommodations`; 
+    console.log("[HostDashboard] Fetching accommodations from:", apiUrl);
+    
+    const response = await fetch(apiUrl, { 
+      headers: { 'Authorization': `Bearer ${accessToken}` }
+    });
+    console.log("[HostDashboard] fetch accommodations 응답 상태:", response.status);
+
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({ error: '서버 응답 JSON 파싱 실패: ' + response.statusText }));
+      throw new Error(errData.error || errData.message || `숙소 목록을 불러오는데 실패했습니다. 상태: ${response.status}`);
+    }
+    const data = await response.json(); // { accommodations: [...], roomsByAccommodation: {}, ... } 등 예상
+    console.log("[HostDashboard] Accommodations API response data:", JSON.parse(JSON.stringify(data)));
+    
+    // API 응답에서 accommodations 배열을 가져옴 (HostController.java 응답 구조에 따라 `data.accommodations` 또는 `data` 자체가 배열일 수 있음)
+    // HostController의 getHostAccommodations는 Map<String, Object>를 반환하며, 그 안에 "accommodations" 키로 List<Accommodation>이 있음.
+    if (data && Array.isArray(data.accommodations)) {
+        accommodations.value = data.accommodations;
+    } else if (data && Array.isArray(data)) { // 혹시 API가 List<Accommodation>을 직접 반환하는 경우
+        accommodations.value = data;
+    } else {
+        console.warn("[HostDashboard] 숙소 목록 API 응답 형식이 예상과 다릅니다. data:", data);
+        accommodations.value = [];
+    }
+
+  } catch (e) {
+    console.error("[HostDashboard] Error loading accommodations:", e);
+    accommodationsError.value = e.message;
+    accommodations.value = [];
+  } finally {
+    accommodationsLoading.value = false;
+    console.log("[HostDashboard] loadAccommodations finally 종료 - accommodationsLoading.value:", accommodationsLoading.value, "error:", accommodationsError.value);
+  }
+}
+
 onMounted(() => {
-  loadDashboardData()
-})
+  console.log('[HostDashboard] onMounted - Component is mounted. Attempting to load data.');
+  loadDashboardData();
+});
+
 </script>
 
 <style scoped>
-.dashboard-card {
-  border-radius: 10px;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-  margin-bottom: 20px;
-  transition: transform 0.3s;
+.table th, .table td { /* data-v-... 제거하여 전역 스타일로 적용될 수 있게 하거나, 필요시 유지 */
+  vertical-align: middle;
 }
-.dashboard-card:hover {
-  transform: translateY(-5px);
+.card .icon { /* data-v-... 제거 */
+  font-size: 2rem;
 }
-.stat-card {
-  text-align: center;
-  padding: 20px;
-  border-radius: 10px;
-  margin-bottom: 20px;
+/* 추가된 스타일 */
+.badge {
+  font-size: 0.85em;
+  padding: 0.4em 0.6em;
 }
-.stat-number {
-  font-size: 2.5rem;
-  font-weight: bold;
+.table-hover tbody tr:hover {
+  background-color: #f8f9fa;
 }
-.stat-label {
-  font-size: 1rem;
-  color: #6c757d;
-}
-.bg-light-blue {
-  background-color: #e3f2fd;
-}
-.bg-light-green {
-  background-color: #e8f5e9;
-}
-.bg-light-yellow {
-  background-color: #fffde7;
-}
-.bg-light-red {
-  background-color: #ffebee;
-}
-.chart-container {
-  position: relative;
-  height: 300px;
-  margin-bottom: 30px;
+.card-header h5 .bi {
+  font-size: 1.1rem;
 }
 </style>
