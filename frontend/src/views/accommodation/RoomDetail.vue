@@ -405,10 +405,10 @@ async function addToCart() {
     price: room.value.price,
   };
   try {
-    await cartStore.addToCart(item);
-    message.value = "객실이 장바구니에 추가되었습니다.";
+    const response = await cartStore.addToCart(item);
+    message.value = response.message || "객실이 장바구니에 추가되었습니다.";
   } catch (err) {
-    message.value = err.response?.data?.message || "장바구니 추가 중 오류가 발생했습니다.";
+    message.value = typeof err === 'string' ? err : (err.response?.data?.message || "장바구니 추가 중 오류가 발생했습니다.");
   }
 }
 

@@ -112,7 +112,39 @@ public interface ReservationDao {
      */
     boolean existsCompletedReservationByUserAndAccommodation(@Param("userId") Long userId, @Param("accommodationId") Long accommodationId) throws SQLException;
 
-    List<Reservation> findReservationsByHostWithFiltersAndPaging(Map<String, Object> params);
+    /**
+     * 새 예약을 PENDING_PAYMENT 상태 및 merchantUid와 함께 등록합니다.
+     * @param reservation 등록할 예약 정보 (status, paymentStatus, merchantUid 포함)
+     * @return 영향을 받은 행 수
+     */
+    int insertPendingReservation(Reservation reservation) throws SQLException;
 
-    long countReservationsByHostWithFilters(Map<String, Object> params);
+    /**
+     * merchantUid로 PENDING_PAYMENT 상태의 예약 목록을 조회합니다.
+     * @param merchantUid 주문 ID
+     * @return 예약 목록
+     */
+    List<Reservation> getPendingReservationsByMerchantUid(String merchantUid) throws SQLException;
+
+    /**
+     * merchantUid로 예약들의 상태와 결제 상태를 업데이트합니다.
+     * @param params Map containing merchantUid, newStatus, newPaymentStatus
+     * @return 업데이트된 행 수
+     */
+    int updateReservationsStatusByMerchantUid(Map<String, Object> params) throws SQLException;
+
+    /**
+     * 사용자 ID로 PENDING_PAYMENT 상태의 예약 건수를 조회합니다.
+     * @param userId 사용자 ID
+     * @return PENDING_PAYMENT 상태의 예약 건수
+     */
+    int countPendingReservationsByUserId(Long userId) throws SQLException;
+
+    List<Reservation> findReservationsByHostWithFiltersAndPaging(Map<String, Object> params) throws SQLException;
+
+    long countReservationsByHostWithFilters(Map<String, Object> params) throws SQLException;
+
+    Reservation getReservationByIdAndUserId(@Param("reservationId") Long reservationId, @Param("userId") Long userId) throws SQLException;
+
+    List<Reservation> getReservationsByMerchantUid(String merchantUid) throws SQLException;
 }

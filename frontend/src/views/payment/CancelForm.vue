@@ -167,6 +167,7 @@
 import { ref, reactive, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import Layout from '@/components/layout/Layout.vue';
+import api from '@/api/index';
 
 const props = defineProps({
   paymentId: {
@@ -190,7 +191,8 @@ const payment = reactive({
   paymentDate: null,
   reservationId: null,
   accommodationTitle: '',
-  roomName: ''
+  roomName: '',
+  paymentKey: null,
 });
 const reservation = reactive({
   reservationId: null,
@@ -220,28 +222,36 @@ onMounted(async () => {
 // 결제 정보 및 예약 정보 로드 (예시: 실제 구현은 API에 맞게 수정)
 async function loadPaymentDetails() {
   loading.value = true;
+  error.value = '';
   try {
-    // 예시 API 호출 (수정 필요)
-    const res = await fetch(`/api/payment/detail/${props.paymentId}`);
-    if (!res.ok) throw new Error('결제 정보를 불러올 수 없습니다.');
-    const data = await res.json();
+    const response = await api.api.get(`/api/v1/payments/detail/${props.paymentId}`);
+    const data = response.data;
 
     // payment와 reservation에 값 세팅
-    Object.assign(payment, data.payment);
-    Object.assign(reservation, data.reservation);
+    if (data.payment) {
+      Object.assign(payment, data.payment);
+    } else {
+      payment.paymentId = props.paymentId;
+    }
+    
+    if (data.reservation) {
+      Object.assign(reservation, data.reservation);
+    }
 
+    if (!payment.paymentKey && data.payment?.status === 'COMPLETED') {
+      console.warn('PaymentKey (imp_uid) is missing for a completed payment. Cancellation might not work as expected.');
+    }
+    
     // 환불 금액 계산
     calculateRefundAmount();
 
     // 상태 검사
-    if (payment.status !== 'COMPLETED') {
-      error.value = '취소할 수 있는 결제가 아닙니다.';
-    }
-    if (reservation.status !== 'CONFIRMED') {
-      error.value = '이미 취소되었거나 완료된 예약입니다.';
+    if (payment.status !== 'COMPLETED' && payment.status !== 'PAID') {
+      error.value = '취소할 수 있는 결제 상태가 아닙니다. 현재 상태: ' + getPaymentStatusName(payment.status);
     }
   } catch (e) {
-    error.value = '결제 정보를 불러올 수 없습니다. 다시 시도해주세요.';
+    console.error("Error loading payment details:", e);
+    error.value = e.response?.data?.error || e.message || '결제 정보를 불러올 수 없습니다. 다시 시도해주세요.';
   } finally {
     loading.value = false;
   }
@@ -272,28 +282,36 @@ async function submitCancelRequest() {
     error.value = '기타 사유를 입력해주세요.';
     return;
   }
+
+  if (!payment.paymentKey) {
+    error.value = '결제 식별자(paymentKey)가 없어 아임포트 취소를 진행할 수 없습니다. 내부 취소를 시도하거나 관리자에게 문의하세요.';
+    isSubmitting.value = false;
+    return;
+  }
+
   isSubmitting.value = true;
   error.value = '';
+  message.value = '';
+
   try {
-    // 실제 API 호출 (수정 필요)
-    const res = await fetch('/api/payment/cancel', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        paymentId: payment.paymentId,
-        reason: cancelRequest.reason,
-        reasonDetail: cancelRequest.reason === 'OTHER' ? cancelRequest.otherReason : '',
-        refundAmount: refundAmount.value,
-      }),
+    const response = await api.api.post(`/api/v1/payments/cancel/imp/${payment.paymentKey}`, {
     });
-    if (!res.ok) throw new Error('결제 취소 요청에 실패했습니다.');
-    // 성공시 결제 상세 페이지 이동
-    router.push({
-      path: `/payment/detail/${payment.paymentId}`,
-      query: { message: '결제 취소 요청이 성공적으로 처리되었습니다.' }
-    });
+
+    const cancelledPaymentData = response.data;
+    message.value = `결제(ID: ${cancelledPaymentData.paymentId})가 성공적으로 취소되었습니다. 상태: ${getPaymentStatusName(cancelledPaymentData.status)}`;
+    
+    setTimeout(() => {
+      router.push({
+        name: 'PaymentDetail',
+        params: { id: payment.paymentId },
+        query: { message: message.value }
+      });
+    }, 3000);
+
   } catch (e) {
-    error.value = '결제 취소 요청에 실패했습니다. 다시 시도해주세요.';
+    console.error("Error submitting cancel request:", e);
+    error.value = e.response?.data?.error || e.message || '결제 취소 요청에 실패했습니다. 다시 시도해주세요.';
+  } finally {
     isSubmitting.value = false;
   }
 }

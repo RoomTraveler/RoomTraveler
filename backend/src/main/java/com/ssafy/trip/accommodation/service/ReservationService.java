@@ -3,6 +3,9 @@ package com.ssafy.trip.accommodation.service;
 import com.ssafy.trip.accommodation.model.Reservation;
 import com.ssafy.trip.accommodation.model.Room;
 import com.ssafy.trip.accommodation.model.RoomAvailability;
+import com.ssafy.trip.exception.InvalidRequestException;
+import com.ssafy.trip.exception.ResourceNotFoundException;
+import com.ssafy.trip.payment.dto.PaymentPrepareRequestDto;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.web.multipart.MultipartFile;
@@ -238,6 +241,69 @@ public interface ReservationService {
      * @param sortBy 정렬 기준
      * @param pageable 페이징 정보
      * @return 페이징된 예약 목록
+     * @throws SQLException DB 오류 발생 시
      */
-    Page<Reservation> getReservationsByHostIdWithFiltersAndPaging(Long hostId, String status, String checkInDate, String guestName, String sortBy, Pageable pageable);
+    Page<Reservation> getReservationsByHostIdWithFiltersAndPaging(Long hostId, String status, String checkInDate, String guestName, String sortBy, Pageable pageable) throws SQLException;
+
+    /**
+     * 결제를 위해 여러 예약을 준비하고 PENDING_PAYMENT 상태로 저장합니다.
+     * 각 예약에 대해 객실 가용성을 감소시킵니다.
+     *
+     * @param prepareRequestDto 결제 준비 요청 DTO (내부에 예약 생성 정보 포함)
+     * @param userId 사용자 ID
+     * @return Map containing "merchantUid", "amount", "orderName"
+     * @throws SQLException DB 오류 또는 객실 예약 불가 시
+     * @throws InvalidRequestException 잘못된 요청 데이터 시
+     * @throws ResourceNotFoundException 객실 등 리소스 조회 실패 시
+     */
+    Map<String, Object> prepareReservationsForPayment(PaymentPrepareRequestDto prepareRequestDto, Long userId) throws SQLException, InvalidRequestException, ResourceNotFoundException;
+
+    /**
+     * 결제 완료 후 예약 상태를 업데이트합니다.
+     *
+     * @param merchantUid 주문 ID
+     * @param newStatus 예약의 새 상태 (예: "CONFIRMED")
+     * @param newPaymentStatus 결제의 새 상태 (예: "PAID")
+     * @throws SQLException DB 오류
+     * @throws ResourceNotFoundException 해당 merchantUid로 PENDING_PAYMENT 상태의 예약을 찾지 못한 경우
+     */
+    void updateReservationsAfterPayment(String merchantUid, String newStatus, String newPaymentStatus) throws SQLException, ResourceNotFoundException;
+
+    /**
+     * 결제 실패 또는 취소 시 merchantUid로 관련된 예약들을 취소하고 객실 재고를 복원합니다.
+     *
+     * @param merchantUid 주문 ID
+     * @param reservationStatus 예약의 새 취소 상태 (예: "CANCELLED")
+     * @param paymentStatus 결제의 새 취소/환불 상태 (예: "REFUNDED" 또는 "CANCELLED")
+     * @throws SQLException DB 오류
+     */
+    void cancelReservationsByMerchantUid(String merchantUid, String reservationStatus, String paymentStatus) throws SQLException;
+
+    /**
+     * 사용자 ID로 PENDING_PAYMENT 상태의 예약 건수를 조회합니다.
+     * @param userId 사용자 ID
+     * @return PENDING_PAYMENT 상태의 예약 건수
+     * @throws SQLException DB 오류
+     */
+    int countPendingReservationsByUserId(Long userId) throws SQLException;
+
+    /**
+     * merchantUid로 PENDING_PAYMENT 상태의 예약 목록을 조회합니다.
+     * PaymentService에서 결제 검증 시 사용됩니다.
+     * @param merchantUid 주문 ID
+     * @return PENDING_PAYMENT 상태의 예약 목록
+     * @throws SQLException DB 오류
+     */
+    List<Reservation> getPendingReservationsByMerchantUid(String merchantUid) throws SQLException;
+
+    /**
+     * 예약 ID와 사용자 ID로 특정 예약을 조회합니다.
+     * (주로 사용자가 자신의 예약을 조회할 때 사용)
+     *
+     * @param reservationId 예약 ID
+     * @param userId 사용자 ID
+     * @return 예약 정보 또는 null (없거나 권한 없는 경우)
+     * @throws SQLException DB 오류
+     */
+    Reservation getReservationByIdAndUserId(Long reservationId, Long userId) throws SQLException;
 }

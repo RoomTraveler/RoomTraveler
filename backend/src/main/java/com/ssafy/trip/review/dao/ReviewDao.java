@@ -17,22 +17,22 @@ public interface ReviewDao {
     /**
      * 새 리뷰를 추가합니다.
      */
-    int insert(Review review) throws SQLException;
+    int insertReview(Review review) throws SQLException;
 
     /**
      * 리뷰 ID로 리뷰를 조회합니다.
      */
-    Review selectById(Long reviewId) throws SQLException;
+    Review selectReviewById(Long reviewId) throws SQLException;
 
     /**
      * 숙소 ID로 리뷰 목록을 조회합니다.
      */
-    List<Review> selectByAccommodationId(Long accommodationId) throws SQLException;
+    List<Review> selectReviewsByAccommodationId(Long accommodationId) throws SQLException;
 
     /**
      * 사용자 ID로 리뷰 목록을 조회합니다.
      */
-    List<Review> selectByUserId(Long userId) throws SQLException;
+    List<Review> selectReviewsByUserId(Long userId) throws SQLException;
 
     /**
      * 숙소 ID로 리뷰 평균 평점을 조회합니다.
@@ -54,7 +54,7 @@ public interface ReviewDao {
     /**
      * 리뷰를 업데이트합니다.
      */
-    int update(Review review) throws SQLException;
+    int updateReview(Review review) throws SQLException;
 
     /**
      * 리뷰 상태를 업데이트합니다.
@@ -64,7 +64,7 @@ public interface ReviewDao {
     /**
      * 리뷰를 삭제합니다.
      */
-    int delete(Long reviewId) throws SQLException;
+    int deleteReviewById(@Param("reviewId") Long reviewId, @Param("userId") Long userId) throws SQLException;
 
     /**
      * 숙소 ID로 리뷰 요약 정보를 조회합니다.
@@ -84,12 +84,12 @@ public interface ReviewDao {
     /**
      * 예약 ID로 리뷰를 조회합니다.
      */
-    Review selectByReservationId(Long reservationId) throws SQLException;
+    Review selectReviewByReservationId(Long reservationId) throws SQLException;
 
     /**
      * 호스트 ID로 리뷰 목록을 조회합니다.
      */
-    List<Review> selectByHostId(Long hostId) throws SQLException;
+    List<Review> selectReviewsByHostId(Long hostId) throws SQLException;
 
     /**
      * 필터링된 리뷰 목록을 조회합니다.
@@ -102,24 +102,14 @@ public interface ReviewDao {
     int insertReviewImage(ReviewImage reviewImage) throws SQLException;
 
     /**
-     * 여러 리뷰 이미지를 추가합니다. (배치 처리용)
+     * 리뷰 ID로 해당 리뷰의 모든 이미지를 삭제합니다.
      */
-    int insertReviewImages(@Param("list") List<ReviewImage> reviewImages) throws SQLException;
-
-    /**
-     * 리뷰 ID로 해당 리뷰의 모든 이미지 목록을 조회합니다.
-     */
-    List<ReviewImage> selectReviewImagesByReviewId(Long reviewId) throws SQLException;
+    int deleteReviewImagesByReviewId(Long reviewId) throws SQLException;
 
     /**
      * 이미지 ID로 단일 리뷰 이미지를 조회합니다.
      */
     ReviewImage selectReviewImageById(Long imageId) throws SQLException;
-
-    /**
-     * 리뷰 ID로 해당 리뷰의 모든 이미지를 삭제합니다.
-     */
-    int deleteReviewImagesByReviewId(Long reviewId) throws SQLException;
 
     /**
      * 이미지 ID로 특정 이미지를 삭제합니다.
@@ -147,16 +137,21 @@ public interface ReviewDao {
     int updateReviewImageSortOrder(@Param("imageId") Long imageId, @Param("sortOrder") int sortOrder) throws SQLException;
 
     /**
-     * 특정 이미지의 캡션을 업데이트합니다.
-     * @param imageId 이미지 ID
-     * @param caption 새로운 캡션
-     */
-    int updateReviewImageCaption(@Param("imageId") Long imageId, @Param("caption") String caption) throws SQLException;
-
-    /**
      * (선택적) 이미지의 모든 정보를 업데이트합니다.
      * ReviewImage 객체 전체를 받아 업데이트합니다.
      * @param reviewImage 업데이트할 이미지 정보 객체
      */
     int updateReviewImage(ReviewImage reviewImage) throws SQLException;
+
+    /**
+     * 특정 리뷰 이미지의 캡션을 업데이트합니다.
+     * @param imageId 캡션을 수정할 이미지 ID
+     * @param caption 새로운 캡션 내용
+     */
+    int updateReviewImageCaption(@Param("imageId") Long imageId, @Param("caption") String caption) throws SQLException;
+
+    /**
+     * 사용자가 특정 숙소에 대해 결제 완료한 예약이 있는지 확인 (리뷰 작성 권한 검사용)
+     */
+    boolean checkUserReservationForAccommodation(@Param("userId") Long userId, @Param("accommodationId") Long accommodationId) throws SQLException;
 }

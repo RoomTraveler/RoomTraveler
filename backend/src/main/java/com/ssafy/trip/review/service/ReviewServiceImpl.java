@@ -1,23 +1,39 @@
 package com.ssafy.trip.review.service;
 
+import com.ssafy.trip.accommodation.dao.AccommodationDao;
+import com.ssafy.trip.accommodation.model.Accommodation;
+import com.ssafy.trip.exception.ResourceNotFoundException;
+import com.ssafy.trip.exception.UnauthorizedException;
 import com.ssafy.trip.review.dao.ReviewDao;
+import com.ssafy.trip.review.dto.ReviewCreationRequestDto;
+import com.ssafy.trip.review.dto.ReviewResponseDto;
+import com.ssafy.trip.review.dto.ReviewUpdateRequestDto;
 import com.ssafy.trip.review.model.Review;
 import com.ssafy.trip.review.model.ReviewImage;
 import com.ssafy.trip.s3.AWSS3Service;
-import com.ssafy.trip.accommodation.dao.ReservationDao;
-import com.ssafy.trip.accommodation.dao.AccommodationDao;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.ssafy.trip.user.UserDao;
+import com.ssafy.trip.user.User;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.CollectionUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * 리뷰 서비스 구현 클래스
@@ -26,453 +42,433 @@ import java.util.Map;
 @Service
 public class ReviewServiceImpl implements ReviewService {
 
-    private final ReviewDao reviewDao;
-    private final AWSS3Service awsS3Service; // S3 서비스 주입
-    private final ReservationDao reservationDao; // ReservationDao 주입
-    private final AccommodationDao accommodationDao; // AccommodationDao 주입
+    private static final Logger logger = LoggerFactory.getLogger(ReviewServiceImpl.class);
 
-    @Value("${app.review.max-images-per-review:5}") // 기본값 5개
+    private final ReviewDao reviewDao;
+    private final AWSS3Service awsS3Service;
+    private final UserDao userDao;
+    private final AccommodationDao accommodationDao;
+
+    @Value("${cloud.aws.s3.bucket}")
+    private String bucketName;
+
+    @Value("${app.review.max-images-per-review:5}")
     private int maxImagesPerReview;
 
-    /**
-     * 생성자 주입을 통한 의존성 주입
-     *
-     * @param reviewDao 리뷰 데이터 접근 객체
-     * @param awsS3Service S3 서비스
-     * @param reservationDao ReservationDao
-     * @param accommodationDao AccommodationDao
-     */
-    @Autowired
-    public ReviewServiceImpl(ReviewDao reviewDao, AWSS3Service awsS3Service, ReservationDao reservationDao, AccommodationDao accommodationDao) {
+    public ReviewServiceImpl(ReviewDao reviewDao, AWSS3Service awsS3Service, UserDao userDao, AccommodationDao accommodationDao) {
         this.reviewDao = reviewDao;
         this.awsS3Service = awsS3Service;
-        this.reservationDao = reservationDao;
+        this.userDao = userDao;
         this.accommodationDao = accommodationDao;
     }
 
-    /**
-     * 새 리뷰를 생성합니다.
-     * 사용자 ID를 리뷰 정보에 설정하고, 기본값(생성 시간, 상태)을 설정한 후 저장합니다.
-     * 리뷰 작성 자격 여부를 확인합니다.
-     * 첨부된 이미지 파일들을 S3에 업로드하고, 해당 URL들을 `review_images` 테이블에 저장합니다.
-     *
-     * @param review 생성할 리뷰 정보
-     * @param userId 작성자 ID
-     * @param imageFiles 첨부된 이미지 파일 목록
-     * @param captions 이미지 캡션 목록
-     * @return 생성된 리뷰 ID
-     * @throws SQLException 데이터베이스 오류 발생 시 또는 리뷰 작성 자격이 없는 경우
-     * @throws IOException 파일 처리 중 오류 발생 시
-     */
+    @Override
+    public boolean canUserReviewAccommodation(Long userId, Long accommodationId) throws SQLException {
+        if (userId == null || accommodationId == null) {
+            return false;
+        }
+        return reviewDao.checkUserReservationForAccommodation(userId, accommodationId);
+    }
+
     @Override
     @Transactional
-    public Long createReview(Review review, Long userId, List<MultipartFile> imageFiles, List<String> captions) throws SQLException, IOException {
-        if (!checkReviewEligibility(userId, review.getAccommodationId())) {
-            throw new SQLException("해당 숙소에 숙박한 기록이 없어 리뷰를 작성할 수 없습니다.");
+    public ReviewResponseDto createReview(ReviewCreationRequestDto requestDto, List<MultipartFile> imageFiles, Long userId)
+            throws SQLException, IOException, UnauthorizedException, ResourceNotFoundException {
+        
+        User user = userDao.selectUserById(userId);
+        if (user == null) {
+            throw new ResourceNotFoundException("사용자를 찾을 수 없습니다: " + userId);
         }
 
-        // 이미지 개수 제한 검사
-        if (imageFiles != null && imageFiles.size() > maxImagesPerReview) {
+        if (!canUserReviewAccommodation(userId, requestDto.getAccommodationId())) {
+            throw new UnauthorizedException("이 숙소에 대한 리뷰를 작성할 권한이 없습니다. 먼저 예약을 완료해주세요.");
+        }
+        
+        if (requestDto.getReservationId() != null) {
+            Review existingReviewForReservation = reviewDao.selectReviewByReservationId(requestDto.getReservationId());
+            if (existingReviewForReservation != null) {
+                throw new IllegalStateException("이미 이 예약에 대한 리뷰가 존재합니다.");
+            }
+        }
+
+        if (!CollectionUtils.isEmpty(imageFiles) && imageFiles.size() > maxImagesPerReview) {
             throw new IllegalArgumentException("리뷰에는 최대 " + maxImagesPerReview + "개의 이미지만 첨부할 수 있습니다.");
         }
+        
+        Review review = Review.builder()
+                .accommodationId(requestDto.getAccommodationId())
+                .userId(userId)
+                .reservationId(requestDto.getReservationId())
+                .rating(requestDto.getRating())
+                .title(requestDto.getTitle())
+                .content(requestDto.getContent())
+                .status("ACTIVE") 
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
+                .build();
+        reviewDao.insertReview(review); 
 
-        review.setUserId(userId);
-        review.setCreatedAt(LocalDateTime.now());
-        review.setStatus(review.getStatus() == null ? "ACTIVE" : review.getStatus());
-        review.setIsVerified(review.getIsVerified() == null ? true : review.getIsVerified());
-
-        reviewDao.insert(review);
-        Long reviewId = review.getReviewId();
-        Long accommodationId = review.getAccommodationId(); // 숙소 ID 가져오기
-
-        if (imageFiles != null && !imageFiles.isEmpty()) {
-            List<ReviewImage> reviewImages = new ArrayList<>();
+        List<ReviewImage> reviewImages = new ArrayList<>();
+        if (!CollectionUtils.isEmpty(imageFiles)) {
             for (int i = 0; i < imageFiles.size(); i++) {
                 MultipartFile file = imageFiles.get(i);
-                String caption = (captions != null && i < captions.size()) ? captions.get(i) : null;
                 if (file != null && !file.isEmpty()) {
-                    String imageUrl = awsS3Service.uploadFile(file); // AWSS3Service에서 크기/형식 검사
+                    String imageUrl = awsS3Service.uploadFile(file); 
+
                     ReviewImage reviewImage = ReviewImage.builder()
-                            .reviewId(reviewId)
+                            .reviewId(review.getReviewId())
                             .imageUrl(imageUrl)
-                            .isThumbnail(i == 0) // 첫 번째 이미지를 썸네일로 자동 지정
-                            .sortOrder(i)
-                            .caption(caption) // 캡션 설정
+                            .uploadOrder(i)
+                            .createdAt(LocalDateTime.now())
+                            .updatedAt(LocalDateTime.now())
                             .build();
+                    reviewDao.insertReviewImage(reviewImage);
                     reviewImages.add(reviewImage);
                 }
             }
-            if (!reviewImages.isEmpty()) {
-                reviewDao.insertReviewImages(reviewImages);
-            }
         }
-        
-        // 숙소 리뷰 통계 업데이트
-        updateAccommodationReviewStats(accommodationId);
-        
-        return reviewId;
+        review.setImages(reviewImages);
+
+        return convertToDto(review);
     }
 
-    /**
-     * 리뷰 ID로 리뷰를 조회합니다.
-     * MyBatis collection 매핑을 통해 이미지 정보가 자동으로 포함됩니다.
-     *
-     * @param reviewId 조회할 리뷰 ID
-     * @return 조회된 리뷰 정보. 해당 ID의 리뷰가 없으면 null 반환.
-     * @throws SQLException 데이터베이스 오류 발생 시
-     */
-    @Override
-    public Review getReviewById(Long reviewId) throws SQLException {
-        return reviewDao.selectById(reviewId);
-    }
-
-    /**
-     * 숙소 ID로 리뷰 목록을 조회합니다.
-     * MyBatis collection 매핑을 통해 이미지 정보가 자동으로 포함됩니다.
-     *
-     * @param accommodationId 조회할 숙소 ID
-     * @return 해당 숙소의 리뷰 목록
-     * @throws SQLException 데이터베이스 오류 발생 시
-     */
-    @Override
-    public List<Review> getReviewsByAccommodationId(Long accommodationId) throws SQLException {
-        return reviewDao.selectByAccommodationId(accommodationId);
-    }
-
-    /**
-     * 사용자 ID로 리뷰 목록을 조회합니다.
-     * MyBatis collection 매핑을 통해 이미지 정보가 자동으로 포함됩니다.
-     *
-     * @param userId 조회할 사용자 ID
-     * @return 해당 사용자가 작성한 리뷰 목록
-     * @throws SQLException 데이터베이스 오류 발생 시
-     */
-    @Override
-    public List<Review> getReviewsByUserId(Long userId) throws SQLException {
-        return reviewDao.selectByUserId(userId);
-    }
-
-    /**
-     * 숙소 ID로 리뷰 평균 평점을 조회합니다.
-     *
-     * @param accommodationId 조회할 숙소 ID
-     * @return 해당 숙소의 평균 평점. 리뷰가 없으면 0.0 반환.
-     * @throws SQLException 데이터베이스 오류 발생 시
-     */
-    @Override
-    public Double getAverageRatingByAccommodationId(Long accommodationId) throws SQLException {
-        Double averageRating = reviewDao.selectAverageRatingByAccommodationId(accommodationId);
-        return averageRating != null ? averageRating : 0.0;
-    }
-
-    /**
-     * 숙소 ID로 리뷰 개수를 조회합니다.
-     *
-     * @param accommodationId 조회할 숙소 ID
-     * @return 해당 숙소의 리뷰 개수
-     * @throws SQLException 데이터베이스 오류 발생 시
-     */
-    @Override
-    public Integer getReviewCountByAccommodationId(Long accommodationId) throws SQLException {
-        return reviewDao.selectCountByAccommodationId(accommodationId);
-    }
-
-    /**
-     * 리뷰를 업데이트합니다.
-     * 리뷰 작성자만 해당 리뷰를 수정할 수 있습니다. 업데이트 시 수정 시간을 현재 시간으로 설정합니다.
-     * 기존 이미지를 삭제하거나 새 이미지를 추가할 수 있습니다.
-     *
-     * @param review 업데이트할 리뷰 정보 (텍스트)
-     * @param userId 수정 요청 사용자 ID
-     * @param newImageFiles 새로 추가할 이미지 파일 목록
-     * @param newCaptions 새로 추가할 이미지 캡션 목록
-     * @param deleteImageIds 삭제할 기존 이미지의 ID 목록
-     * @return 업데이트 성공 시 true, 실패 시 false
-     * @throws SQLException 데이터베이스 오류 발생 시 또는 리뷰를 찾을 수 없거나 수정 권한이 없는 경우
-     * @throws IOException 파일 처리 중 오류 발생 시
-     */
     @Override
     @Transactional
-    public boolean updateReview(Review review, Long userId, List<MultipartFile> newImageFiles, List<String> newCaptions, List<Long> deleteImageIds) throws SQLException, IOException {
-        Review existingReview = reviewDao.selectById(review.getReviewId());
-        if (existingReview == null) {
-            throw new SQLException("리뷰를 찾을 수 없습니다: " + review.getReviewId());
+    public ReviewResponseDto updateReview(Long reviewId, ReviewUpdateRequestDto requestDto, List<MultipartFile> newImageFiles, Long userId)
+            throws SQLException, IOException, ResourceNotFoundException, UnauthorizedException {
+        
+        Review review = reviewDao.selectReviewById(reviewId); 
+        if (review == null) {
+            throw new ResourceNotFoundException("리뷰를 찾을 수 없습니다: " + reviewId);
         }
-        if (!existingReview.getUserId().equals(userId)) {
-            throw new SQLException("자신이 작성한 리뷰만 수정할 수 있습니다.");
+        if (!review.getUserId().equals(userId)) {
+            throw new UnauthorizedException("이 리뷰를 수정할 권한이 없습니다.");
         }
-        Long accommodationId = existingReview.getAccommodationId(); // 숙소 ID 가져오기
+        
+        List<ReviewImage> existingImages = review.getImages() == null ? new ArrayList<>() : review.getImages();
+        int currentImageCount = existingImages.size();
+        int newImageInputCount = !CollectionUtils.isEmpty(newImageFiles) ? newImageFiles.size() : 0;
+        int deletedImageCount = !CollectionUtils.isEmpty(requestDto.getDeletedImageIds()) ? requestDto.getDeletedImageIds().size() : 0;
 
-        // 이미지 개수 검증 (기존 이미지 + 새 이미지 - 삭제될 이미지)
-        List<ReviewImage> currentImages = reviewDao.selectReviewImagesByReviewId(review.getReviewId());
-        int currentImageCount = currentImages != null ? currentImages.size() : 0;
-        int newImageCount = newImageFiles != null ? newImageFiles.size() : 0;
-        int deleteImageCount = deleteImageIds != null ? deleteImageIds.size() : 0;
-        if (currentImageCount + newImageCount - deleteImageCount > maxImagesPerReview) {
+        if (currentImageCount - deletedImageCount + newImageInputCount > maxImagesPerReview) {
             throw new IllegalArgumentException("리뷰에는 최대 " + maxImagesPerReview + "개의 이미지만 첨부할 수 있습니다.");
         }
 
-        review.setUserId(userId); // 변경될 수 없지만, 명시적으로 설정
-        review.setUpdatedAt(LocalDateTime.now()); // 수정 시간 업데이트
-        review.setStatus(existingReview.getStatus()); // 상태는 이 메서드에서 변경하지 않음
-        review.setIsVerified(existingReview.getIsVerified()); // 검증 상태는 이 메서드에서 변경하지 않음
-        review.setCreatedAt(existingReview.getCreatedAt()); // 생성 시간은 유지
-        review.setAccommodationId(accommodationId); // 숙소 ID는 변경 불가
+        review.setRating(requestDto.getRating());
+        review.setTitle(requestDto.getTitle());
+        review.setContent(requestDto.getContent());
+        review.setUpdatedAt(LocalDateTime.now());
+        reviewDao.updateReview(review); 
 
-        int updatedRows = reviewDao.update(review); // 리뷰 텍스트 정보 업데이트
-
-        // 기존 이미지 삭제 처리
-        if (deleteImageIds != null && !deleteImageIds.isEmpty()) {
-            for (Long imageIdToDelete : deleteImageIds) {
-                ReviewImage imageToDelete = reviewDao.selectReviewImageById(imageIdToDelete);
-                if (imageToDelete != null && imageToDelete.getReviewId().equals(review.getReviewId())) {
-                    awsS3Service.deleteImage(imageToDelete.getImageUrl()); // S3에서 이미지 삭제
-                    reviewDao.deleteReviewImageById(imageIdToDelete); // DB에서 이미지 정보 삭제
+        if (!CollectionUtils.isEmpty(requestDto.getDeletedImageIds())) {
+            for (Long imageIdToDelete : requestDto.getDeletedImageIds()) {
+                ReviewImage imageToDelete = existingImages.stream()
+                                                .filter(img -> img.getReviewImageId().equals(imageIdToDelete))
+                                                .findFirst().orElse(null);
+                if (imageToDelete != null) {
+                    try {
+                        String s3Key = extractS3KeyFromUrl(imageToDelete.getImageUrl());
+                        if (s3Key != null) awsS3Service.deleteImage(s3Key); 
+                    } catch (Exception e) {
+                        logger.error("S3 이미지 삭제 중 오류 발생 (Image ID: {}): {}", imageIdToDelete, e.getMessage());
+                    }
+                    reviewDao.deleteReviewImageById(imageIdToDelete); 
                 }
             }
         }
+        
+        Review reviewAfterImageDeletion = reviewDao.selectReviewById(reviewId);
+        List<ReviewImage> currentReviewImagesAfterDelete = reviewAfterImageDeletion.getImages() == null ? new ArrayList<>() : reviewAfterImageDeletion.getImages();
 
-        // 새 이미지 추가 처리
-        if (newImageFiles != null && !newImageFiles.isEmpty()) {
-            List<ReviewImage> newReviewImages = new ArrayList<>();
-            // 새 이미지 추가 시 현재 이미지들의 최대 sortOrder 다음부터 시작
-            int maxSortOrder = -1;
-            List<ReviewImage> remainingImages = reviewDao.selectReviewImagesByReviewId(review.getReviewId());
-            if (remainingImages != null) {
-                for (ReviewImage img : remainingImages) {
-                    if (img.getSortOrder() > maxSortOrder) {
-                        maxSortOrder = img.getSortOrder();
-                    }
-                }
-            }
+        if (!CollectionUtils.isEmpty(newImageFiles)) {
+            int maxOrder = currentReviewImagesAfterDelete.stream()
+                                .mapToInt(ReviewImage::getUploadOrder)
+                                .max().orElse(-1);
 
             for (int i = 0; i < newImageFiles.size(); i++) {
                 MultipartFile file = newImageFiles.get(i);
-                String caption = (newCaptions != null && i < newCaptions.size()) ? newCaptions.get(i) : null;
                 if (file != null && !file.isEmpty()) {
                     String imageUrl = awsS3Service.uploadFile(file);
                     ReviewImage reviewImage = ReviewImage.builder()
                             .reviewId(review.getReviewId())
                             .imageUrl(imageUrl)
-                            .isThumbnail(false) // 썸네일은 API로 명시적으로 지정, 기본값 false
-                            .sortOrder(maxSortOrder + 1 + i) // 순서 할당
-                            .caption(caption)
+                            .uploadOrder(maxOrder + 1 + i)
+                            .createdAt(LocalDateTime.now())
+                            .updatedAt(LocalDateTime.now())
                             .build();
-                    newReviewImages.add(reviewImage);
+                    reviewDao.insertReviewImage(reviewImage);
                 }
             }
-            if (!newReviewImages.isEmpty()) {
-                reviewDao.insertReviewImages(newReviewImages);
-            }
-        }
-
-        // 썸네일 재설정 로직 (필요 시)
-        // 만약 이미지 삭제/추가 후 썸네일이 없어졌다면, 남은 이미지 중 첫 번째를 썸네일로 설정
-        List<ReviewImage> finalImages = reviewDao.selectReviewImagesByReviewId(review.getReviewId());
-        if (finalImages != null && !finalImages.isEmpty()) {
-            boolean hasThumbnail = finalImages.stream().anyMatch(img -> img.getIsThumbnail() != null && img.getIsThumbnail());
-            if (!hasThumbnail) {
-                reviewDao.resetThumbnailStatusByReviewId(review.getReviewId()); // 모든 썸네일 false로
-                reviewDao.updateReviewImageThumbnailStatus(finalImages.get(0).getImageId(), true); // 첫 이미지 썸네일로
-            }
-        } else {
-             // 이미지가 모두 삭제된 경우 처리 (필요하다면)
         }
         
-        // 숙소 리뷰 통계 업데이트
-        if (updatedRows > 0) { // 리뷰 텍스트가 실제로 업데이트 되었을 때만 통계 업데이트 (선택적)
-            updateAccommodationReviewStats(accommodationId);
-        }
-        
-        return updatedRows > 0;
+        Review updatedReview = reviewDao.selectReviewById(reviewId);
+        return convertToDto(updatedReview);
     }
 
-    /**
-     * 리뷰 상태를 업데이트합니다.
-     * 리뷰 작성자 또는 관리자('ADMIN' 역할)만 상태를 변경할 수 있습니다.
-     *
-     * @param reviewId 상태를 변경할 리뷰 ID
-     * @param status 새로운 상태
-     * @param userId 상태 변경 요청 사용자 ID
-     * @param userRole 상태 변경 요청 사용자의 역할 (예: "ADMIN")
-     * @return 업데이트 성공 시 true, 실패 시 false
-     * @throws SQLException 데이터베이스 오류 발생 시 또는 리뷰를 찾을 수 없거나 상태 변경 권한이 없는 경우
-     */
     @Override
     @Transactional
-    public boolean updateReviewStatus(Long reviewId, String status, Long userId, String userRole) throws SQLException {
-        Review review = reviewDao.selectById(reviewId);
+    public void deleteReview(Long reviewId, Long userId) throws SQLException, IOException, ResourceNotFoundException, UnauthorizedException {
+        Review review = reviewDao.selectReviewById(reviewId);
         if (review == null) {
-            throw new SQLException("리뷰를 찾을 수 없습니다: " + reviewId);
+            throw new ResourceNotFoundException("리뷰를 찾을 수 없습니다: " + reviewId);
         }
-        // 리뷰 작성자이거나 ADMIN 역할일 경우에만 상태 변경 가능
-        if (!review.getUserId().equals(userId) && !"ADMIN".equalsIgnoreCase(userRole)) {
-            throw new SQLException("리뷰 상태를 변경할 권한이 없습니다.");
-        }
-        return reviewDao.updateStatus(reviewId, status) > 0;
-    }
-
-    /**
-     * 리뷰를 삭제합니다.
-     * 리뷰 작성자 또는 관리자('ADMIN' 역할)만 리뷰를 삭제할 수 있습니다.
-     * 리뷰와 관련된 모든 이미지도 S3 및 DB에서 삭제됩니다.
-     *
-     * @param reviewId 삭제할 리뷰 ID
-     * @param userId 삭제 요청 사용자 ID
-     * @param userRole 삭제 요청 사용자의 역할 (예: "ADMIN")
-     * @return 삭제 성공 시 true, 실패 시 false
-     * @throws SQLException 데이터베이스 오류 발생 시 또는 리뷰를 찾을 수 없거나 삭제 권한이 없는 경우
-     * @throws IOException S3 이미지 삭제 중 오류 발생 시
-     */
-    @Override
-    @Transactional
-    public boolean deleteReview(Long reviewId, Long userId, String userRole) throws SQLException, IOException {
-        Review review = reviewDao.selectById(reviewId);
-        if (review == null) {
-            throw new SQLException("리뷰를 찾을 수 없습니다: " + reviewId);
+        if (!review.getUserId().equals(userId)) {
+            throw new UnauthorizedException("이 리뷰를 삭제할 권한이 없습니다.");
         }
 
-        // 관리자 또는 리뷰 작성자만 삭제 가능
-        if (!("ADMIN".equals(userRole) || review.getUserId().equals(userId))) {
-            throw new SQLException("리뷰를 삭제할 권한이 없습니다.");
+        if (!CollectionUtils.isEmpty(review.getImages())) {
+            for (ReviewImage image : review.getImages()) {
+                try {
+                    String s3Key = extractS3KeyFromUrl(image.getImageUrl());
+                    if (s3Key != null) awsS3Service.deleteImage(s3Key);
+                } catch (Exception e) {
+                    logger.error("S3 이미지 삭제 중 오류 발생 (리뷰 ID: {}, 이미지 URL: {}): {}", reviewId, image.getImageUrl(), e.getMessage());
+                }
+            }
         }
         
-        Long accommodationId = review.getAccommodationId(); // 숙소 ID 가져오기
-
-        // 연결된 이미지들 S3에서 삭제 및 DB에서 삭제
-        List<ReviewImage> images = reviewDao.selectReviewImagesByReviewId(reviewId);
-        if (images != null && !images.isEmpty()) {
-            for (ReviewImage image : images) {
-                awsS3Service.deleteImage(image.getImageUrl()); // S3에서 이미지 파일 삭제
-            }
-            reviewDao.deleteReviewImagesByReviewId(reviewId); // DB에서 모든 이미지 정보 삭제
-        }
-
-        int deletedRows = reviewDao.delete(reviewId); // 리뷰 삭제
-
-        // 숙소 리뷰 통계 업데이트
-        if (deletedRows > 0) {
-            updateAccommodationReviewStats(accommodationId);
-        }
-
-        return deletedRows > 0;
+        reviewDao.deleteReviewImagesByReviewId(reviewId); 
+        reviewDao.deleteReviewById(reviewId, userId);
     }
 
-    /**
-     * 숙소 ID로 리뷰 요약 정보를 조회합니다.
-     * (예: 평균 평점, 리뷰 개수 등)
-     *
-     * @param accommodationId 조회할 숙소 ID
-     * @return 리뷰 요약 정보
-     * @throws SQLException 데이터베이스 오류 발생 시
-     */
+    @Override
+    public Page<ReviewResponseDto> getReviewsByAccommodationId(Long accommodationId, Pageable pageable) throws SQLException {
+        List<Review> allReviews = reviewDao.selectReviewsByAccommodationId(accommodationId); 
+        if (CollectionUtils.isEmpty(allReviews)) {
+            return new PageImpl<>(Collections.emptyList(), pageable, 0);
+        }
+        
+        List<ReviewResponseDto> dtos = allReviews.stream()
+                                            .map(this::convertToDtoSafe)
+                                            .filter(Objects::nonNull)
+                                            .collect(Collectors.toList());
+        
+        int start = (int) pageable.getOffset();
+        int end = Math.min((start + pageable.getPageSize()), dtos.size());
+        List<ReviewResponseDto> pageContent = (start <= end && !dtos.isEmpty() && start < dtos.size()) ? dtos.subList(start, end) : Collections.emptyList();
+        
+        return new PageImpl<>(pageContent, pageable, dtos.size());
+    }
+    
+    @Override
+    public Page<ReviewResponseDto> getReviewsByUserId(Long userId, Pageable pageable) throws SQLException {
+        List<Review> allReviews = reviewDao.selectReviewsByUserId(userId);
+        if (CollectionUtils.isEmpty(allReviews)) {
+            return new PageImpl<>(Collections.emptyList(), pageable, 0);
+        }
+        
+        List<ReviewResponseDto> dtos = allReviews.stream()
+                                            .map(this::convertToDtoSafe)
+                                            .filter(Objects::nonNull)
+                                            .collect(Collectors.toList());
+
+        int start = (int) pageable.getOffset();
+        int end = Math.min((start + pageable.getPageSize()), dtos.size());
+        List<ReviewResponseDto> pageContent = (start <= end && !dtos.isEmpty() && start < dtos.size()) ? dtos.subList(start, end) : Collections.emptyList();
+        
+        return new PageImpl<>(pageContent, pageable, dtos.size()); 
+    }
+
+    @Override
+    public ReviewResponseDto getReviewDetailsById(Long reviewId) throws SQLException, ResourceNotFoundException {
+        Review review = reviewDao.selectReviewById(reviewId);
+        if (review == null) {
+            throw new ResourceNotFoundException("리뷰를 찾을 수 없습니다: " + reviewId);
+        }
+        return convertToDto(review);
+    }
+    
+    private ReviewResponseDto convertToDto(Review review) {
+        if (review == null) return null;
+        
+        User user = null;
+        String userNickname = "알 수 없는 사용자";
+        String userProfileImgUrl = null; 
+
+        if (review.getUserId() != null) {
+            try {
+                 user = userDao.selectUserById(review.getUserId());
+                 if (user != null) {
+                     userNickname = user.getUsername();
+                     userProfileImgUrl = user.getProfileImage();
+                 } else {
+                     logger.warn("리뷰 작성자 정보를 찾을 수 없습니다. userId: {}", review.getUserId());
+                 }
+            } catch (Exception e) {
+               logger.error("리뷰 DTO 변환 중 사용자 정보 조회 실패 (리뷰 ID: {}, 사용자 ID: {}): {}", review.getReviewId(), review.getUserId(), e.getMessage());
+            }
+        }
+
+        Accommodation accommodation = null;
+        String accomTitle = "알 수 없는 숙소";
+        if (review.getAccommodationId() != null) {
+            try {
+                accommodation = accommodationDao.getAccommodationById(review.getAccommodationId()); 
+                if (accommodation != null) {
+                    accomTitle = accommodation.getTitle();
+                } else {
+                     logger.warn("리뷰의 숙소 정보를 찾을 수 없습니다. accommodationId: {}", review.getAccommodationId());
+                }
+            } catch (Exception e) {
+                logger.error("리뷰 DTO 변환 중 숙소 정보 조회 실패 (리뷰 ID: {}, 숙소 ID: {}): {}", review.getReviewId(), review.getAccommodationId(), e.getMessage());
+            }
+        }
+        
+        List<ReviewResponseDto.ImageInfo> imageInfos = Collections.emptyList();
+        if (!CollectionUtils.isEmpty(review.getImages())) {
+            imageInfos = review.getImages().stream()
+                .map(img -> ReviewResponseDto.ImageInfo.builder()
+                        .reviewImageId(img.getReviewImageId())
+                        .imageUrl(img.getImageUrl())
+                        .uploadOrder(img.getUploadOrder())
+                        .build())
+                .collect(Collectors.toList());
+        }
+
+        return ReviewResponseDto.builder()
+                .reviewId(review.getReviewId())
+                .accommodationId(review.getAccommodationId())
+                .accommodationTitle(accomTitle)
+                .userId(review.getUserId())
+                .userNickname(userNickname)
+                .userProfileImageUrl(userProfileImgUrl)
+                .reservationId(review.getReservationId())
+                .rating(review.getRating())
+                .title(review.getTitle())
+                .content(review.getContent())
+                .createdAt(review.getCreatedAt())
+                .updatedAt(review.getUpdatedAt())
+                .images(imageInfos)
+                .build();
+    }
+
+    private ReviewResponseDto convertToDtoSafe(Review review) {
+        try {
+            return convertToDto(review);
+        } catch (Exception e) {
+            logger.error("리뷰 DTO 변환 중 예외 발생 (리뷰 ID: {}): {}", review != null ? review.getReviewId() : "null", e.getMessage(), e);
+            return null; 
+        }
+    }
+    
+    private String extractS3KeyFromUrl(String imageUrl) {
+        if (imageUrl == null || bucketName == null || bucketName.trim().isEmpty()) {
+            logger.warn("S3 URL에서 키를 추출할 수 없습니다. imageUrl 또는 bucketName이 null이거나 비어있습니다. imageUrl: {}", imageUrl);
+            return null;
+        }
+        try {
+            java.net.URL url = new java.net.URL(imageUrl);
+            String path = url.getPath();
+            if (path.startsWith("/" + bucketName + "/")) {
+                return path.substring(("/" + bucketName + "/").length());
+            } else if (url.getHost().startsWith(bucketName + ".s3.")) {
+                if (path.startsWith("/")) {
+                    return path.substring(1);
+                }
+                return path; 
+            } else if (path.startsWith("/")) {
+                 logger.warn("S3 URL 형식이 표준적이지 않으나, 경로의 첫 슬래시를 제거하고 키로 사용합니다. URL: {}", imageUrl);
+                 return path.substring(1);
+            }
+            logger.warn("S3 URL에서 키를 추출하지 못했습니다. URL이 예상된 형식이 아닙니다. URL: {}, Path: {}", imageUrl, path);
+            return null;
+        } catch (java.net.MalformedURLException e) {
+            logger.warn("잘못된 형식의 S3 URL입니다: {}. 오류: {}", imageUrl, e.getMessage());
+            return null;
+        }
+    }
+
+    @Override
+    public Double getAverageRatingByAccommodationId(Long accommodationId) throws SQLException {
+        return reviewDao.selectAverageRatingByAccommodationId(accommodationId); 
+    }
+
+    @Override
+    public Integer getReviewCountByAccommodationId(Long accommodationId) throws SQLException {
+        return reviewDao.selectCountByAccommodationId(accommodationId); 
+    }
+
     @Override
     public Map<String, Object> getReviewSummaryByAccommodationId(Long accommodationId) throws SQLException {
-        return reviewDao.selectReviewSummaryByAccommodationId(accommodationId);
+        return reviewDao.selectReviewSummaryByAccommodationId(accommodationId); 
     }
 
-    /**
-     * 최근 리뷰 목록을 조회합니다.
-     * MyBatis collection 매핑을 통해 이미지 정보가 자동으로 포함됩니다.
-     *
-     * @param limit 조회할 최근 리뷰의 개수
-     * @return 최근 리뷰 목록
-     * @throws SQLException 데이터베이스 오류 발생 시
-     */
     @Override
-    public List<Review> getRecentReviews(int limit) throws SQLException {
-        return reviewDao.selectRecentReviews(limit);
+    public List<ReviewResponseDto> getRecentReviews(int limit) throws SQLException {
+        List<Review> reviews = reviewDao.selectRecentReviews(limit); 
+        if (CollectionUtils.isEmpty(reviews)) return Collections.emptyList();
+        return reviews.stream().map(this::convertToDtoSafe).filter(Objects::nonNull).collect(Collectors.toList());
     }
 
-    /**
-     * 평점별 리뷰 개수를 조회합니다.
-     *
-     * @param accommodationId 조회할 숙소 ID
-     * @return 평점(키)과 해당 평점의 리뷰 개수(값)를 담은 Map
-     * @throws SQLException 데이터베이스 오류 발생 시
-     */
     @Override
     public Map<Integer, Integer> getRatingDistributionByAccommodationId(Long accommodationId) throws SQLException {
-        return reviewDao.selectRatingDistributionByAccommodationId(accommodationId);
+        return reviewDao.selectRatingDistributionByAccommodationId(accommodationId); 
     }
 
-    /**
-     * 리뷰 작성 자격을 확인합니다.
-     * 사용자가 해당 숙소에 실제로 숙박했는지 (또는 예약 기록이 있는지 등) 확인합니다.
-     * <p>
-     * 참고: 이 메서드는 예약 시스템과 연동하여 정확한 자격 여부를 판단해야 합니다.
-     * 현재 구현은 임시적으로 항상 true를 반환합니다.
-     *
-     * @param userId 확인할 사용자 ID
-     * @param accommodationId 확인할 숙소 ID
-     * @return 리뷰 작성 자격이 있으면 true, 없으면 false (현재는 항상 true)
-     * @throws SQLException 데이터베이스 오류 발생 시
-     */
     @Override
     public boolean checkReviewEligibility(Long userId, Long accommodationId) throws SQLException {
-        if (userId == null || accommodationId == null) {
-            return false; // 유효하지 않은 입력
+        return canUserReviewAccommodation(userId, accommodationId);
+    }
+
+    @Override
+    public ReviewResponseDto getReviewByReservationId(Long reservationId) throws SQLException {
+        Review review = reviewDao.selectReviewByReservationId(reservationId); 
+        if (review == null) {
+            return null; 
         }
-        // ReservationDao를 사용하여 사용자가 해당 숙소에 완료된 예약이 있는지 확인
-        return reservationDao.existsCompletedReservationByUserAndAccommodation(userId, accommodationId);
-    }
-
-    /**
-     * 예약 ID로 리뷰를 조회합니다.
-     * MyBatis collection 매핑을 통해 이미지 정보가 자동으로 포함됩니다.
-     *
-     * @param reservationId 조회할 예약 ID
-     * @return 해당 예약에 대한 리뷰 정보. 리뷰가 없으면 null 반환.
-     * @throws SQLException 데이터베이스 오류 발생 시
-     */
-    @Override
-    public Review getReviewByReservationId(Long reservationId) throws SQLException {
-        return reviewDao.selectByReservationId(reservationId);
+        return convertToDto(review);
     }
 
     @Override
-    public List<Review> getReviewsByHostId(Long hostId, Integer rating) throws SQLException {
-        List<Review> reviews = reviewDao.selectByHostId(hostId);
-        if (rating != null && reviews != null && !reviews.isEmpty()) {
-            reviews.removeIf(review -> !rating.equals(review.getRating()));
+    public List<ReviewResponseDto> getReviewsByHostId(Long hostId, Integer rating) throws SQLException {
+        List<Review> reviews = reviewDao.selectReviewsByHostId(hostId); 
+        if (CollectionUtils.isEmpty(reviews)) return Collections.emptyList();
+        Stream<Review> reviewStream = reviews.stream();
+        if (rating != null) {
+            reviewStream = reviewStream.filter(r -> r.getRating() != null && r.getRating().equals(rating));
         }
-        return reviews;
+        return reviewStream.map(this::convertToDtoSafe).filter(Objects::nonNull).collect(Collectors.toList());
     }
 
-    // --- 요청하신 추가 기능 메서드들 --- 
-
     @Override
-    @Transactional
-    public boolean setReviewImageThumbnail(Long reviewId, Long imageId, Long userId) throws SQLException {
-        Review review = reviewDao.selectById(reviewId);
-        if (review == null || !review.getUserId().equals(userId)) {
-            throw new SQLException("리뷰 정보를 찾을 수 없거나 권한이 없습니다.");
+    public boolean setReviewImageThumbnail(Long reviewId, Long imageId, Long userId) throws SQLException, UnauthorizedException, ResourceNotFoundException {
+        Review review = reviewDao.selectReviewById(reviewId);
+        if (review == null) {
+            throw new ResourceNotFoundException("리뷰를 찾을 수 없습니다: " + reviewId);
+        }
+        if (!review.getUserId().equals(userId)) {
+             throw new UnauthorizedException("리뷰를 찾을 수 없거나 썸네일 설정 권한이 없습니다.");
         }
         ReviewImage image = reviewDao.selectReviewImageById(imageId);
         if (image == null || !image.getReviewId().equals(reviewId)) {
-            throw new SQLException("해당 리뷰의 이미지를 찾을 수 없습니다.");
+            throw new ResourceNotFoundException("해당 리뷰의 이미지를 찾을 수 없습니다: " + imageId);
         }
-
-        reviewDao.resetThumbnailStatusByReviewId(reviewId); // 기존 썸네일 해제
+        reviewDao.resetThumbnailStatusByReviewId(reviewId);
         return reviewDao.updateReviewImageThumbnailStatus(imageId, true) > 0;
     }
 
     @Override
-    @Transactional
-    public boolean updateReviewImageOrder(Long reviewId, List<Long> orderedImageIds, Long userId) throws SQLException {
-        Review review = reviewDao.selectById(reviewId);
-        if (review == null || !review.getUserId().equals(userId)) {
-            throw new SQLException("리뷰 정보를 찾을 수 없거나 권한이 없습니다.");
+    public boolean updateReviewImageOrder(Long reviewId, List<Long> orderedImageIds, Long userId) throws SQLException, UnauthorizedException, ResourceNotFoundException {
+        Review review = reviewDao.selectReviewById(reviewId);
+        if (review == null) {
+            throw new ResourceNotFoundException("리뷰를 찾을 수 없습니다: " + reviewId);
+        }
+        if (!review.getUserId().equals(userId)) {
+            throw new UnauthorizedException("리뷰를 찾을 수 없거나 이미지 순서 변경 권한이 없습니다.");
         }
         
-        List<ReviewImage> currentImages = reviewDao.selectReviewImagesByReviewId(reviewId);
-        if (currentImages == null || currentImages.size() != orderedImageIds.size()) {
-            throw new IllegalArgumentException("제공된 이미지 ID 목록이 현재 리뷰의 이미지 수와 일치하지 않습니다.");
+        List<ReviewImage> currentImages = review.getImages(); 
+        if (currentImages == null) {
+            currentImages = Collections.emptyList();
         }
-        // 모든 ID가 실제로 해당 리뷰에 속하는지 확인 (선택적이지만 안전함)
+
+        if (currentImages.size() != orderedImageIds.size()) {
+            throw new IllegalArgumentException("제공된 이미지 ID 목록의 개수(" + orderedImageIds.size() + 
+                                               ")가 현재 리뷰의 이미지 개수(" + currentImages.size() + ")와 일치하지 않습니다.");
+        }
         for (Long imgId : orderedImageIds) {
-            if (currentImages.stream().noneMatch(ci -> ci.getImageId().equals(imgId))) {
-                throw new IllegalArgumentException("잘못된 이미지 ID가 포함되어 있습니다: " + imgId);
+            if (currentImages.stream().noneMatch(ci -> ci.getReviewImageId().equals(imgId))) {
+                throw new IllegalArgumentException("제공된 이미지 ID 목록에 유효하지 않은 이미지 ID가 포함되어 있습니다: " + imgId);
             }
         }
 
@@ -480,62 +476,6 @@ public class ReviewServiceImpl implements ReviewService {
         for (int i = 0; i < orderedImageIds.size(); i++) {
             updatedCount += reviewDao.updateReviewImageSortOrder(orderedImageIds.get(i), i);
         }
-        return updatedCount == orderedImageIds.size();
-    }
-
-    @Override
-    @Transactional
-    public boolean updateReviewImageCaption(Long reviewId, Long imageId, String caption, Long userId) throws SQLException {
-        Review review = reviewDao.selectById(reviewId);
-        if (review == null || !review.getUserId().equals(userId)) {
-            throw new SQLException("리뷰 정보를 찾을 수 없거나 권한이 없습니다.");
-        }
-        ReviewImage image = reviewDao.selectReviewImageById(imageId);
-        if (image == null || !image.getReviewId().equals(reviewId)) {
-            throw new SQLException("해당 리뷰의 이미지를 찾을 수 없습니다.");
-        }
-        return reviewDao.updateReviewImageCaption(imageId, caption) > 0;
-    }
-
-    // Helper method to update accommodation review statistics
-    private void updateAccommodationReviewStats(Long accommodationId) throws SQLException {
-        if (accommodationId == null) {
-            // log.warn("Accommodation ID is null. Cannot update review stats.");
-            return;
-        }
-        Map<String, Object> stats = reviewDao.selectReviewStatsByAccommodationId(accommodationId);
-        Double avgRating = 0.0;
-        Integer reviewCount = 0;
-
-        if (stats != null) {
-            Object rawAvgRating = stats.get("avg_rating");
-            if (rawAvgRating instanceof Number) {
-                avgRating = ((Number) rawAvgRating).doubleValue();
-            }
-            
-            Object rawReviewCount = stats.get("review_count");
-            if (rawReviewCount instanceof Number) {
-                reviewCount = ((Number) rawReviewCount).intValue();
-            }
-        }
-
-        // 추천 점수 계산: avg_review_rating * LOG10(review_count + 1)
-        // 사용자가 SQL에서 LOG가 상용로그라고 언급했으므로 Math.log10 사용
-        double recommendScore = 0.0;
-        if (reviewCount > 0) { 
-            recommendScore = avgRating * Math.log10(reviewCount + 1);
-        } else {
-            // reviewCount가 0이면 reviewCount + 1 = 1, log10(1) = 0 이므로 recommendScore는 0이 됨.
-            // avgRating이 0이거나 reviewCount가 0이면 recommendScore는 자연스럽게 0이 됨.
-        }
-        
-        // 소수점 처리 (예: 둘째 자리까지 반올림)
-        recommendScore = Math.round(recommendScore * 100.0) / 100.0;
-        // avgRating은 DB에서 가져올 때 이미 DECIMAL(3,2) 등으로 처리될 수 있으나, 여기서 한 번 더 명시적으로 처리
-        avgRating = Math.round(avgRating * 100.0) / 100.0;
-
-        accommodationDao.updateReviewStats(accommodationId, avgRating, reviewCount, recommendScore);
-        // log.info("Updated review stats for accommodation {}: avgRating={}, reviewCount={}, recommendScore={}", 
-        // accommodationId, avgRating, reviewCount, recommendScore);
+        return updatedCount == orderedImageIds.size(); 
     }
 }

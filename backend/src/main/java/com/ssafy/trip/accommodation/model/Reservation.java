@@ -20,6 +20,7 @@ public class Reservation {
     private Long reservationId;       // 예약 ID
     private Long userId;              // 사용자 ID
     private Long roomId;              // 객실 ID
+    private String merchantUid;       // 주문 ID (아임포트용)
     private LocalDate checkInDate;    // 체크인 날짜
     private LocalDate checkOutDate;   // 체크아웃 날짜
     private Integer guestCount;       // 투숙객 수

@@ -198,6 +198,7 @@
 import { ref, reactive, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import Layout from '@/components/layout/Layout.vue';
+import api from '@/api/index';
 
 const props = defineProps({
   paymentId: {
@@ -246,22 +247,53 @@ onMounted(async () => {
   await loadPaymentDetails();
 });
 
-// 결제 상세 정보, 이력 불러오기 (API 예시)
+// 결제 상세 정보, 이력 불러오기
 async function loadPaymentDetails() {
   loading.value = true;
-  try {
-    // 실제 API에 맞게 수정 필요
-    const res = await fetch(`/api/payment/detail/${props.paymentId}`);
-    if (!res.ok) throw new Error();
-    const data = await res.json();
-    Object.assign(payment, data.payment);
-    Object.assign(reservation, data.reservation);
+  error.value = '';
+  message.value = route.query.message || ''; // 페이지 진입 시 메시지 다시 설정
 
-    // 결제 이력 불러오기 (API 예시)
-    const hisRes = await fetch(`/api/payment/history/${props.paymentId}`);
-    paymentHistory.value = hisRes.ok ? await hisRes.json() : [];
+  try {
+    const response = await api.api.get(`/api/v1/payments/detail/${props.paymentId}`);
+    const data = response.data;
+
+    if (data) { // 백엔드에서 Payment 객체와 Reservation 객체를 함께 보내준다고 가정
+      if (data.payment) {
+        Object.assign(payment, data.payment);
+      } else {
+        // payment 정보가 없는 경우, props.paymentId만 사용하고 나머지는 기본값 유지
+        payment.paymentId = props.paymentId;
+        // 또는 에러 처리
+        // error.value = '결제 정보를 찾을 수 없습니다.';
+        // return;
+      }
+      if (data.reservation) {
+        Object.assign(reservation, data.reservation);
+      } else {
+         // reservation 정보가 없는 경우 (예: 결제는 있으나 예약 정보 누락)
+         // 필요시 에러 처리 또는 사용자 안내
+      }
+    } else {
+      throw new Error('결제 상세 정보를 가져오는데 실패했습니다.');
+    }
+
+    // 결제 이력 불러오기 (API 예시 - 실제 API 엔드포인트 및 응답 형식에 맞게 수정 필요)
+    // 현재는 결제 이력 API가 명확하지 않으므로 주석 처리
+    /*
+    try {
+      const historyResponse = await api.api.get(`/api/v1/payments/${props.paymentId}/history`); // 예시 경로
+      if (historyResponse.data) {
+        paymentHistory.value = historyResponse.data;
+      }
+    } catch (historyError) {
+      console.warn("결제 이력을 불러오는데 실패했습니다:", historyError);
+      // 이력 로딩 실패는 전체 페이지 로딩을 막지 않도록 처리
+    }
+    */
+
   } catch (e) {
-    error.value = '결제 정보를 불러올 수 없습니다. 다시 시도해주세요.';
+    console.error("Error loading payment details:", e);
+    error.value = e.response?.data?.error || e.message || '결제 정보를 불러올 수 없습니다. 다시 시도해주세요.';
   } finally {
     loading.value = false;
   }

@@ -1,6 +1,5 @@
-package com.ssafy.trip.payment.dto;
+package com.ssafy.trip.payment.model;
 
-import com.ssafy.trip.payment.model.Payment;
 import lombok.Data;
 
 import java.math.BigDecimal;

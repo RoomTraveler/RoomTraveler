@@ -1,8 +1,15 @@
 package com.ssafy.trip.review.service;
 
-import com.ssafy.trip.review.model.Review;
+import com.ssafy.trip.review.dto.ReviewCreationRequestDto;
+import com.ssafy.trip.review.dto.ReviewResponseDto;
+import com.ssafy.trip.review.dto.ReviewUpdateRequestDto;
+import com.ssafy.trip.exception.ResourceNotFoundException;
+import com.ssafy.trip.exception.UnauthorizedException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
@@ -13,46 +20,44 @@ import java.util.Map;
  */
 public interface ReviewService {
     /**
-     * 새 리뷰를 생성합니다.
-     * 사용자 ID를 포함하여 리뷰를 생성하고, 첨부된 이미지 파일들을 S3에 업로드 후 URL을 DB에 저장합니다.
-     * 생성된 리뷰 ID를 반환합니다.
-     *
-     * @param review 생성할 리뷰 정보
-     * @param userId 작성자 ID
-     * @param imageFiles 첨부된 이미지 파일 목록 (없을 경우 null 또는 빈 리스트)
-     * @param captions 이미지에 대한 캡션 목록 (없을 경우 null 또는 빈 리스트)
-     * @return 생성된 리뷰 ID
-     * @throws SQLException 데이터베이스 오류 발생 시
-     * @throws java.io.IOException 파일 처리 오류 발생 시
+     * 사용자가 특정 숙소에 대해 리뷰를 작성할 수 있는지 확인합니다.
+     * (결제 완료된 예약 건이 있는지 확인)
      */
-    Long createReview(Review review, Long userId, List<MultipartFile> imageFiles, List<String> captions) throws SQLException, java.io.IOException;
+    boolean canUserReviewAccommodation(Long userId, Long accommodationId) throws SQLException;
 
     /**
-     * 리뷰 ID로 리뷰를 조회합니다. 리뷰에 포함된 이미지 정보도 함께 조회됩니다.
-     *
-     * @param reviewId 조회할 리뷰 ID
-     * @return 조회된 리뷰 정보. 해당 ID의 리뷰가 없으면 null 반환.
-     * @throws SQLException 데이터베이스 오류 발생 시
+     * 특정 숙소에 대한 리뷰 목록을 페이징하여 조회합니다.
      */
-    Review getReviewById(Long reviewId) throws SQLException;
+    Page<ReviewResponseDto> getReviewsByAccommodationId(Long accommodationId, Pageable pageable) throws SQLException;
 
     /**
-     * 숙소 ID로 리뷰 목록을 조회합니다. 각 리뷰에 포함된 이미지 정보도 함께 조회됩니다.
-     *
-     * @param accommodationId 조회할 숙소 ID
-     * @return 해당 숙소의 리뷰 목록
-     * @throws SQLException 데이터베이스 오류 발생 시
+     * 특정 사용자가 작성한 리뷰 목록을 페이징하여 조회합니다.
      */
-    List<Review> getReviewsByAccommodationId(Long accommodationId) throws SQLException;
+    Page<ReviewResponseDto> getReviewsByUserId(Long userId, Pageable pageable) throws SQLException;
+    
+    /**
+     * 리뷰 ID로 상세 정보를 조회합니다.
+     */
+    ReviewResponseDto getReviewDetailsById(Long reviewId) throws SQLException, ResourceNotFoundException;
 
     /**
-     * 사용자 ID로 리뷰 목록을 조회합니다. 각 리뷰에 포함된 이미지 정보도 함께 조회됩니다.
-     *
-     * @param userId 조회할 사용자 ID
-     * @return 해당 사용자가 작성한 리뷰 목록
-     * @throws SQLException 데이터베이스 오류 발생 시
+     * 새 리뷰를 생성합니다. 이미지 파일들을 S3에 업로드하고 URL을 DB에 저장합니다.
      */
-    List<Review> getReviewsByUserId(Long userId) throws SQLException;
+    ReviewResponseDto createReview(ReviewCreationRequestDto requestDto, List<MultipartFile> imageFiles, Long userId)
+            throws SQLException, IOException, UnauthorizedException, ResourceNotFoundException;
+
+    /**
+     * 리뷰를 수정합니다. 작성자만 수정 가능합니다.
+     * 기존 이미지를 삭제하거나 새 이미지를 추가할 수 있습니다.
+     */
+    ReviewResponseDto updateReview(Long reviewId, ReviewUpdateRequestDto requestDto, List<MultipartFile> newImageFiles, Long userId)
+            throws SQLException, IOException, ResourceNotFoundException, UnauthorizedException;
+
+    /**
+     * 리뷰를 삭제합니다. 작성자 또는 관리자만 삭제 가능합니다.
+     * S3 이미지도 함께 삭제합니다.
+     */
+    void deleteReview(Long reviewId, Long userId) throws SQLException, IOException, ResourceNotFoundException, UnauthorizedException;
 
     /**
      * 숙소 ID로 리뷰 평균 평점을 조회합니다.
@@ -73,49 +78,6 @@ public interface ReviewService {
     Integer getReviewCountByAccommodationId(Long accommodationId) throws SQLException;
 
     /**
-     * 리뷰를 업데이트합니다.
-     * 리뷰 작성자만 해당 리뷰를 수정할 수 있습니다.
-     * 기존 이미지를 삭제하거나 새 이미지를 추가할 수 있습니다.
-     *
-     * @param review 업데이트할 리뷰 정보 (텍스트 내용)
-     * @param userId 수정 요청 사용자 ID
-     * @param newImageFiles 새로 추가할 이미지 파일 목록
-     * @param newCaptions 새로 추가할 이미지에 대한 캡션 목록
-     * @param deleteImageIds 삭제할 기존 이미지의 ID 목록
-     * @return 업데이트 성공 시 true, 실패 시 false
-     * @throws SQLException 데이터베이스 오류 발생 시, 또는 권한 없는 사용자의 수정 시도
-     * @throws java.io.IOException 파일 처리 오류 발생 시
-     */
-    boolean updateReview(Review review, Long userId, List<MultipartFile> newImageFiles, List<String> newCaptions, List<Long> deleteImageIds) throws SQLException, java.io.IOException;
-
-    /**
-     * 리뷰 상태를 업데이트합니다.
-     * 리뷰 작성자 또는 관리자만 상태를 변경할 수 있습니다.
-     *
-     * @param reviewId 상태를 변경할 리뷰 ID
-     * @param status 새로운 상태
-     * @param userId 상태 변경 요청 사용자 ID
-     * @param userRole 상태 변경 요청 사용자의 역할 (예: "ADMIN")
-     * @return 업데이트 성공 시 true, 실패 시 false
-     * @throws SQLException 데이터베이스 오류 발생 시, 또는 권한 없는 사용자의 상태 변경 시도
-     */
-    boolean updateReviewStatus(Long reviewId, String status, Long userId, String userRole) throws SQLException;
-
-    /**
-     * 리뷰를 삭제합니다.
-     * 리뷰 작성자 또는 관리자만 리뷰를 삭제할 수 있습니다.
-     * 리뷰 삭제 시 S3에 업로드된 관련 이미지들도 함께 삭제됩니다.
-     *
-     * @param reviewId 삭제할 리뷰 ID
-     * @param userId 삭제 요청 사용자 ID
-     * @param userRole 삭제 요청 사용자의 역할 (예: "ADMIN")
-     * @return 삭제 성공 시 true, 실패 시 false
-     * @throws SQLException 데이터베이스 오류 발생 시, 또는 권한 없는 사용자의 삭제 시도
-     * @throws java.io.IOException S3 이미지 삭제 중 오류 발생 시
-     */
-    boolean deleteReview(Long reviewId, Long userId, String userRole) throws SQLException, java.io.IOException;
-
-    /**
      * 숙소 ID로 리뷰 요약 정보를 조회합니다.
      * (예: 평균 평점, 리뷰 개수 등)
      *
@@ -132,7 +94,7 @@ public interface ReviewService {
      * @return 최근 리뷰 목록
      * @throws SQLException 데이터베이스 오류 발생 시
      */
-    List<Review> getRecentReviews(int limit) throws SQLException;
+    List<ReviewResponseDto> getRecentReviews(int limit) throws SQLException;
 
     /**
      * 평점별 리뷰 개수를 조회합니다.
@@ -161,7 +123,7 @@ public interface ReviewService {
      * @return 해당 예약에 대한 리뷰 정보. 리뷰가 없으면 null 반환.
      * @throws SQLException 데이터베이스 오류 발생 시
      */
-    Review getReviewByReservationId(Long reservationId) throws SQLException;
+    ReviewResponseDto getReviewByReservationId(Long reservationId) throws SQLException;
 
     /**
      * 호스트 ID로 해당 호스트가 관리하는 모든 숙소의 리뷰 목록을 조회합니다.
@@ -173,7 +135,7 @@ public interface ReviewService {
      * @return 리뷰 목록
      * @throws SQLException 데이터베이스 오류 발생 시
      */
-    List<Review> getReviewsByHostId(Long hostId, Integer rating) throws SQLException;
+    List<ReviewResponseDto> getReviewsByHostId(Long hostId, Integer rating) throws SQLException;
 
     /**
      * 특정 리뷰 이미지의 썸네일 상태를 설정합니다.
@@ -199,15 +161,4 @@ public interface ReviewService {
      */
     boolean updateReviewImageOrder(Long reviewId, List<Long> orderedImageIds, Long userId) throws SQLException;
 
-    /**
-     * 특정 리뷰 이미지의 캡션을 업데이트합니다.
-     *
-     * @param reviewId 리뷰 ID
-     * @param imageId 캡션을 수정할 이미지 ID
-     * @param caption 새로운 캡션 내용
-     * @param userId 요청 사용자 ID (리뷰 작성자 또는 관리자 확인용)
-     * @return 성공 시 true, 실패 시 false
-     * @throws SQLException 데이터베이스 오류 또는 권한 없음
-     */
-    boolean updateReviewImageCaption(Long reviewId, Long imageId, String caption, Long userId) throws SQLException;
 }

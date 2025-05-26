@@ -9,6 +9,8 @@
         <id property="reservationId" column="reservation_id"/>
         <result property="userId" column="user_id"/>
         <result property="roomId" column="room_id"/>
+        <result property="accommodationId" column="accommodation_id"/>
+        <result property="merchantUid" column="merchant_uid"/>
         <result property="checkInDate" column="check_in_date"/>
         <result property="checkOutDate" column="check_out_date"/>
         <result property="guestCount" column="guest_count"/>
@@ -23,7 +25,6 @@
         <result property="userPhone" column="user_phone"/>
         <result property="roomName" column="room_name"/>
         <result property="accommodationTitle" column="accommodation_title"/>
-        <result property="accommodationId" column="accommodation_id"/>
         <result property="hostName" column="host_business_name"/>
         <result property="nights" column="nights"/>
     </resultMap>
@@ -254,5 +255,79 @@
                  AND u.username LIKE CONCAT('%', #{guestName}, '%')
             </if>
         </where>
+    </select>
+
+    <!-- 새 예약을 PENDING_PAYMENT 상태 및 merchantUid와 함께 등록합니다. -->
+    <insert id="insertPendingReservation" parameterType="com.ssafy.trip.accommodation.model.Reservation" useGeneratedKeys="true" keyProperty="reservationId">
+        INSERT INTO reservations (
+            user_id, room_id, accommodation_id, merchant_uid,
+            check_in_date, check_out_date, guest_count, total_price,
+            status, payment_status, special_requests, created_at, updated_at
+        ) VALUES (
+            #{userId}, #{roomId}, #{accommodationId}, #{merchantUid},
+            #{checkInDate}, #{checkOutDate}, #{guestCount}, #{totalPrice},
+            'PENDING_PAYMENT', 'PENDING', #{specialRequests}, NOW(), NOW()
+        )
+    </insert>
+
+    <!-- merchantUid로 PENDING_PAYMENT 상태의 예약 목록을 조회합니다. -->
+    <select id="getPendingReservationsByMerchantUid" parameterType="string" resultMap="ReservationMap">
+        SELECT r.*,
+               u.username AS user_name, u.email AS user_email, u.phone AS user_phone,
+               rm.name AS room_name, a.title AS accommodation_title, r.accommodation_id,
+               h.business_name as host_business_name,
+               DATEDIFF(r.check_out_date, r.check_in_date) AS nights
+        FROM reservations r
+        LEFT JOIN users u ON r.user_id = u.user_id
+        LEFT JOIN rooms rm ON r.room_id = rm.room_id
+        LEFT JOIN accommodations a ON r.accommodation_id = a.accommodation_id
+        LEFT JOIN hosts h ON a.host_id = h.host_id
+        WHERE r.merchant_uid = #{merchantUid} AND r.status = 'PENDING_PAYMENT'
+    </select>
+
+    <!-- merchantUid로 예약들의 상태와 결제 상태를 업데이트합니다. -->
+    <update id="updateReservationsStatusByMerchantUid" parameterType="map">
+        UPDATE reservations
+        SET
+            status = #{reservationStatus},
+            payment_status = #{paymentStatus},
+            updated_at = NOW()
+        WHERE merchant_uid = #{merchantUid}
+          AND (status != #{reservationStatus} OR payment_status != #{paymentStatus})
+    </update>
+
+    <!-- 사용자 ID로 PENDING_PAYMENT 상태의 예약 건수를 조회합니다. -->
+    <select id="countPendingReservationsByUserId" parameterType="long" resultType="int">
+        SELECT COUNT(*)
+        FROM reservations
+        WHERE user_id = #{userId} AND status = 'PENDING_PAYMENT'
+    </select>
+
+    <select id="getReservationByIdAndUserId" resultMap="ReservationMap">
+        SELECT r.*,
+               u.username AS user_name, u.email AS user_email, u.phone AS user_phone,
+               rm.name AS room_name, a.title AS accommodation_title, r.accommodation_id,
+               h.business_name as host_business_name,
+               DATEDIFF(r.check_out_date, r.check_in_date) AS nights
+        FROM reservations r
+        LEFT JOIN users u ON r.user_id = u.user_id
+        LEFT JOIN rooms rm ON r.room_id = rm.room_id
+        LEFT JOIN accommodations a ON r.accommodation_id = a.accommodation_id
+        LEFT JOIN hosts h ON a.host_id = h.host_id
+        WHERE r.reservation_id = #{reservationId} AND r.user_id = #{userId}
+    </select>
+
+    <select id="getReservationsByMerchantUid" parameterType="string" resultMap="ReservationMap">
+        SELECT r.*,
+               u.username AS user_name, u.email AS user_email, u.phone AS user_phone,
+               rm.name AS room_name, a.title AS accommodation_title, r.accommodation_id,
+               h.business_name as host_business_name,
+               DATEDIFF(r.check_out_date, r.check_in_date) AS nights
+        FROM reservations r
+        LEFT JOIN users u ON r.user_id = u.user_id
+        LEFT JOIN rooms rm ON r.room_id = rm.room_id
+        LEFT JOIN accommodations a ON r.accommodation_id = a.accommodation_id
+        LEFT JOIN hosts h ON a.host_id = h.host_id
+        WHERE r.merchant_uid = #{merchantUid}
     </select>
 </mapper>

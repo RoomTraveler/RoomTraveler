@@ -37,6 +37,12 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import org.slf4j.LoggerFactory; // 잠시 추가, Slf4j 없을 경우 대비
 import lombok.extern.slf4j.Slf4j; // Slf4j 어노테이션 추가
+import com.ssafy.trip.exception.InvalidRequestException;
+import com.ssafy.trip.exception.ResourceNotFoundException;
+import com.ssafy.trip.payment.dto.PaymentPrepareRequestDto; // DTO 임포트
+import com.ssafy.trip.payment.dto.ReservationCreationDto; // ReservationCreationDto 임포트 추가
+import com.ssafy.trip.cart.service.CartService; // CartService 임포트
+import java.util.UUID; // UUID 임포트
 
 /**
  * 예약 서비스 구현 클래스
@@ -52,6 +58,7 @@ public class ReservationServiceImpl implements ReservationService {
     private final RoomDao roomDao;
     private final RoomAvailabilityDao roomAvailabilityDao;
     private final AccommodationDao accommodationDao; // 숙소 정보 접근을 위해 추가
+    private final CartService cartService; // CartService 주입
     // private final ReviewService reviewService; // ReviewService 필드 제거
 
     /**
@@ -586,9 +593,7 @@ public class ReservationServiceImpl implements ReservationService {
             // 혹은 이 경우에도 0을 반환하는 것이 더 안전할 수 있습니다.
             // 여기서는 좀 더 보수적으로 0을 반환하거나, 아니면 최소한 인원 체크는 통과했으므로 room.getRoomCount()를 반환합니다.
             // 이전 로직은 room.getRoomCount()를 반환했으나, guests 체크 후이므로, 여기서 0을 반환하는 것이 더 일관적일 수 있습니다.
-            // 하지만, AccommodationServiceImpl에서 날짜/인원 정보 불충분 시 -1을 반환하는 패턴을 따르기 위해 여기서는 -1로 수정합니다.
-            // 만약 이 메서드가 순수하게 "잔여 객실"만 계산한다면, 날짜 정보 없이는 계산 불가이므로 0 또는 예외가 더 적절합니다.
-            // 현재 AccommodationServiceImpl에서 이 메서드의 반환값을 "예약 가능한 최소 객실 수"로 사용하므로,
+            // 하지만, AccommodationServiceImpl에서 이 메서드의 반환값을 "예약 가능한 최소 객실 수"로 사용하므로,
             // 날짜 정보가 없으면 "판단 불가"의 의미로 -1을 반환하는 것도 고려해볼 수 있습니다.
             // 우선은, -1로 설정합니다.
             return -1; 
@@ -640,7 +645,7 @@ public class ReservationServiceImpl implements ReservationService {
     }
 
     @Override
-    public Page<Reservation> getReservationsByHostIdWithFiltersAndPaging(Long hostId, String status, String checkInDateStr, String guestName, String sortBy, Pageable pageable) {
+    public Page<Reservation> getReservationsByHostIdWithFiltersAndPaging(Long hostId, String status, String checkInDateStr, String guestName, String sortBy, Pageable pageable) throws SQLException {
         // 정렬 처리 (sortBy 파라미터 기반)
         // 예: "createdAtDesc" -> Sort.by(Sort.Direction.DESC, "createdAt")
         //      "checkInDateAsc" -> Sort.by(Sort.Direction.ASC, "checkInDate")
@@ -678,4 +683,150 @@ public class ReservationServiceImpl implements ReservationService {
 
         return new PageImpl<>(reservations, pageable, total);
     }
+
+    @Override
+    @Transactional
+    public Map<String, Object> prepareReservationsForPayment(PaymentPrepareRequestDto prepareRequestDto, Long userId) throws SQLException, InvalidRequestException, ResourceNotFoundException {
+        List<ReservationCreationDto> creationDtos = prepareRequestDto.getReservationsToCreate();
+        if (creationDtos == null || creationDtos.isEmpty()) {
+            throw new InvalidRequestException("결제할 예약 정보가 없습니다.");
+        }
+
+        String merchantUid = UUID.randomUUID().toString();
+        List<Reservation> reservations = new ArrayList<>();
+        BigDecimal totalAmount = BigDecimal.ZERO;
+        String representativeRoomName = null;
+
+        for (ReservationCreationDto dto : creationDtos) {
+            Room room = roomDao.getRoomById(dto.getRoomId());
+            if (room == null) {
+                throw new ResourceNotFoundException("요청된 객실 정보를 찾을 수 없습니다: ID " + dto.getRoomId());
+            }
+            if (representativeRoomName == null) {
+                representativeRoomName = room.getName();
+            }
+
+            if (room.getRoomCount() == null || room.getRoomCount() <= 0) {
+                throw new InvalidRequestException("객실 '" + room.getName() + "'의 기본 재고 정보가 유효하지 않습니다.");
+            }
+
+            Reservation reservation = Reservation.builder()
+                    .userId(userId)
+                    .roomId(dto.getRoomId())
+                    .accommodationId(dto.getAccommodationId())
+                    .merchantUid(merchantUid)
+                    .checkInDate(dto.getCheckInDate())
+                    .checkOutDate(dto.getCheckOutDate())
+                    .guestCount(dto.getGuestCount())
+                    .totalPrice(dto.getTotalPrice())
+                    .status("PENDING_PAYMENT")
+                    .paymentStatus("PENDING")
+                    .specialRequests(prepareRequestDto.getSpecialRequests())
+                    .build();
+            reservations.add(reservation);
+            totalAmount = totalAmount.add(dto.getTotalPrice());
+        }
+
+        for (Reservation reservation : reservations) {
+            reservationDao.insertPendingReservation(reservation);
+        }
+
+        for (Reservation reservation : reservations) {
+            List<LocalDate> dates = getDateRange(reservation.getCheckInDate(), reservation.getCheckOutDate());
+            for (LocalDate date : dates) {
+                RoomAvailability availabilityUpdate = RoomAvailability.builder()
+                                                .roomId(reservation.getRoomId())
+                                                .date(date)
+                                                .availableCount(1)
+                                                .build();
+                int updatedRows = roomAvailabilityDao.decreaseDailyAvailability(availabilityUpdate);
+                if (updatedRows == 0) {
+                    throw new InvalidRequestException("객실 ID " + reservation.getRoomId() + "의 " + date + " 날짜 재고를 확보할 수 없습니다. 이미 예약되었거나 재고가 부족합니다.");
+                }
+            }
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("merchantUid", merchantUid);
+        result.put("amount", totalAmount);
+        result.put("paymentName", representativeRoomName + (reservations.size() > 1 ? " 외 " + (reservations.size() - 1) + "건" : ""));
+        log.info("결제 준비 완료: merchantUid={}, totalAmount={}", merchantUid, totalAmount);
+        return result;
+    }
+
+    private List<LocalDate> getDateRange(LocalDate startDate, LocalDate endDate) {
+        return startDate.datesUntil(endDate).collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public void updateReservationsAfterPayment(String merchantUid, String reservationStatus, String paymentStatus) throws SQLException, ResourceNotFoundException {
+        Map<String, Object> params = new HashMap<>();
+        params.put("merchantUid", merchantUid);
+        params.put("reservationStatus", reservationStatus);
+        params.put("paymentStatus", paymentStatus);
+        int updatedRows = reservationDao.updateReservationsStatusByMerchantUid(params);
+        if (updatedRows == 0) {
+            log.warn("merchantUid '{}'에 해당하는 예약들의 상태 변경에 실패했거나, 변경할 예약이 없습니다.", merchantUid);
+            throw new ResourceNotFoundException("merchantUid '" + merchantUid + "'에 해당하는 예약들을 찾거나 상태를 변경할 수 없습니다.");
+        }
+        log.info("merchantUid '{}' 예약 상태 변경 완료: reservationStatus={}, paymentStatus={}", merchantUid, reservationStatus, paymentStatus);
+    }
+
+    @Override
+    @Transactional
+    public void cancelReservationsByMerchantUid(String merchantUid, String reservationStatus, String paymentStatus) throws SQLException {
+        List<Reservation> reservationsToCancel = reservationDao.getReservationsByMerchantUid(merchantUid);
+        if (reservationsToCancel == null || reservationsToCancel.isEmpty()){
+            log.warn("취소할 예약이 없습니다. merchantUid: {}", merchantUid);
+            return; 
+        }
+        
+        Map<String, Object> params = new HashMap<>();
+        params.put("merchantUid", merchantUid);
+        params.put("reservationStatus", reservationStatus);
+        params.put("paymentStatus", paymentStatus);
+        reservationDao.updateReservationsStatusByMerchantUid(params);
+        log.info("merchantUid '{}'에 대한 예약 {}건 상태 변경 완료: {}, {}", merchantUid, reservationsToCancel.size(), reservationStatus, paymentStatus);
+
+        for (Reservation reservation : reservationsToCancel) {
+            List<LocalDate> dates = getDateRange(reservation.getCheckInDate(), reservation.getCheckOutDate());
+            for (LocalDate date : dates) {
+                RoomAvailability availabilityUpdate = RoomAvailability.builder()
+                                                .roomId(reservation.getRoomId())
+                                                .date(date)
+                                                .availableCount(1)
+                                                .build();
+                int updatedRows = roomAvailabilityDao.increaseDailyAvailability(availabilityUpdate);
+                if (updatedRows == 0) {
+                    log.warn("객실 ID {}의 {} 날짜 재고 복구 중 예상치 못한 결과 발생 (updatedRows=0). DB에 해당 날짜의 재고 레코드가 없거나 동시성 문제일 수 있습니다.", reservation.getRoomId(), date);
+                }
+            }
+        }
+        log.info("merchantUid '{}'에 대한 객실 재고 복구 완료.", merchantUid);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public int countPendingReservationsByUserId(Long userId) throws SQLException {
+        return reservationDao.countPendingReservationsByUserId(userId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Reservation getReservationByIdAndUserId(Long reservationId, Long userId) throws SQLException {
+        return reservationDao.getReservationByIdAndUserId(reservationId, userId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Reservation> getPendingReservationsByMerchantUid(String merchantUid) throws SQLException {
+        return reservationDao.getPendingReservationsByMerchantUid(merchantUid);
+    }
+
+    // ... (기타 필요한 메소드들: e.g., 페이징 처리된 예약 목록 조회 등)
+
+    // createReservation, updateReservation, deleteReservation 등 기존 메소드들은
+    // 새로운 예약/결제 플로우와 어떻게 통합될지 또는 별도로 유지될지 검토 필요.
+    // 예를 들어, createReservation은 이제 prepareReservationsForPayment를 통해 처리될 수 있음.
 }

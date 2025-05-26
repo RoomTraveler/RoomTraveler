@@ -111,6 +111,8 @@ CREATE TABLE reservations (
     reservation_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     user_id BIGINT UNSIGNED NOT NULL,
     room_id BIGINT UNSIGNED NOT NULL,
+    accommodation_id BIGINT UNSIGNED NOT NULL,
+    merchant_uid VARCHAR(255) NULL UNIQUE,
     check_in_date DATE NOT NULL,
     check_out_date DATE NOT NULL,
     guest_count INT NOT NULL,

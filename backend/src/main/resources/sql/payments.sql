@@ -1,8 +1,9 @@
 -- 결제 테이블 생성
 CREATE TABLE IF NOT EXISTS payments (
     payment_id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    reservation_id BIGINT UNSIGNED NOT NULL,
+    reservation_id BIGINT UNSIGNED NULL,
     user_id BIGINT UNSIGNED NOT NULL,
+    merchant_uid VARCHAR(255) NOT NULL,
     payment_method VARCHAR(50) NOT NULL,
     payment_key VARCHAR(255),
     amount DECIMAL(10, 2) NOT NULL,
@@ -21,12 +22,16 @@ CREATE TABLE IF NOT EXISTS payments (
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
 );
 
+
+
 -- 인덱스 생성
 CREATE INDEX idx_payments_reservation_id ON payments(reservation_id);
 CREATE INDEX idx_payments_user_id ON payments(user_id);
 CREATE INDEX idx_payments_status ON payments(status);
 CREATE INDEX idx_payments_payment_method ON payments(payment_method);
 CREATE INDEX idx_payments_created_at ON payments(created_at);
+CREATE INDEX idx_payments_merchant_uid ON payments(merchant_uid);
+CREATE INDEX idx_payments_payment_key ON payments(payment_key);
 
 -- 테스트 데이터 삽입
 INSERT INTO payments (reservation_id, user_id, payment_method, payment_key, amount, currency, status, card_info, paid_at, created_at, updated_at)

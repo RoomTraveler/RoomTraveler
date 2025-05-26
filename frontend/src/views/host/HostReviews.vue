@@ -188,12 +188,12 @@ function getStarClass(index, rating) {
 function formatDate(dateString) {
   if (!dateString) return '-'
   try {
-    const date = new Date(dateString)
-    return new Intl.DateTimeFormat('ko-KR', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    }).format(date)
+  const date = new Date(dateString)
+  return new Intl.DateTimeFormat('ko-KR', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date)
   } catch (e) {
     return dateString
   }
@@ -335,7 +335,7 @@ watch(() => route.query, (newQuery, oldQuery) => {
 
   if (filtersChanged && userStore.user?.hostId) {
     applyClientSideFilters()
-  }
+    }
 }, { deep: true })
 </script>
 

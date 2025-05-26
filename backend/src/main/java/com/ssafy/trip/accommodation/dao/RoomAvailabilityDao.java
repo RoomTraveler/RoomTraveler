@@ -115,4 +115,20 @@ public interface RoomAvailabilityDao {
      * @return 필터링된 객실 가용성 정보 목록
      */
     List<RoomAvailability> getFilteredAvailabilities(Map<String, Object> filters) throws SQLException;
+
+    /**
+     * 특정 날짜의 객실 재고를 감소시킵니다. (예약 시 사용)
+     * @param availability RoomAvailability 객체 (roomId, date, availableCount는 감소시킬 수량, 보통 1)
+     * @return 업데이트된 행 수
+     * @throws SQLException SQL 예외
+     */
+    int decreaseDailyAvailability(RoomAvailability availability) throws SQLException;
+
+    /**
+     * 특정 날짜의 객실 재고를 증가시킵니다. (예약 취소 시 사용)
+     * @param availability RoomAvailability 객체 (roomId, date, availableCount는 증가시킬 수량, 보통 1)
+     * @return 업데이트된 행 수
+     * @throws SQLException SQL 예외
+     */
+    int increaseDailyAvailability(RoomAvailability availability) throws SQLException;
 }

@@ -180,20 +180,12 @@ export default {
       }
     }
 
-    // 예약하기
-    async function checkoutHandler() {
-      try {
-        const response = await cartStore.checkoutCart({ specialRequests: '' });
-        if (cartStore.error) {
-          componentError.value = cartStore.error;
-        } else {
-          message.value = response.message || "장바구니의 항목들이 예약되었습니다.";
-          router.push({ name: "MyReservations" });
-        }
-      } catch (err) {
-        if (!componentError.value) {
-          componentError.value = "예약 처리에 실패했습니다. 다시 시도해주세요.";
-        }
+    // 수정된 예약하기 핸들러: CartCheckout 페이지로 이동
+    function checkoutHandler() {
+      if (cart.value && cart.value.items && cart.value.items.length > 0) {
+        router.push({ name: "AccommodationCartCheckout" }); // CartCheckout 라우트 이름 수정
+      } else {
+        componentError.value = "장바구니에 예약할 상품이 없습니다.";
       }
     }
 

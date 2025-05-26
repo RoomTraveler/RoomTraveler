@@ -170,7 +170,7 @@ public class HostController {
         if (userDetails == null || !"ADMIN".equals(userDetails.getUser().getRole())) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "관리자만 호스트 상태를 변경할 수 있습니다."));
         }
-        
+
         String status = payload.get("status");
         String adminComment = payload.get("adminComment");
 
