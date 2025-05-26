@@ -99,7 +99,7 @@ instance.interceptors.response.use(
 
 const apiNoAuth = axios.create({
   baseURL: "http://localhost:8080",
-  timeout: 1000,
+  timeout: 30000,
 });
 
 apiNoAuth.interceptors.request.use(

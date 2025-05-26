@@ -1,5 +1,6 @@
 package com.ssafy.trip.config;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import jakarta.annotation.PostConstruct;
@@ -18,5 +19,8 @@ public class JacksonConfig {
     @PostConstruct
     public void setUp() {
         objectMapper.registerModule(new JavaTimeModule());
+        // Configure Jackson to ignore unknown properties during deserialization
+        // This will prevent errors when new fields are added to the OpenAI API response
+        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     }
 }

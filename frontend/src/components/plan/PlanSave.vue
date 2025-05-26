@@ -122,6 +122,38 @@
             <button type="button" class="btn btn-success w-100" @click="savePlan">선택한 장소 저장</button>
           </div>
         </div>
+
+        <div>
+          <button
+            v-if="selectedPlaces.length > 2"
+            @click="evaluatePlan"
+            class="btn btn-success btn-lg w-100 mb-3 d-flex align-items-center justify-content-center"
+          >
+            <i class="bi bi-check-circle-fill me-2"></i> 여행 계획 평가받기
+          </button>
+
+          <div
+            v-if="evaluationResult.advantages || evaluationResult.disadvantages || evaluationResult.recommendations"
+            class="mt-3 evaluation-container"
+          >
+            <div class="evaluation-header"><i class="bi bi-robot"></i> 계획 평가 및 개선 추천</div>
+
+            <div v-if="evaluationResult.advantages" class="evaluation-section advantages-section">
+              <div class="section-header"><i class="bi bi-plus-circle-fill"></i> 장점</div>
+              <div class="section-content">{{ evaluationResult.advantages }}</div>
+            </div>
+
+            <div v-if="evaluationResult.disadvantages" class="evaluation-section disadvantages-section">
+              <div class="section-header"><i class="bi bi-dash-circle-fill"></i> 단점</div>
+              <div class="section-content">{{ evaluationResult.disadvantages }}</div>
+            </div>
+
+            <div v-if="evaluationResult.recommendations" class="evaluation-section recommendations-section">
+              <div class="section-header"><i class="bi bi-lightbulb-fill"></i> 추천</div>
+              <div class="section-content">{{ evaluationResult.recommendations }}</div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -133,9 +165,10 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import draggable from "vuedraggable";
 import axios from "axios";
+import apiGroup from "@/api/index";
 import ModalWrapper from "@/components/attraction/ModelWrapper.vue";
 import AttractionDetail from "@/components/attraction/AttractionDetail.vue";
 
@@ -174,6 +207,67 @@ const markerIcons = {
   32: "/img/lodgmentIcon.png",
   38: "/img/shoppingIcon.png",
   39: "/img/restaurantIcon.png",
+};
+
+const evaluationResult = ref({
+  advantages: "",
+  disadvantages: "",
+  recommendations: "",
+});
+
+const evaluatePlan = async () => {
+  try {
+    const response = await apiGroup.apiNoAuth({
+      url: "/api/ai/evaluation",
+      method: "POST",
+      data: {
+        selectedPlaces: selectedPlaces.value.map((item) => ({
+          address: `${item.addr1}${item.addr2 ?? ""}`.trim(),
+          name: item.title,
+          contentType: contentTypeMap[item.contentTypeId] ?? "기타",
+          latitude: item.latitude,
+          longitude: item.longitude,
+        })),
+      },
+    });
+
+    // Parse the response to separate advantages, disadvantages, and recommendations
+    const fullText = response.data;
+
+    // Initialize with empty strings
+    const parsedResult = {
+      advantages: "",
+      disadvantages: "",
+      recommendations: "",
+    };
+
+    // Find the sections in the text
+    const advantagesMatch = fullText.match(/장점[:\s]+([\s\S]+?)(?=단점[:\s]+|$)/i);
+    const disadvantagesMatch = fullText.match(/단점[:\s]+([\s\S]+?)(?=추천[:\s]+|$)/i);
+    const recommendationsMatch = fullText.match(/추천[:\s]+([\s\S]+?)(?=$)/i);
+
+    // Extract the content if matches are found
+    if (advantagesMatch && advantagesMatch[1]) {
+      parsedResult.advantages = advantagesMatch[1].trim();
+    }
+
+    if (disadvantagesMatch && disadvantagesMatch[1]) {
+      parsedResult.disadvantages = disadvantagesMatch[1].trim();
+    }
+
+    if (recommendationsMatch && recommendationsMatch[1]) {
+      parsedResult.recommendations = recommendationsMatch[1].trim();
+    }
+
+    // If no structured content was found, use the full text as recommendations
+    if (!parsedResult.advantages && !parsedResult.disadvantages && !parsedResult.recommendations) {
+      parsedResult.recommendations = fullText.trim();
+    }
+
+    evaluationResult.value = parsedResult;
+  } catch (err) {
+    console.error("평가 요청 실패", err);
+  }
 };
 
 // 계산된 속성들
@@ -320,6 +414,7 @@ const fetchTourSpots = async (pageIndex) => {
     });
 
     const data = await response.json();
+    console.log(data);
     spots.value = data || [];
     likedAttractions.value = data.reduce((acc, item) => {
       acc[item.no] = item.attractionLikeId !== 0;
@@ -419,105 +514,43 @@ const updateMap = (spots) => {
   }
 };
 
-// const panTo = (latitude, longitude) => {
-//   if (!window.kakao || !window.kakao.maps || !map.value) return
+const contentTypeMap = {
+  12: "관광지",
+  14: "문화시설",
+  15: "축제공연행사",
+  25: "여행코스",
+  28: "레포츠",
+  32: "숙박",
+  38: "쇼핑",
+  39: "음식점",
+};
 
-//   const moveLatLon = new window.kakao.maps.LatLng(latitude, longitude)
-//   map.value.panTo(moveLatLon)
-// }
+watch(selectedPlaces, (newVal, oldVal) => {
+  drawLines();
+});
 
-// const selectSpot = (spot) => {
-//   // 이미 선택된 장소인지 확인
-//   const alreadySelected = selectedPlaces.value.some((place) => place.id === spot.contentId)
-//   if (alreadySelected) {
-//     alert('이미 선택된 장소입니다.')
-//     return
-//   }
+const drawLines = () => {
+  if (!window.kakao || !window.kakao.maps || !map) return;
 
-//   selectedPlaces.value.push({
-//     id: spot.contentId,
-//     title: spot.title,
-//     latitude: spot.latitude,
-//     longitude: spot.longitude,
-//   })
+  if (savePolyline.value) {
+    savePolyline.value.setMap(null);
+  }
 
-//   // 경로 선 그리기
-//   drawLines()
-// }
+  if (selectedPlaces.value.length >= 2) {
+    const linePath = selectedPlaces.value.map((place) => new window.kakao.maps.LatLng(place.latitude, place.longitude));
 
-// const toggleSpotSelection = (spot, event) => {
-//   const isChecked = event.target.checked
+    const polyline = new window.kakao.maps.Polyline({
+      path: linePath,
+      strokeWeight: 3,
+      strokeColor: "#005666",
+      strokeOpacity: 0.7,
+      strokeStyle: "solid",
+    });
 
-//   if (isChecked) {
-//     // 이미 선택된 장소인지 확인
-//     const alreadySelected = selectedPlaces.value.some((place) => place.id === spot.contentId)
-//     if (alreadySelected) {
-//       event.target.checked = false
-//       alert('이미 선택된 장소입니다.')
-//       return
-//     }
-
-//     // 선택된 장소에 추가
-//     selectedPlaces.value.push({
-//       id: spot.contentId,
-//       title: spot.title,
-//       latitude: spot.latitude,
-//       longitude: spot.longitude,
-//     })
-//   } else {
-//     // 선택된 장소에서 제거
-//     selectedPlaces.value = selectedPlaces.value.filter((place) => place.id !== spot.contentId)
-//   }
-
-//   // 경로 선 그리기
-//   drawLines()
-// }
-
-// const addToSelectedPlaces = (id, title, latitude, longitude) => {
-//   // 이미 선택된 장소인지 확인
-//   const alreadySelected = selectedPlaces.value.some((place) => place.id === id)
-//   if (alreadySelected) {
-//     alert('이미 선택된 장소입니다.')
-//     return
-//   }
-
-//   selectedPlaces.value.push({
-//     id,
-//     title,
-//     latitude,
-//     longitude,
-//   })
-
-//   // 경로 선 그리기
-//   drawLines()
-// }
-
-// const drawLines = () => {
-//   if (!window.kakao || !window.kakao.maps || !map.value) return
-
-//   // 기존 선이 있으면 제거
-//   if (savePolyline.value) {
-//     savePolyline.value.setMap(null)
-//   }
-
-//   // 선택된 장소가 2개 이상일 때만 선 그리기
-//   if (selectedPlaces.value.length >= 2) {
-//     const linePath = selectedPlaces.value.map(
-//       (place) => new window.kakao.maps.LatLng(place.latitude, place.longitude),
-//     )
-
-//     const polyline = new window.kakao.maps.Polyline({
-//       path: linePath,
-//       strokeWeight: 3,
-//       strokeColor: '#005666',
-//       strokeOpacity: 0.7,
-//       strokeStyle: 'solid',
-//     })
-
-//     polyline.setMap(map.value)
-//     savePolyline.value = polyline
-//   }
-// }
+    polyline.setMap(map);
+    savePolyline.value = polyline;
+  }
+};
 
 const savePlan = async () => {
   if (selectedPlaces.value.length === 0) {
@@ -593,5 +626,73 @@ const toggleLike = async (attractionId) => {
 }
 .spot-item:hover {
   background-color: #d9f99d;
+}
+
+.evaluation-container {
+  background-color: #1a1a1a;
+  border-radius: 8px;
+  overflow: hidden;
+  font-family: "Courier New", monospace;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  margin-bottom: 20px;
+}
+
+.evaluation-header {
+  background-color: #333;
+  color: #0f0;
+  padding: 12px 15px;
+  font-size: 1.2rem;
+  font-weight: bold;
+  letter-spacing: 1px;
+  border-bottom: 1px solid #444;
+  display: flex;
+  align-items: center;
+}
+
+.evaluation-header i {
+  margin-right: 10px;
+}
+
+.evaluation-section {
+  margin: 0;
+  border-bottom: 1px solid #333;
+}
+
+.section-header {
+  padding: 10px 15px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  color: #fff;
+  background-color: #222;
+}
+
+.section-header i {
+  margin-right: 10px;
+}
+
+.advantages-section .section-header i {
+  color: #4caf50;
+}
+
+.disadvantages-section .section-header i {
+  color: #f44336;
+}
+
+.recommendations-section .section-header i {
+  color: #2196f3;
+}
+
+.section-content {
+  white-space: pre-line;
+  line-height: 1.6;
+  font-size: 0.95rem;
+  padding: 15px;
+  color: #ddd;
+  background-color: #2a2a2a;
+}
+
+.section-content p {
+  margin-bottom: 10px;
 }
 </style>

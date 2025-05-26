@@ -1,69 +1,58 @@
 <template>
-  <Header/>
+  <Header />
   <div class="map-container">
     <!-- 왼쪽 사이드바 -->
     <div class="sidebar">
       <div class="sidebar-header">
         <h2>여행 계획</h2>
       </div>
-      
+
       <div class="plans-list">
-        <div 
-          v-for="plan in plans" 
-          :key="plan.planId" 
+        <div
+          v-for="plan in plans"
+          :key="plan.planId"
           class="plan-card"
           :class="{ active: selectedPlanId === plan.planId }"
           @click="selectPlan(plan)"
         >
           <h3>Plan #{{ plan.planId }}</h3>
-          
+
           <!-- Likes: 하트 아이콘 + 개수 -->
           <p class="likes">
             <span class="heart">❤️</span>
             {{ plan.likes }}
           </p>
-          
+
           <!-- Attractions 리스트 -->
           <ul class="attractions-list">
-            <li 
-              v-for="(attraction, index) in plan.planAttractions" 
-              :key="attraction.attractionId" 
+            <li
+              v-for="(attraction, index) in plan.planAttractions"
+              :key="attraction.attractionId"
               class="attraction-item"
             >
               <span class="attraction-number">{{ index + 1 }}</span>
               <div class="attraction-info">
-                <a 
-                  href="#" 
-                  class="attraction-link" 
-                  @click.prevent.stop="goToAttraction(attraction.attractionId)"
-                >
-                  {{ attraction.title }}
-                </a>
+                {{ attraction.title }}
                 <small class="content-type">({{ contentTypeMap[attraction.contentType] }})</small>
               </div>
             </li>
           </ul>
-          
+
           <!-- Plan 상세보기 버튼 -->
-          <button 
-            class="detail-button" 
-            @click.stop="goToPlan(plan.planId)"
-          >
-            자세히 보기
-          </button>
+          <button class="detail-button" @click.stop="goToPlan(plan.planId)">자세히 보기</button>
         </div>
-        
+
         <div ref="infiniteScrollTrigger" class="loading">
           <p v-if="loading">Loading more plans...</p>
           <p v-if="finished">No more plans.</p>
         </div>
       </div>
     </div>
-    
+
     <!-- 카카오맵 -->
     <div class="map-wrapper">
       <div id="kakao-map" ref="mapContainer"></div>
-      
+
       <!-- 선택된 플랜 정보 오버레이 -->
       <div v-if="selectedPlan" class="map-overlay">
         <div class="overlay-content">
@@ -80,7 +69,7 @@
 import { ref, onMounted, nextTick } from "vue";
 import { useRouter } from "vue-router";
 import api from "@/api/index";
-import Header from "@/components/layout/Header.vue"
+import Header from "@/components/layout/Header.vue";
 
 const router = useRouter();
 
@@ -113,61 +102,61 @@ const initKakaoMap = async () => {
   const loadKakaoMapScript = () => {
     return new Promise((resolve) => {
       if (window.kakao && window.kakao.maps) {
-        return resolve()
+        return resolve();
       }
 
-      const script = document.createElement("script")
-      script.src = "https://dapi.kakao.com/v2/maps/sdk.js?appkey=a1b7d43f74e8d7c4fa60d02ce2c13f58&autoload=false"
+      const script = document.createElement("script");
+      script.src = "https://dapi.kakao.com/v2/maps/sdk.js?appkey=a1b7d43f74e8d7c4fa60d02ce2c13f58&autoload=false";
       script.onload = () => {
         window.kakao.maps.load(() => {
-          resolve()
-        })
-      }
-      document.head.appendChild(script)
-    })
-  }
+          resolve();
+        });
+      };
+      document.head.appendChild(script);
+    });
+  };
 
-  await loadKakaoMapScript()
+  await loadKakaoMapScript();
 
   if (!mapContainer.value) {
-    console.warn('mapContainer가 아직 준비되지 않았습니다.')
-    return
+    console.warn("mapContainer가 아직 준비되지 않았습니다.");
+    return;
   }
 
   const options = {
-    center: new window.kakao.maps.LatLng(37.5665, 126.9780),
+    center: new window.kakao.maps.LatLng(37.5665, 126.978),
     level: 5,
-  }
+  };
 
-  map.value = new window.kakao.maps.Map(mapContainer.value, options)
-}
+  map.value = new window.kakao.maps.Map(mapContainer.value, options);
+};
 
 const clearMarkers = () => {
-  markers.value.forEach(marker => marker.setMap(null));
+  markers.value.forEach((marker) => marker.setMap(null));
   markers.value = [];
 };
 
 const selectPlan = async (plan) => {
-  console.log(plan)
+  console.log(plan);
   selectedPlan.value = plan;
   selectedPlanId.value = plan.planId;
-  
+
   clearMarkers();
-  
+
   if (!plan.planAttractions || plan.planAttractions.length === 0) {
     return;
   }
-  
+
   const bounds = new kakao.maps.LatLngBounds();
-  
+
   for (let i = 0; i < plan.planAttractions.length; i++) {
     const attraction = plan.planAttractions[i];
-    
+
     const lat = plan.planAttractions[i].latitude;
     const lng = plan.planAttractions[i].longitude;
-    
+
     const position = new kakao.maps.LatLng(lat, lng);
-    
+
     // 커스텀 마커 (순서 번호 포함)
     const markerContent = `
       <div style="
@@ -187,16 +176,16 @@ const selectPlan = async (plan) => {
         ${i + 1}
       </div>
     `;
-    
+
     const customOverlay = new kakao.maps.CustomOverlay({
       position: position,
       content: markerContent,
-      yAnchor: 0.5
+      yAnchor: 0.5,
     });
-    
+
     customOverlay.setMap(map.value);
     markers.value.push(customOverlay);
-    
+
     // 인포윈도우
     const infoWindow = new kakao.maps.InfoWindow({
       content: `
@@ -204,12 +193,12 @@ const selectPlan = async (plan) => {
           <strong>${attraction.title}</strong><br>
           <small>${contentTypeMap[attraction.contentType]}</small>
         </div>
-      `
+      `,
     });
-    
+
     bounds.extend(position);
   }
-  
+
   map.value.setBounds(bounds);
 };
 
@@ -221,7 +210,7 @@ const clearSelection = () => {
 
 const fetchPlans = async () => {
   if (loading.value || finished.value) return;
-  
+
   loading.value = true;
   try {
     const response = await api.api({
@@ -230,7 +219,7 @@ const fetchPlans = async () => {
       params: { page: page.value, size },
     });
     const data = response.data;
-    
+
     if (data.length < size) finished.value = true;
     plans.value.push(...data);
     page.value++;
@@ -254,7 +243,7 @@ const goToPlan = (planId) => {
 onMounted(async () => {
   await nextTick();
   initKakaoMap();
-  
+
   const observer = new IntersectionObserver(
     ([entry]) => {
       if (entry.isIntersecting) {
@@ -263,11 +252,11 @@ onMounted(async () => {
     },
     { threshold: 1.0 }
   );
-  
+
   if (infiniteScrollTrigger.value) {
     observer.observe(infiniteScrollTrigger.value);
   }
-  
+
   fetchPlans();
 });
 </script>
@@ -318,13 +307,13 @@ onMounted(async () => {
 
 .plan-card:hover {
   border-color: #007bff;
-  box-shadow: 0 2px 8px rgba(0,123,255,0.1);
+  box-shadow: 0 2px 8px rgba(0, 123, 255, 0.1);
 }
 
 .plan-card.active {
   border-color: #007bff;
   background: #f0f8ff;
-  box-shadow: 0 2px 8px rgba(0,123,255,0.2);
+  box-shadow: 0 2px 8px rgba(0, 123, 255, 0.2);
 }
 
 .plan-card h3 {
@@ -431,7 +420,7 @@ onMounted(async () => {
   background: white;
   padding: 16px;
   border-radius: 8px;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
   z-index: 1000;
 }
 
@@ -483,12 +472,12 @@ onMounted(async () => {
   .map-container {
     flex-direction: column;
   }
-  
+
   .sidebar {
     width: 100%;
     height: 40vh;
   }
-  
+
   .map-wrapper {
     height: 60vh;
   }

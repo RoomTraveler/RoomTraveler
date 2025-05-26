@@ -4,6 +4,8 @@ import com.ssafy.trip.security.jwt.JwtAuthenticationFilter;
 import com.ssafy.trip.security.jwt.JwtUtil;
 import com.ssafy.trip.security.jwt.JwtVerificationFilter;
 import java.util.Arrays;
+import java.util.List;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -47,7 +49,6 @@ public class CustomSecurityConfig {
     }
 
     @Bean
-    @Order(1)
     SecurityFilterChain apiSecurityFilterChain(HttpSecurity http,
                                                @Qualifier("corsConfigurationSource")CorsConfigurationSource corsConfig,
                                                CustomUserDetailsService userDetailsService,
@@ -61,7 +62,7 @@ public class CustomSecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
         http.authorizeHttpRequests(authorize ->
-                authorize.requestMatchers("/api/user/auth/**", "/api/user/refresh", "/api/map/**", "/api/attractions/**", "/api/plans/**", "/swagger-ui/**", "/v3/api-docs/**", "/ws").permitAll()
+                authorize.requestMatchers("api/ai/**", "/api/user/auth/**", "/api/user/refresh", "/api/map/**", "/api/attractions/**", "/api/plans/**", "/swagger-ui/**", "/v3/api-docs/**", "/ws").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/host/**").hasAnyRole("HOST", "ADMIN")
                         .requestMatchers("/api/notifications/**", "/api/cart/**").hasAnyRole("USER", "HOST", "ADMIN")
@@ -78,9 +79,13 @@ public class CustomSecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList("*"));
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
-        configuration.setAllowedHeaders(Arrays.asList("*"));
+        configuration.setAllowedOrigins(
+                List.of("http://localhost:5173")
+        );
+        configuration.setAllowedMethods(
+                List.of("GET","POST","PUT","DELETE","OPTIONS","PATCH")
+        );
+        configuration.setAllowedHeaders(List.of("*"));
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/api/**", configuration);
