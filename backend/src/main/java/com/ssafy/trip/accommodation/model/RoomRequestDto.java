@@ -1,4 +1,4 @@
-package com.ssafy.trip.dto.request;
+package com.ssafy.trip.accommodation.model;
 
 import lombok.Getter;
 import lombok.NoArgsConstructor;

@@ -2,10 +2,10 @@ package com.ssafy.trip.accommodation.controller;
 
 import com.ssafy.trip.accommodation.model.Accommodation;
 import com.ssafy.trip.accommodation.model.Room;
-import com.ssafy.trip.dto.request.AccommodationRequestDto;
-import com.ssafy.trip.dto.response.AccommodationResponseDto;
-import com.ssafy.trip.dto.request.RoomRequestDto;
-import com.ssafy.trip.dto.response.RoomResponseDto;
+import com.ssafy.trip.accommodation.model.AccommodationRequestDto;
+import com.ssafy.trip.accommodation.model.AccommodationResponseDto;
+import com.ssafy.trip.accommodation.model.RoomRequestDto;
+import com.ssafy.trip.accommodation.model.RoomResponseDto;
 import com.ssafy.trip.accommodation.service.AccommodationService;
 import com.ssafy.trip.host.model.Host;
 import com.ssafy.trip.host.service.HostService;
@@ -19,12 +19,9 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.sql.SQLException;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Comparator;
-import java.util.stream.Collectors;
 import java.util.NoSuchElementException;
 
 /**

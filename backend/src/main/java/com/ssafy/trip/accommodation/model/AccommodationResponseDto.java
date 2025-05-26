@@ -1,7 +1,5 @@
-package com.ssafy.trip.dto.response;
+package com.ssafy.trip.accommodation.model;
 
-import com.ssafy.trip.accommodation.model.Accommodation;
-import com.ssafy.trip.accommodation.model.Image; // Image 엔티티 임포트
 import com.fasterxml.jackson.core.type.TypeReference; // JSON 파싱용
 import com.fasterxml.jackson.databind.ObjectMapper; // JSON 파싱용
 import lombok.AllArgsConstructor;
@@ -10,7 +8,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-import java.time.LocalTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;

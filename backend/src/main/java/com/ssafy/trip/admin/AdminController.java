@@ -40,6 +40,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.ui.Model;
 import org.springframework.security.access.prepost.PreAuthorize;
+import io.swagger.v3.oas.annotations.Operation;
+import com.ssafy.trip.common.BaseResponse;
+import com.ssafy.trip.host.model.Host;
+import java.sql.SQLException;
 
 /**
  * 관리자 기능을 위한 API 컨트롤러 (모든 엔드포인트 /api/admin/~~~)
@@ -668,67 +672,23 @@ public class AdminController {
         }
     }
 
-    // [호스트 신청 승인]
-    @PostMapping("/hosts/{hostUserId}/approve")
-    public ResponseEntity<Map<String, Object>> approveHost(@PathVariable Long hostUserId) {
-        Map<String, Object> response = new HashMap<>();
-        try {
-            boolean hostStatusUpdated = hostService.updateHostStatus(hostUserId, "APPROVED");
-            if (hostStatusUpdated) {
-                int userRoleUpdatedResult = userService.updateUserRole(hostUserId, "HOST");
-                if (userRoleUpdatedResult > 0) {
-                    response.put("success", true);
-                    response.put("message", "호스트 신청이 성공적으로 승인되었습니다.");
-                    return ResponseEntity.ok(response);
-                } else {
-                    logger.error("호스트 (ID: {}) 승인 중 사용자 역할 변경 실패", hostUserId);
-                    response.put("success", false);
-                    response.put("message", "호스트 승인은 되었으나, 사용자 역할 변경에 실패했습니다. 확인이 필요합니다.");
-                    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
-                }
-            } else {
-                response.put("success", false);
-                response.put("message", "호스트 상태 변경에 실패했습니다. 해당 호스트 신청이 존재하지 않거나 이미 처리되었을 수 있습니다.");
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
-            }
-        } catch (Exception e) {
-            logger.error("호스트 (ID: {}) 승인 중 오류 발생", hostUserId, e);
-            response.put("success", false);
-            response.put("message", "호스트 승인 중 오류가 발생했습니다: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+    @Operation(summary = "호스트 신청 승인", description = "관리자가 호스트 신청을 승인합니다.")
+    @PutMapping("/approve/{hostId}")
+    public ResponseEntity<BaseResponse<Host>> approveHost(@PathVariable Long hostId) throws SQLException {
+        hostService.updateHostStatus(hostId, "ACTIVE");
+        Host host = hostService.getHostById(hostId);
+        if (host != null) {
+            userService.updateUserRole(host.getUserId(), "HOST"); // users 테이블의 역할 변경
+            return ResponseEntity.ok(BaseResponse.onSuccess(host));
         }
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(BaseResponse.onFail("호스트 정보를 찾을 수 없습니다."));
     }
 
-    // [호스트 신청 거절]
-    @PostMapping("/hosts/{hostUserId}/reject")
-    public ResponseEntity<Map<String, Object>> rejectHost(
-            @PathVariable Long hostUserId,
-            @RequestBody Map<String, String> payload) {
-        Map<String, Object> response = new HashMap<>();
-        String reason = payload.get("reason");
-        if (reason == null || reason.trim().isEmpty()) {
-            response.put("success", false);
-            response.put("message", "거절 사유를 입력해야 합니다.");
-            return ResponseEntity.badRequest().body(response);
-        }
-
-        try {
-            boolean hostStatusUpdated = hostService.updateHostStatusAndReason(hostUserId, "REJECTED", reason);
-            if (hostStatusUpdated) {
-                response.put("success", true);
-                response.put("message", "호스트 신청이 거절되었습니다.");
-                return ResponseEntity.ok(response);
-            } else {
-                response.put("success", false);
-                response.put("message", "호스트 거절 처리 중 문제가 발생했습니다. 해당 호스트 신청이 존재하지 않거나 이미 처리되었을 수 있습니다.");
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
-            }
-        } catch (Exception e) {
-            logger.error("호스트 (ID: {}) 거절 중 오류 발생", hostUserId, e);
-            response.put("success", false);
-            response.put("message", "호스트 거절 중 오류가 발생했습니다: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
-        }
+    @Operation(summary = "호스트 신청 거절", description = "관리자가 호스트 신청을 거절하고 사유를 입력합니다.")
+    @PutMapping("/reject/{hostId}")
+    public ResponseEntity<BaseResponse<Void>> rejectHost(@PathVariable Long hostId, @RequestBody String reason) throws SQLException {
+        hostService.updateHostStatusAndReason(hostId, "REJECT", reason);
+        return ResponseEntity.ok(BaseResponse.onSuccess());
     }
 
     /**

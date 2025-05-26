@@ -1,6 +1,5 @@
-package com.ssafy.trip.dto.response;
+package com.ssafy.trip.accommodation.model;
 
-import com.ssafy.trip.accommodation.model.Image;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;

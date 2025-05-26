@@ -2,6 +2,7 @@ package com.ssafy.trip.admin;
 
 import com.ssafy.trip.accommodation.dao.AccommodationDao;
 import com.ssafy.trip.accommodation.model.Accommodation;
+import com.ssafy.trip.host.service.HostService;
 import com.ssafy.trip.region.model.Sido;
 import com.ssafy.trip.region.model.Gugun;
 import com.ssafy.trip.user.User;
@@ -31,6 +32,7 @@ public class AdminServiceImpl implements AdminService {
     private static final Logger logger = LoggerFactory.getLogger(AdminServiceImpl.class);
     private final AdminDao adminDao;
     private final AccommodationDao accommodationDao;
+    private final HostService hostService;
 
     /**
      * 사용자 통계 정보를 조회합니다.
@@ -264,14 +266,28 @@ public class AdminServiceImpl implements AdminService {
     @Override
     @Transactional
     public boolean updateUserRoleByAdmin(Long userId, String newRole) {
-        logger.info("AdminService: 사용자 ID {}의 역할을 {}로 변경 요청", userId, newRole);
-        int updatedRows = adminDao.updateUserRole(userId, newRole);
-        if (updatedRows > 0) {
-            logger.info("AdminService: 사용자 ID {} 역할 변경 성공. 변경된 행: {}", userId, updatedRows);
-            return true;
-        } else {
-            logger.warn("AdminService: 사용자 ID {} 역할 변경 실패 또는 변경 없음. 변경된 행: {}. 사용자가 없거나 이미 해당 역할일 수 있습니다.", userId, updatedRows);
+        try {
+            int updatedRows = adminDao.updateUserRole(userId, newRole);
+            if (updatedRows > 0) {
+                logger.info("사용자 ID {}의 역할이 {}로 성공적으로 변경되었습니다.", userId, newRole);
+                return true;
+            } else {
+                logger.warn("사용자 ID {}의 역할 변경 실패. 사용자를 찾을 수 없거나 변경 사항이 없습니다.", userId);
+                return false;
+            }
+        } catch (Exception e) {
+            logger.error("사용자 역할 변경 중 오류 발생 (userId: {}, newRole: {}): {}", userId, newRole, e.getMessage(), e);
+            // 필요에 따라 사용자 정의 예외를 던지거나, false를 반환하여 컨트롤러에서 처리하도록 할 수 있습니다.
+            // 여기서는 일단 false를 반환합니다.
             return false;
         }
+    }
+
+    @Override
+    @Transactional
+    public boolean updateHostStatusAndReason(Long hostId, String status, String reason) throws SQLException {
+        // AdminController에서 넘어온 파라미터를 HostService의 메서드로 전달
+        // HostService는 hosts 테이블의 PK인 host_id를 기준으로 업데이트 수행
+        return hostService.updateHostStatusAndReason(hostId, status, reason);
     }
 }

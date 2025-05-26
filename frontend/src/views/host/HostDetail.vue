@@ -11,7 +11,7 @@
         <div v-else-if="error" class="alert alert-danger">{{ error }}</div>
         <div v-else-if="host">
           <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
-            <h3 class="mb-0">{{ host.businessName || '호스트 정보 없음' }}</h3>
+            <h3 class="mb-0">{{ host.businessName || "호스트 정보 없음" }}</h3>
             <span :class="getStatusBadgeClass(host.status)">
               {{ getStatusText(host.status) }}
             </span>
@@ -21,15 +21,17 @@
             <h5 class="section-title">기본 정보</h5>
             <div class="row mb-2">
               <div class="col-md-4 info-label">상호명</div>
-              <div class="col-md-8">{{ host.businessName || '-' }}</div>
+              <div class="col-md-8">{{ host.businessName || "-" }}</div>
             </div>
             <div class="row mb-2">
               <div class="col-md-4 info-label">대표자명</div>
-              <div class="col-md-8">{{ host.ceoName || '-' }}</div>
+              <div class="col-md-8">{{ host.ceoName || "-" }}</div>
             </div>
             <div class="row mb-2">
               <div class="col-md-4 info-label">호스트 소개</div>
-              <div class="col-md-8"><pre class="description-pre">{{ host.description || '-' }}</pre></div>
+              <div class="col-md-8">
+                <pre class="description-pre">{{ host.description || "-" }}</pre>
+              </div>
             </div>
           </div>
 
@@ -37,34 +39,41 @@
             <h5 class="section-title">사업자 정보</h5>
             <div class="row mb-2">
               <div class="col-md-4 info-label">사업자 등록번호</div>
-              <div class="col-md-8">{{ host.businessNumber || '-' }}</div>
+              <div class="col-md-8">{{ host.businessNumber || "-" }}</div>
             </div>
             <div class="row mb-2">
               <div class="col-md-4 info-label">사업장 주소</div>
-              <div class="col-md-8">{{ host.businessAddress || '-' }}</div>
+              <div class="col-md-8">{{ host.businessAddress || "-" }}</div>
             </div>
             <div class="row mb-2">
               <div class="col-md-4 info-label">사업장 전화번호</div>
-              <div class="col-md-8">{{ host.businessPhone || '-' }}</div>
+              <div class="col-md-8">{{ host.businessPhone || "-" }}</div>
             </div>
             <div class="row mb-2">
               <div class="col-md-4 info-label">사업자 업종</div>
-              <div class="col-md-8">{{ host.businessType || '-' }}</div>
+              <div class="col-md-8">{{ host.businessType || "-" }}</div>
             </div>
             <div class="row mb-2">
               <div class="col-md-4 info-label">사업자 등록증 만료일</div>
-              <div class="col-md-8">{{ host.businessLicenseExpire ? formatDate(host.businessLicenseExpire, false) : '-' }}</div>
+              <div class="col-md-8">
+                {{ host.businessLicenseExpire ? formatDate(host.businessLicenseExpire, false) : "-" }}
+              </div>
             </div>
             <div class="row mb-2">
               <div class="col-md-4 info-label">사업자 등록증</div>
               <div class="col-md-8">
-                <a v-if="host.businessLicense" :href="host.businessLicense" target="_blank" class="btn btn-sm btn-outline-primary">
+                <a
+                  v-if="host.businessLicense"
+                  :href="host.businessLicense"
+                  target="_blank"
+                  class="btn btn-sm btn-outline-primary"
+                >
                   <i class="bi bi-file-earmark-image"></i> 등록증 보기
                 </a>
                 <span v-else>-</span>
               </div>
             </div>
-             <div v-if="host.licenseResubmitUrl" class="row mb-2">
+            <div v-if="host.licenseResubmitUrl" class="row mb-2">
               <div class="col-md-4 info-label">재제출된 등록증</div>
               <div class="col-md-8">
                 <a :href="host.licenseResubmitUrl" target="_blank" class="btn btn-sm btn-outline-info">
@@ -79,15 +88,15 @@
             <h5 class="section-title">정산 정보</h5>
             <div class="row mb-2">
               <div class="col-md-4 info-label">은행명</div>
-              <div class="col-md-8">{{ host.bankName || '-' }}</div>
+              <div class="col-md-8">{{ host.bankName || "-" }}</div>
             </div>
             <div class="row mb-2">
               <div class="col-md-4 info-label">계좌번호</div>
-              <div class="col-md-8">{{ host.bankAccount || '-' }}</div>
+              <div class="col-md-8">{{ host.bankAccount || "-" }}</div>
             </div>
             <div class="row mb-2">
               <div class="col-md-4 info-label">예금주명</div>
-              <div class="col-md-8">{{ host.bankOwner || '-' }}</div>
+              <div class="col-md-8">{{ host.bankOwner || "-" }}</div>
             </div>
           </div>
 
@@ -103,7 +112,9 @@
             </div>
             <div v-if="host.adminComment" class="row mb-2">
               <div class="col-md-4 info-label">관리자 코멘트</div>
-              <div class="col-md-8"><pre class="description-pre">{{ host.adminComment }}</pre></div>
+              <div class="col-md-8">
+                <pre class="description-pre">{{ host.adminComment }}</pre>
+              </div>
             </div>
             <div v-if="host.approvedAt" class="row mb-2">
               <div class="col-md-4 info-label">승인일</div>
@@ -120,7 +131,7 @@
               <RouterLink :to="`/host/update-form/${host.hostId}`" class="btn btn-primary">
                 <i class="bi bi-pencil-square"></i> 정보 수정
               </RouterLink>
-              <template v-if="host.status === 'APPROVED' && isOwner">
+              <template v-if="host.status === 'ACTIVE' && isOwner">
                 <RouterLink :to="`/host/accommodations/new`" class="btn btn-success">
                   <i class="bi bi-plus-circle"></i> 새 숙소 등록
                 </RouterLink>
@@ -136,9 +147,9 @@
                   <i class="bi bi-x-circle"></i> 반려
                 </button>
               </template>
-               <template v-if="isOwner && host.status === 'REJECT'">
-                 <RouterLink :to="`/host/license-resubmit/${host.hostId}`" class="btn btn-warning">
-                    <i class="bi bi-arrow-repeat"></i> 사업자 등록증 재제출
+              <template v-if="isOwner && host.status === 'REJECT'">
+                <RouterLink :to="`/host/license-resubmit/${host.hostId}`" class="btn btn-warning">
+                  <i class="bi bi-arrow-repeat"></i> 사업자 등록증 재제출
                 </RouterLink>
               </template>
             </div>
@@ -149,8 +160,8 @@
           <RouterLink v-if="isAdmin" to="/admin/hosts" class="btn btn-outline-secondary">
             <i class="bi bi-arrow-left-short"></i> 관리자 호스트 목록
           </RouterLink>
-           <RouterLink v-else to="/host/index" class="btn btn-outline-secondary">
-             <i class="bi bi-arrow-left-short"></i> 내 호스트 정보
+          <RouterLink v-else to="/host" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left-short"></i> 내 호스트 정보
           </RouterLink>
         </div>
       </div>
@@ -161,7 +172,7 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import { useRoute, useRouter, RouterLink } from "vue-router";
-import { useUserStore } from '../../store/userStore';
+import { useUserStore } from "../../store/userStore";
 
 const route = useRoute();
 const router = useRouter();
@@ -169,29 +180,33 @@ const userStore = useUserStore();
 
 const host = ref(null);
 const loading = ref(true);
-const error = ref('');
+const error = ref("");
 const actionLoading = ref(false); // 승인/반려 액션 로딩 상태
 
-const isOwner = computed(() => host.value && authStore.user && authStore.user.userId === host.value.userId);
-const isAdmin = computed(() => authStore.user && authStore.user.role === "ADMIN");
+const isOwner = computed(() => host.value && userStore.user && userStore.user.userId === host.value.userId);
+const isAdmin = computed(() => userStore.user && userStore.user.role === "ADMIN");
 
 const getStatusBadgeClass = (status) => {
   const base = "badge fs-6";
   switch (status) {
-    case "WAIT": return `${base} bg-warning text-dark`;
-    case "APPROVED": return `${base} bg-success`;
-    case "REJECT": return `${base} bg-danger`;
-    default: return `${base} bg-secondary`;
+    case "WAIT":
+      return `${base} bg-warning text-dark`;
+    case "ACTIVE":
+      return `${base} bg-success`;
+    case "REJECT":
+      return `${base} bg-danger`;
+    default:
+      return `${base} bg-secondary`;
   }
 };
 
 const getStatusText = (status) => {
   const statusMap = {
     WAIT: "심사중",
-    APPROVED: "승인됨",
+    ACTIVE: "승인됨",
     REJECT: "반려됨",
   };
-  return statusMap[status] || status || '알 수 없음';
+  return statusMap[status] || status || "알 수 없음";
 };
 
 const formatDate = (dateString, includeTime = true) => {
@@ -212,25 +227,25 @@ const formatDate = (dateString, includeTime = true) => {
 async function updateHostStatus(hostId, newStatus, adminComment = null) {
   actionLoading.value = true;
   try {
-    const token = authStore.accessToken;
+    const token = userStore.tokens.access_token;
     if (!token) throw new Error("인증 토큰이 없습니다.");
 
     const queryParams = new URLSearchParams({ status: newStatus });
     if (adminComment) {
-      queryParams.append('adminComment', adminComment);
+      queryParams.append("adminComment", adminComment);
     }
 
     const response = await fetch(`/api/hosts/${hostId}/status?${queryParams.toString()}`, {
       method: "PUT", // HTTP 메소드를 PUT으로 변경
-      headers: { 
+      headers: {
         "Content-Type": "application/json", // Content-Type은 필요할 수 있음, 백엔드 설정 확인
-        "Authorization": `Bearer ${token}` 
+        Authorization: `Bearer ${token}`,
       },
       // RequestParam을 사용하므로 바디는 비워둘 수 있으나, 명시적으로 빈 객체를 보낼 수도 있음
-      // body: JSON.stringify({}) 
+      // body: JSON.stringify({})
     });
     if (!response.ok) {
-      const errData = await response.json().catch(() => ({ message: '상태 변경 실패' }));
+      const errData = await response.json().catch(() => ({ message: "상태 변경 실패" }));
       throw new Error(errData.error || errData.message || "호스트 상태 변경에 실패했습니다.");
     }
     await loadHostDetail(hostId); // 성공 후 상세 정보 다시 로드
@@ -255,22 +270,22 @@ async function triggerUpdateStatus(newStatus) {
 async function promptAdminCommentAndReject() {
   if (!host.value) return;
   const adminComment = window.prompt("반려 사유를 입력해주세요. (선택사항)");
-  const confirmMessage = `정말로 이 호스트의 상태를 '반려' 처리하시겠습니까?${adminComment ? '\n반려사유: ' + adminComment : ''}`;
+  const confirmMessage = `정말로 이 호스트의 상태를 '반려' 처리하시겠습니까?${adminComment ? "\n반려사유: " + adminComment : ""}`;
   if (window.confirm(confirmMessage)) {
-    await updateHostStatus(host.value.hostId, 'REJECT', adminComment);
+    await updateHostStatus(host.value.hostId, "REJECT", adminComment);
   }
 }
 
-async function loadHostDetail(hostId) {
+async function loadHostDetail(id) {
   loading.value = true;
-  error.value = '';
+  error.value = "";
   try {
-    const token = authStore.accessToken; 
+    const token = userStore.tokens.access_token;
     const headers = {};
     if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
+      headers["Authorization"] = `Bearer ${token}`;
     }
-    const res = await fetch(`/api/hosts/${hostId}`, { headers });
+    const res = await fetch(`/api/host/${id}`, { headers });
     if (!res.ok) {
       if (res.status === 404) throw new Error("호스트 정보를 찾을 수 없습니다.");
       throw new Error("호스트 정보를 불러오는데 실패했습니다.");
@@ -286,12 +301,22 @@ async function loadHostDetail(hostId) {
 }
 
 onMounted(async () => {
-  // authStore의 사용자 정보 로드가 완료될 때까지 기다릴 수 있음 (선택적)
-  // await authStore.fetchUser(); // 예시: 스토어에 사용자 정보 로드 함수가 있다면
-  
-  const hostId = route.params.id;
-  if (hostId) {
-    await loadHostDetail(hostId);
+  // userStore의 사용자 정보 로드가 완료될 때까지 기다릴 수 있음 (선택적)
+  try {
+    await userStore.fetchCurrentUser(); // 사용자 정보 및 토큰 로드
+  } catch (e) {
+    console.error("사용자 정보 로드 실패:", e);
+    error.value = "사용자 정보를 불러오는데 실패했습니다. 다시 로그인해주세요.";
+    loading.value = false;
+    return;
+  }
+
+  const hostIdFromRoute = route.params.hostId;
+  if (hostIdFromRoute) {
+    await loadHostDetail(hostIdFromRoute);
+  } else {
+    error.value = "호스트 ID를 찾을 수 없습니다.";
+    loading.value = false;
   }
 });
 </script>
@@ -324,6 +349,6 @@ onMounted(async () => {
   word-break: break-word;
 }
 .actions-section {
-    margin-top: 2rem; /* 위쪽 여백 추가 */
+  margin-top: 2rem; /* 위쪽 여백 추가 */
 }
 </style>

@@ -40,7 +40,7 @@
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="host in pendingHosts" :key="host.userId">
+                <tr v-for="host in pendingHosts" :key="host.hostId">
                   <td>{{ host.userId }}</td>
                   <td>{{ host.user?.username || 'N/A' }}</td>
                   <td>{{ host.businessName }}</td>
@@ -54,8 +54,8 @@
                   <td>{{ formatDate(host.createdAt) }}</td>
                   <td>
                     <div class="btn-group btn-group-sm" role="group">
-                      <button class="btn btn-success" @click="approveHostApplication(host.userId)">승인</button>
-                      <button class="btn btn-danger" @click="promptRejectHostApplication(host.userId)">거절</button>
+                      <button class="btn btn-success" @click="approveHostApplication(host.hostId)">승인</button>
+                      <button class="btn btn-danger" @click="promptRejectHostApplication(host.hostId)">거절</button>
                     </div>
                   </td>
                 </tr>

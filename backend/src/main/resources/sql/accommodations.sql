@@ -86,6 +86,7 @@ WHERE
     original_price IS NULL; -- 아직 설정되지 않은 행에 대해서만 실행 (선택적)
 
 UPDATE rooms SET status = 'ACTIVE' WHERE status = 'AVAILABLE';
+
 -- 이미지 테이블
 CREATE TABLE images (
     image_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,

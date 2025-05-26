@@ -22,7 +22,6 @@ import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -34,14 +33,12 @@ import java.io.IOException;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import com.ssafy.trip.dto.request.AccommodationRequestDto;
-import com.ssafy.trip.dto.response.AccommodationResponseDto;
-import com.ssafy.trip.dto.response.ImageResponseDto;
-import com.ssafy.trip.dto.request.RoomRequestDto;
-import com.ssafy.trip.dto.response.RoomResponseDto;
+import com.ssafy.trip.accommodation.model.AccommodationRequestDto;
+import com.ssafy.trip.accommodation.model.AccommodationResponseDto;
+import com.ssafy.trip.accommodation.model.RoomRequestDto;
+import com.ssafy.trip.accommodation.model.RoomResponseDto;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.util.UUID;
 
 /**
  * 숙소 서비스 구현 클래스

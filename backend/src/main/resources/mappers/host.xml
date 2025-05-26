@@ -159,7 +159,7 @@
                 approved_at = NULL,
             </if>
             updated_at = NOW()
-        WHERE user_id = #{hostId} <!-- 여기도 user_id 기준일 가능성 높음 -->
+        WHERE host_id = #{hostId}
     </update>
 
     <!-- 사용자 ID로 호스트 조회 (User 정보 포함) -->

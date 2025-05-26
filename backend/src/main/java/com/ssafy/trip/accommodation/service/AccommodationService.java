@@ -1,15 +1,10 @@
 package com.ssafy.trip.accommodation.service;
 
-import com.ssafy.trip.accommodation.model.Accommodation;
-import com.ssafy.trip.accommodation.model.Room;
-import com.ssafy.trip.accommodation.model.Image;
-import com.ssafy.trip.dto.request.AccommodationRequestDto;
-import com.ssafy.trip.dto.response.AccommodationResponseDto;
-import com.ssafy.trip.dto.request.RoomRequestDto;
-import com.ssafy.trip.dto.response.RoomResponseDto;
+import com.ssafy.trip.accommodation.model.*;
+import com.ssafy.trip.accommodation.model.AccommodationResponseDto;
+import com.ssafy.trip.accommodation.model.RoomResponseDto;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.sql.SQLException;
 import java.util.List;
@@ -206,7 +201,7 @@ public interface AccommodationService {
      * @return 생성된 숙소 정보 DTO
      * @throws Exception 예외 처리
      */
-    AccommodationResponseDto createAccommodationAndImages(com.ssafy.trip.dto.request.AccommodationRequestDto requestDto, Long hostId) throws Exception;
+    AccommodationResponseDto createAccommodationAndImages(AccommodationRequestDto requestDto, Long hostId) throws Exception;
 
     /**
      * 기존 숙소 정보를 수정합니다. (파일 업로드/삭제 포함)
@@ -216,7 +211,7 @@ public interface AccommodationService {
      * @return 수정된 숙소 정보 DTO
      * @throws Exception 예외 처리
      */
-    AccommodationResponseDto updateAccommodationAndImages(Long accommodationId, com.ssafy.trip.dto.request.AccommodationRequestDto requestDto, Long hostId) throws Exception;
+    AccommodationResponseDto updateAccommodationAndImages(Long accommodationId, AccommodationRequestDto requestDto, Long hostId) throws Exception;
 
     /**
      * 숙소 상세 정보를 조회합니다. (이미지 포함)
@@ -227,9 +222,9 @@ public interface AccommodationService {
     AccommodationResponseDto getAccommodationDetails(Long accommodationId) throws Exception;
 
     // Room Management for Host
-    RoomResponseDto createRoomAndImages(Long accommodationId, com.ssafy.trip.dto.request.RoomRequestDto requestDto, Long hostId) throws Exception;
+    RoomResponseDto createRoomAndImages(Long accommodationId, RoomRequestDto requestDto, Long hostId) throws Exception;
 
-    RoomResponseDto updateRoomAndImages(Long roomId, com.ssafy.trip.dto.request.RoomRequestDto requestDto, Long hostId) throws Exception;
+    RoomResponseDto updateRoomAndImages(Long roomId, RoomRequestDto requestDto, Long hostId) throws Exception;
 
     RoomResponseDto getRoomDetailsForHost(Long roomId, Long hostId) throws Exception;
 

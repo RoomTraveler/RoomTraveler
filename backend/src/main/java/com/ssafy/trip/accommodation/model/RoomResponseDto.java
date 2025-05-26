@@ -1,9 +1,7 @@
-package com.ssafy.trip.dto.response;
+package com.ssafy.trip.accommodation.model;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.ssafy.trip.accommodation.model.Image;
-import com.ssafy.trip.accommodation.model.Room;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;

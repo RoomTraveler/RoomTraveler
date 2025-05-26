@@ -7,6 +7,7 @@ import com.ssafy.trip.user.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
 
@@ -103,4 +104,14 @@ public interface AdminService {
      * @return 페이징된 호스트(User) 목록
      */
     Page<User> getAllHostsPage(String status, String keyword, Pageable pageable);
+
+    /**
+     * 호스트 상태와 사유를 업데이트합니다. (AdminController에서 호출)
+     * @param hostId 호스트 ID (PK)
+     * @param status 새로운 상태 (ACTIVE, REJECT 등)
+     * @param reason 사유 (주로 거절 사유)
+     * @return 업데이트 성공 여부
+     * @throws SQLException SQL 예외 발생 시
+     */
+    boolean updateHostStatusAndReason(Long hostId, String status, String reason) throws SQLException;
 }
