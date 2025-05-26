@@ -19,8 +19,8 @@
 
           <!-- Likes: 하트 아이콘 + 개수 -->
           <p class="likes">
-            <span class="heart">❤️</span>
-            {{ plan.likes }}
+            <span @click.stop="toggleLike(plan.planId)" class="heart">{{ liked[plan.planId] ? "❤️" : "🤍" }}</span>
+            {{ likeCount[plan.planId] }}
           </p>
 
           <!-- Attractions 리스트 -->
@@ -68,7 +68,7 @@
 <script setup>
 import { ref, onMounted, nextTick } from "vue";
 import { useRouter } from "vue-router";
-import api from "@/api/index";
+import apiGroup from "@/api/index";
 import Header from "@/components/layout/Header.vue";
 
 const router = useRouter();
@@ -213,7 +213,7 @@ const fetchPlans = async () => {
 
   loading.value = true;
   try {
-    const response = await api.api({
+    const response = await apiGroup.api({
       url: "/api/map/plans",
       method: "get",
       params: { page: page.value, size },
@@ -221,6 +221,12 @@ const fetchPlans = async () => {
     const data = response.data;
 
     if (data.length < size) finished.value = true;
+    data.forEach((plan) => {
+      likeCount.value[plan.planId] = plan.likes;
+      liked.value[plan.planId] = plan.likedByUser;
+    });
+    console.log(likeCount.value);
+    console.log(liked.value);
     plans.value.push(...data);
     page.value++;
   } catch (err) {
@@ -259,6 +265,24 @@ onMounted(async () => {
 
   fetchPlans();
 });
+
+const likeCount = ref({});
+const liked = ref({});
+
+const toggleLike = async (planId) => {
+  try {
+    const response = await apiGroup.api({
+      url: `api/map/likes/plans/${planId}`,
+      method: "POST",
+    });
+    if (response.status === 200) {
+      liked.value[planId] = !liked.value[planId];
+      likeCount.value[planId] += liked.value[planId] ? 1 : -1;
+    }
+  } catch (error) {
+    console.error("좋아요 토글 실패:", error);
+  }
+};
 </script>
 
 <style scoped>

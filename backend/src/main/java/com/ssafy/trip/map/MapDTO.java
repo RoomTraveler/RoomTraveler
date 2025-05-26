@@ -98,6 +98,7 @@ public class MapDTO {
         private Long planId;
         private List<PlanAttractionDTO> planAttractions;
         private long likes;
+        private boolean likedByUser;
     }
 
     @Data

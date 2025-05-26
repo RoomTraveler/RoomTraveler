@@ -1,6 +1,7 @@
 <template>
+  <Header />
   <section class="plans-section">
-    <h2 class="section-title">&nbsp;&nbsp; 내가 만든 여행 플랜</h2>
+    <h2 class="section-title">&nbsp;&nbsp; ❤️내가 좋아요 누른 여행 플랜</h2>
 
     <div class="plans-grid">
       <div v-for="plan in plans" :key="plan.planId" class="plan-card">
@@ -36,6 +37,7 @@
 import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import api from "@/api/index";
+import Header from "@/components/layout/Header.vue";
 
 const router = useRouter();
 

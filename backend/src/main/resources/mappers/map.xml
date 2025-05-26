@@ -72,6 +72,7 @@
     <resultMap id="PlanWithAttractions" type="com.ssafy.trip.map.MapDTO$PlanDTO">
         <id property="planId" column="plan_id"/>
         <result property="likes" column="likes"/>
+        <result property="likedByUser" column="liked_by_user"/>
         <collection property="planAttractions" ofType="com.ssafy.trip.map.MapDTO$PlanAttractionDTO">
             <result property="attractionId" column="attraction_id"/>
             <result property="order"  column="order_num"/>
@@ -85,19 +86,23 @@
 
     <select id="getPlansByUserId" resultMap="PlanWithAttractions">
         SELECT
-            p.plan_id        AS plan_id,
-            p.likes          AS likes,
+            p.plan_id,
+            p.likes,
             pa.attraction_id,
             pa.order_num,
             a.title,
             a.content_type_id,
             a.first_image2
-        FROM plan p
-                 JOIN plan_attraction pa  ON p.plan_id = pa.plan_id
-                 JOIN attractions    a    ON pa.attraction_id = a.no
-        WHERE p.user_id = #{userId}
-        ORDER BY p.plan_id DESC
-        LIMIT #{size} OFFSET #{offset}
+        FROM (
+                 SELECT pl.plan_id
+                 FROM plan_likes pl
+                 WHERE pl.user_id = #{userId}
+                     LIMIT #{size} OFFSET #{offset}
+             ) liked_plans
+                 JOIN plan p ON p.plan_id = liked_plans.plan_id
+                 JOIN plan_attraction pa ON p.plan_id = pa.plan_id
+                 JOIN attractions a ON pa.attraction_id = a.no
+        ORDER BY p.plan_id DESC, pa.order_num
     </select>
 
     <select id="getAttractionsByUserId" resultMap="RegionTripResDtoMap">
@@ -231,7 +236,11 @@
             a.content_type_id,
             a.first_image2,
             a.latitude,
-            a.longitude
+            a.longitude,
+            CASE
+                WHEN pl.user_id IS NOT NULL THEN TRUE
+                ELSE FALSE
+            END AS liked_by_user
         FROM (
                  SELECT plan_id
                  FROM plan
@@ -242,6 +251,7 @@
                  JOIN plan p ON p.plan_id = limited_plans.plan_id
                  JOIN plan_attraction pa ON p.plan_id = pa.plan_id
                  JOIN attractions a ON pa.attraction_id = a.no
+                 LEFT JOIN plan_likes pl ON pl.plan_id = p.plan_id
         ORDER BY p.likes DESC, pa.order_num ASC
     </select>
 
@@ -294,7 +304,7 @@
     </select>
 
     <delete id="insertPlanLike">
-        INSERT INTO plan_likes(user_id, attraction_id) VALUES(#{userId}, #{planId})
+        INSERT INTO plan_likes(user_id, plan_id) VALUES(#{userId}, #{planId})
     </delete>
 
     <insert id="deletePlanLike">

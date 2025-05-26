@@ -26,7 +26,7 @@
 <script setup>
 import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
-import axios from "axios";
+import apiGroup from "@/api/index";
 import Header from "@/components/layout/Header.vue";
 
 const router = useRouter();
@@ -49,7 +49,10 @@ const userId = 1;
 // 좋아요 누른 관광지 데이터 불러오기
 const fetchLikedAttractions = async () => {
   try {
-    const response = await axios.get(`http://localhost:8080/api/map/likes/attractions`);
+    const response = await apiGroup.api({
+      url: "/api/map/likes/attractions",
+      method: "GET",
+    });
     likedAttractions.value = response.data;
   } catch (error) {
     console.error("Error fetching liked attractions:", error);
@@ -62,7 +65,10 @@ const goToAttraction = (attractionId) => {
 
 const unlikeAttraction = async (attractionId) => {
   try {
-    await axios.post(`http://localhost:8080/api/map/likes/attractions/${attractionId}`);
+    await apiGroup.api({
+      url: `/api/map/likes/attractions/${attractionId}`,
+      method: "POST",
+    });
     likedAttractions.value = likedAttractions.value.filter((attraction) => attraction.no !== attractionId);
   } catch (error) {
     console.error("Failed to unlike attraction:", error);

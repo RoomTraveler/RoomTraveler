@@ -2,16 +2,11 @@
   <div class="container-fluid mt-4">
     <h2>Squad(ID: {{ squadId }})</h2>
     <div class="d-flex flex-row flex-nowrap align-items-center">
-  <div v-for="member in squadMembers" :key="member.userId" class="d-flex align-items-center me-3">
-    <img
-      :src="cursorImageMap[member.position]"
-      alt="cursor"
-      style="width: 16px; height: 16px;"
-      class="me-1"
-    />
-    <span>{{ member.username }}</span>
-  </div>
-</div>
+      <div v-for="member in squadMembers" :key="member.userId" class="d-flex align-items-center me-3">
+        <img :src="cursorImageMap[member.position]" alt="cursor" style="width: 16px; height: 16px" class="me-1" />
+        <span>{{ member.username }}</span>
+      </div>
+    </div>
     <div class="row">
       <!-- LEFT: Filters, Search Results & Map -->
       <div class="col-lg-8">
@@ -111,22 +106,20 @@
           </div>
           <div class="card-body">
             <draggable
-  v-model="selectedPlaces"
-  class="list-group"
-  ghost-class="ghost"
-  @start="dragging = true"
-  @end="dragging = false"
-  item-key="title"
->
-  <template #item="{ element, index }">
-    <div class="list-group-item d-flex justify-between items-center">
-      <span>{{ element.title }}</span>
-      <button @click="removePlace(index)" class="btn btn-danger btn-sm">
-        삭제
-      </button>
-    </div>
-  </template>
-</draggable>
+              v-model="selectedPlaces"
+              class="list-group"
+              ghost-class="ghost"
+              @start="dragging = true"
+              @end="dragging = false"
+              item-key="title"
+            >
+              <template #item="{ element, index }">
+                <div class="list-group-item d-flex justify-between items-center">
+                  <span>{{ element.title }}</span>
+                  <button @click="removePlace(index)" class="btn btn-danger btn-sm">삭제</button>
+                </div>
+              </template>
+            </draggable>
             <template v-if="squadMembers.length - 1 === position">
               <label>
                 <input v-model="isShared" type="checkbox" name="is_shared" />
@@ -143,8 +136,8 @@
     </div>
 
     <div v-if="joinMessage" class="join-popup">
-    {{ joinMessage }}
-  </div>
+      {{ joinMessage }}
+    </div>
 
     <ModalWrapper v-if="showModal" :title="modalTitle" @close="showModal = false">
       <!-- AttractionDetail 컴포넌트를 슬롯에 넣고, id 전달 -->
@@ -165,7 +158,7 @@ import { useUserStore } from "@/store/userStore";
 import apiGroup from "@/api/index";
 
 const userStore = useUserStore();
-const userId = userStore.user.userId;
+const userId = userStore.user.id;
 const route = useRoute();
 const router = useRouter();
 const squadId = route.query.squadId;
@@ -209,11 +202,11 @@ const markerIcons = {
 };
 
 const cursorImageMap = {
-    0: "/img/redCursor.png",
-    1: "/img/greenCursor.png",
-    2: "/img/blueCursor.png",
-    3: "/img/purpleCursor.png",
-  };
+  0: "/img/redCursor.png",
+  1: "/img/greenCursor.png",
+  2: "/img/blueCursor.png",
+  3: "/img/purpleCursor.png",
+};
 
 // 계산된 속성들
 const startPage = computed(() => {
@@ -234,7 +227,7 @@ const pageNumbers = computed(() => {
 });
 
 function removePlace(index) {
-  selectedPlaces.value.splice(index, 1)
+  selectedPlaces.value.splice(index, 1);
   stompClient.publish({
     destination: "/app/squad/selectedPlaces",
     body: JSON.stringify({
@@ -296,11 +289,8 @@ const getSquadMembers = async () => {
     },
   });
   squadMembers.value = response.data;
-  const userObj = squadMembers.value.find(member => member.userId === userId);
+  const userObj = squadMembers.value.find((member) => member.userId === userId);
   position = userObj.position;
-  console.log(1248109501)
-  console.log(squadMembers.value.length, position)
-  console.log(1248124234209501)
 };
 
 // 초기화 함수들
@@ -320,7 +310,7 @@ const loadKakaoMapScript = async () => {
 
   return new Promise((resolve, reject) => {
     const script = document.createElement("script");
-    script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=a1b7d43f74e8d7c4fa60d02ce2c13f58&autoload=false`; // autoload=false로 설정
+    script.src = `//dapi.kakao.com/v2/maps/sdk.js?appkey=a1b7d43f74e8d7c4fa60d02ce2c13f58&autoload=false`; // autoload=false로 설정
     script.onload = () => {
       window.kakao.maps.load(() => {
         initKakaoMap();
@@ -349,7 +339,7 @@ const initKakaoMap = () => {
     lastLatLng = mouseEvent.latLng;
   });
 
-  mapContainer.value.addEventListener('mouseleave', function() {
+  mapContainer.value.addEventListener("mouseleave", function () {
     lastLatLng = null;
     stompClient.publish({
       destination: "/app/squad/mouseMove",
@@ -364,7 +354,7 @@ const initKakaoMap = () => {
         position,
       }),
     });
-});
+  });
 
   if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition((pos) => {
@@ -444,7 +434,7 @@ const socketConfig = () => {
       stompClient.subscribe(`/topic/squad.${squadId}`, (msg) => {
         const body = JSON.parse(msg.body);
         if (body.messageType === "JOIN") {
-          showJoinPopup(body.content)
+          showJoinPopup(body.content);
         } else if (body.messageType === "SelectedPlaces") {
           selectedPlaces.value = body.content;
         } else if (body.messageType === "Mousemove") {
@@ -453,7 +443,7 @@ const socketConfig = () => {
             updateUserCursor(body.userId, body.position, latitude, longitude);
           }
         } else if (body.messageType === "savePlan") {
-          router.push('/plans')
+          router.push("/plans");
         }
       });
 
@@ -648,13 +638,13 @@ const updateMap = (spots) => {
 
 const setMarkers = () => {
   // 기존 마커/선 제거
-  savePolyline.value.forEach(o => o.setMap(null))
-  savePolyline.value = []
+  savePolyline.value.forEach((o) => o.setMap(null));
+  savePolyline.value = [];
 
-  const bounds = new window.kakao.maps.LatLngBounds()
+  const bounds = new window.kakao.maps.LatLngBounds();
 
   selectedPlaces.value.forEach((item, index) => {
-    const position = new window.kakao.maps.LatLng(item.latitude, item.longitude)
+    const position = new window.kakao.maps.LatLng(item.latitude, item.longitude);
 
     const content = `<div style="
       background: #3f51b5;
@@ -668,53 +658,54 @@ const setMarkers = () => {
       box-shadow: 0 0 5px rgba(0,0,0,0.3);
     ">
       ${index + 1}
-    </div>`
+    </div>`;
 
     const customOverlay = new window.kakao.maps.CustomOverlay({
       position,
       content,
       xAnchor: 0.5,
       yAnchor: 0.5,
-    })
+    });
 
-    customOverlay.setMap(map)
-    savePolyline.value.push(customOverlay)
-    bounds.extend(position)
+    customOverlay.setMap(map);
+    savePolyline.value.push(customOverlay);
+    bounds.extend(position);
 
     if (index < selectedPlaces.value.length - 1) {
-      const next = selectedPlaces.value[index + 1]
-      const linePath = [
-        position,
-        new window.kakao.maps.LatLng(next.latitude, next.longitude),
-      ]
+      const next = selectedPlaces.value[index + 1];
+      const linePath = [position, new window.kakao.maps.LatLng(next.latitude, next.longitude)];
 
       const polyline = new window.kakao.maps.Polyline({
         path: linePath,
         strokeWeight: 4,
         strokeColor: getColorByIndex(index, selectedPlaces.value.length),
         strokeOpacity: 0.8,
-        strokeStyle: 'solid',
+        strokeStyle: "solid",
         map: map,
-      })
+      });
 
-      savePolyline.value.push(polyline)
+      savePolyline.value.push(polyline);
     }
-  })
+  });
 
   if (selectedPlaces.value.length > 0) {
-    map.setBounds(bounds)
+    map.setBounds(bounds);
   }
-}
+};
 
 // 색상 구하는 함수
-const getColorByIndex = (i, total) => `hsl(${(i / total) * 360}, 80%, 60%)`
+const getColorByIndex = (i, total) => `hsl(${(i / total) * 360}, 80%, 60%)`;
 
 // selectedPlaces가 변경될 때 마커 다시 그림
-watch(selectedPlaces, () => {
-  if (mapContainer.value) {
-    setMarkers()
-  }
-}, { deep: true })
+watch(
+  selectedPlaces,
+  () => {
+    if (mapContainer.value) {
+      setMarkers();
+    }
+  },
+  { deep: true }
+);
 
 const savePlan = async () => {
   if (selectedPlaces.value.length === 0) {
@@ -738,7 +729,7 @@ const savePlan = async () => {
         method: "POST",
         data: planData,
       });
-    })
+    });
     const planData = {
       userId,
       travelDate: selectedDate.value,
@@ -759,7 +750,7 @@ const savePlan = async () => {
       destination: "/app/squad/savePlan",
       body: JSON.stringify({
         squadId,
-        messageType: "savePlan"
+        messageType: "savePlan",
       }),
     });
 
@@ -768,7 +759,7 @@ const savePlan = async () => {
 
     // 경로선 제거
     if (savePolyline.value) {
-      savePolyline.value.forEach(polyline => polyline.setMap(null));
+      savePolyline.value.forEach((polyline) => polyline.setMap(null));
       savePolyline.value = [];
     }
   } catch (error) {
@@ -828,9 +819,21 @@ const toggleLike = async (attractionId) => {
 }
 
 @keyframes fadeInOut {
-  0% { opacity: 0; transform: translate(-50%, -10px); }
-  10% { opacity: 1; transform: translate(-50%, 0); }
-  90% { opacity: 1; transform: translate(-50%, 0); }
-  100% { opacity: 0; transform: translate(-50%, -10px); }
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -10px);
+  }
+  10% {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+  90% {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -10px);
+  }
 }
 </style>

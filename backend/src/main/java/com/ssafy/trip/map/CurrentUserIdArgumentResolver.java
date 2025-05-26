@@ -23,11 +23,10 @@ public class CurrentUserIdArgumentResolver implements HandlerMethodArgumentResol
     public Object resolveArgument(MethodParameter parameter, ModelAndViewContainer mavContainer,
                                   NativeWebRequest webRequest, WebDataBinderFactory binderFactory) throws Exception {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !(authentication.getPrincipal() instanceof CustomUserDetails)) {
+        if (authentication == null || !(authentication.getPrincipal() instanceof CustomUserDetails userDetails)) {
             throw new AccessDeniedException("사용자 인증 실패");
         }
 
-        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
         return userDetails.getUser().getUserId();
     }
 }

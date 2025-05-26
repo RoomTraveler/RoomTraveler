@@ -167,7 +167,6 @@
 <script setup>
 import { ref, computed, onMounted, watch } from "vue";
 import draggable from "vuedraggable";
-import axios from "axios";
 import apiGroup from "@/api/index";
 import ModalWrapper from "@/components/attraction/ModelWrapper.vue";
 import AttractionDetail from "@/components/attraction/AttractionDetail.vue";
@@ -597,7 +596,10 @@ const savePlan = async () => {
 
 const toggleLike = async (attractionId) => {
   try {
-    const response = await axios.post(`http://localhost:8080/api/map/likes/attractions/${attractionId}`);
+    const response = await apiGroup.api({
+      url: `/api/map/likes/attractions/${attractionId}`,
+      method: "POST",
+    });
     if (likedAttractions.value[attractionId]) {
       likeCounts.value[attractionId]--;
     } else {

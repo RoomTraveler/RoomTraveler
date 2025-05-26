@@ -70,6 +70,7 @@ public class MapController {
     public ResponseEntity<?> getAttractions(@CurrentUserId Long userId,
                                             @RequestParam(defaultValue = "0") int page,
                                             @RequestParam(defaultValue = "10") int size) {
+        log.info(String.valueOf(userId));
         return ResponseEntity.ok(mapService.getAttractionsByUserId(userId, page, size));
     }
 
@@ -110,8 +111,7 @@ public class MapController {
     @GetMapping("/likes/attractions")
     @Operation(summary = "사용자 좋아요한 관광지 목록", description = "현재 로그인한 사용자가 좋아요한 관광지들을 조회합니다.")
     @ApiResponse(responseCode = "200", description = "관광지 좋아요 목록 조회 성공")
-    public ResponseEntity<?> getLikedAttractions() {
-        Long userId = 1L; // 실제 서비스에서는 JWT에서 추출
+    public ResponseEntity<?> getLikedAttractions(@CurrentUserId Long userId) {
         List<MapDTO. RegionTripRes> likedAttractions = mapService.getLikedAttractionsByUser(userId);
         return ResponseEntity.ok(likedAttractions);
     }
@@ -119,19 +119,19 @@ public class MapController {
     @PostMapping("/likes/attractions/{attractionId}")
     @Operation(summary = "관광지 좋아요", description = "관광지 좋아요 토글")
     @ApiResponse(responseCode = "200", description = "관광지 좋아요 처리 성공")
-    public ResponseEntity<?> toggleAttractionLike(
+    public ResponseEntity<?> toggleAttractionLike(@CurrentUserId Long userId,
             @PathVariable Long attractionId) { // get userId on jwt
         log.info("come? " + attractionId);
-        mapService.toggleAttractionLike(attractionId, 1L);
+        mapService.toggleAttractionLike(attractionId, userId);
         return ResponseEntity.ok("success");
     }
 
     @PostMapping("/likes/plans/{planId}")
     @Operation(summary = "여행 계획 좋아요", description = "여행 계획 좋아요 토글")
     @ApiResponse(responseCode = "200", description = "여행 계획 좋아요 처리 성공")
-    public ResponseEntity<?> togglePlanLike(
+    public ResponseEntity<?> togglePlanLike(@CurrentUserId Long userId,
             @PathVariable Long planId) { //get userId on jwt
-        mapService.togglePlanLike(planId, 1L);
+        mapService.togglePlanLike(planId, userId);
         return ResponseEntity.ok("success");
     }
 

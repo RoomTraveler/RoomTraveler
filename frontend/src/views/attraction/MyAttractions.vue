@@ -1,6 +1,7 @@
 <template>
+  <Header />
   <section class="attractions-section">
-    <h2 class="section-title">📍 나의 관광지 목록</h2>
+    <h2 class="section-title">📍 내가 좋아요 누른 관광지 목록</h2>
 
     <div class="attractions-grid">
       <div v-for="item in attractions" :key="item.no" class="attraction-card">
@@ -26,6 +27,7 @@
 import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import api from "@/api/index";
+import Header from "@/components/layout/Header.vue";
 
 const attractions = ref([]);
 const page = ref(0);
