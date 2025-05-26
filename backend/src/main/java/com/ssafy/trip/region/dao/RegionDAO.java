@@ -32,4 +32,37 @@ public interface RegionDAO {
      * @throws Exception 데이터베이스 오류 발생 시
      */
     List<Gugun> getGuguns(int sidoCode) throws Exception;
+
+    /**
+     * 새로운 시도 정보를 등록합니다.
+     * no 컬럼은 AUTO_INCREMENT 입니다.
+     * @param sido 등록할 시도 정보 (sido_code, sido_name, sido_img_url 필요)
+     * @return 영향을 받은 행 수
+     * @throws Exception 데이터베이스 오류 발생 시
+     */
+    int insertSido(Sido sido) throws Exception;
+
+    /**
+     * 기존 시도 정보를 수정합니다. (sido_code를 기준으로)
+     * @param sido 수정할 시도 정보 (sido_name, sido_img_url 수정 가능)
+     * @return 영향을 받은 행 수
+     * @throws Exception 데이터베이스 오류 발생 시
+     */
+    int updateSido(Sido sido) throws Exception;
+
+    /**
+     * 특정 시도 정보를 삭제합니다. (sido_code를 기준으로)
+     * @param sidoCode 삭제할 시도 코드
+     * @return 영향을 받은 행 수
+     * @throws Exception 데이터베이스 오류 발생 시
+     */
+    int deleteSido(int sidoCode) throws Exception;
+
+    /**
+     * 특정 시도 코드로 시도 정보를 조회합니다.
+     * @param sidoCode 조회할 시도 코드
+     * @return Sido 객체 또는 null
+     * @throws Exception 데이터베이스 오류 발생 시
+     */
+    Sido getSidoByCode(int sidoCode) throws Exception;
 }

@@ -24,7 +24,7 @@
         <result property="roomName" column="room_name"/>
         <result property="accommodationTitle" column="accommodation_title"/>
         <result property="accommodationId" column="accommodation_id"/>
-        <result property="hostName" column="host_name"/>
+        <result property="hostName" column="host_business_name"/>
         <result property="nights" column="nights"/>
     </resultMap>
 
@@ -49,17 +49,19 @@
     <select id="getReservationsByUserId" resultMap="ReservationMap">
         SELECT
             r.*,
-            u.name AS user_name,
+            u.username AS user_name,
             u.email AS user_email,
             u.phone AS user_phone,
             rm.name AS room_name,
             a.title AS accommodation_title,
             a.accommodation_id,
+            h.business_name as host_business_name,
             DATEDIFF(r.check_out_date, r.check_in_date) AS nights
         FROM reservations r
         JOIN users u ON r.user_id = u.user_id
         JOIN rooms rm ON r.room_id = rm.room_id
         JOIN accommodations a ON rm.accommodation_id = a.accommodation_id
+        JOIN hosts h ON a.host_id = h.host_id
         WHERE r.user_id = #{userId}
         ORDER BY r.created_at DESC
     </select>
@@ -121,31 +123,48 @@
     <!-- 필터링된 예약 목록을 조회합니다. -->
     <select id="getFilteredReservations" parameterType="map" resultMap="ReservationMap">
         SELECT
-            reservation_id, user_id, room_id, check_in_date, check_out_date, guest_count,
-            total_price, status, payment_status, special_requests, created_at, updated_at
-        FROM reservations
+            r.reservation_id, r.user_id, r.room_id, r.check_in_date, r.check_out_date, r.guest_count,
+            r.total_price, r.status, r.payment_status, r.special_requests, r.created_at, r.updated_at,
+            u.username AS user_name,
+            u.email AS user_email,
+            u.phone AS user_phone,
+            rm.name AS room_name,
+            a.title AS accommodation_title,
+            a.accommodation_id,
+            h.business_name as host_business_name,
+            DATEDIFF(r.check_out_date, r.check_in_date) AS nights
+        FROM reservations r
+        LEFT JOIN users u ON r.user_id = u.user_id
+        LEFT JOIN rooms rm ON r.room_id = rm.room_id
+        LEFT JOIN accommodations a ON r.accommodation_id = a.accommodation_id
+        LEFT JOIN hosts h ON a.host_id = h.host_id
         <where>
             <if test="userId != null">
-                AND user_id = #{userId}
+                AND r.user_id = #{userId}
             </if>
             <if test="roomId != null">
-                AND room_id = #{roomId}
+                AND r.room_id = #{roomId}
+            </if>
+            <if test="accommodationId != null">
+                 AND a.accommodation_id = #{accommodationId}
+            </if>
+            <if test="hostId != null">
+                AND a.host_id = #{hostId}
             </if>
             <if test="status != null and status != ''">
-                AND status = #{status}
+                AND r.status = #{status}
             </if>
             <if test="paymentStatus != null and paymentStatus != ''">
-                AND payment_status = #{paymentStatus}
+                AND r.payment_status = #{paymentStatus}
             </if>
             <if test="startDate != null">
-                AND check_in_date >= #{startDate}
+                AND r.check_in_date &gt;= #{startDate}
             </if>
             <if test="endDate != null">
-                AND check_out_date &lt;= #{endDate}
+                AND r.check_out_date &lt;= #{endDate}
             </if>
-            <!-- 추가적인 필터 조건들 -->
         </where>
-        ORDER BY created_at DESC
+        ORDER BY r.created_at DESC
     </select>
 
     <!-- 사용자가 특정 숙소에 대해 완료된 예약을 가지고 있는지 확인 -->
@@ -156,8 +175,84 @@
             JOIN rooms rm ON r.room_id = rm.room_id
             WHERE r.user_id = #{userId}
             AND rm.accommodation_id = #{accommodationId}
-            AND r.status = 'COMPLETED' <!-- 실제 사용하는 '숙박 완료' 상태로 변경 필요 -->
-            AND r.check_out_date &lt; CURDATE() <!-- 체크아웃 날짜가 오늘보다 이전인지 확인 -->
+            AND r.status = 'COMPLETED'
+            AND r.check_out_date &lt; CURDATE()
         )
+    </select>
+
+    <!-- 호스트 예약 목록 조회 (필터링 및 페이징) -->
+    <select id="findReservationsByHostWithFiltersAndPaging" parameterType="map" resultMap="ReservationMap">
+        SELECT
+            r.reservation_id, r.user_id, rm.accommodation_id, r.room_id,
+            r.check_in_date, r.check_out_date, r.guest_count,
+            r.total_price, r.status,
+            r.payment_status,
+            r.created_at, r.updated_at,
+            u.username AS user_name, 
+            u.email AS user_email, 
+            u.phone AS user_phone, 
+            a.title AS accommodation_title, 
+            rm.name AS room_name, 
+            h.host_id, 
+            DATEDIFF(r.check_out_date, r.check_in_date) AS nights
+        FROM reservations r
+        JOIN users u ON r.user_id = u.user_id
+        JOIN rooms rm ON r.room_id = rm.room_id
+        JOIN accommodations a ON rm.accommodation_id = a.accommodation_id
+        JOIN hosts h ON a.host_id = h.host_id
+        <where>
+            h.host_id = #{hostId}
+            <if test="status != null and status != ''">
+                AND r.status = #{status}
+            </if>
+            <if test="checkInDate != null">
+                AND r.check_in_date = #{checkInDate}
+            </if>
+            <if test="guestName != null and guestName != ''">
+                AND u.username LIKE CONCAT('%', #{guestName}, '%')
+            </if>
+        </where>
+        <if test="sortBy != null and sortBy != ''">
+            <choose>
+                <when test="sortBy == 'createdAtDesc'">
+                    ORDER BY r.created_at DESC
+                </when>
+                <when test="sortBy == 'checkInDateAsc'">
+                    ORDER BY r.check_in_date ASC
+                </when>
+                <when test="sortBy == 'checkInDateDesc'">
+                    ORDER BY r.check_in_date DESC
+                </when>
+                <otherwise>
+                    ORDER BY r.created_at DESC
+                </otherwise>
+            </choose>
+        </if>
+        <if test="sortBy == null or sortBy == ''">
+             ORDER BY r.created_at DESC
+        </if>
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <!-- 호스트 예약 총 개수 조회 (필터링) -->
+    <select id="countReservationsByHostWithFilters" parameterType="map" resultType="long">
+        SELECT COUNT(DISTINCT r.reservation_id)
+        FROM reservations r
+        JOIN rooms rm ON r.room_id = rm.room_id
+        JOIN accommodations a ON rm.accommodation_id = a.accommodation_id
+        JOIN hosts h ON a.host_id = h.host_id
+        JOIN users u ON r.user_id = u.user_id
+        <where>
+            h.host_id = #{hostId}
+            <if test="status != null and status != ''">
+                AND r.status = #{status}
+            </if>
+            <if test="checkInDate != null">
+                AND r.check_in_date = #{checkInDate}
+            </if>
+            <if test="guestName != null and guestName != ''">
+                 AND u.username LIKE CONCAT('%', #{guestName}, '%')
+            </if>
+        </where>
     </select>
 </mapper>

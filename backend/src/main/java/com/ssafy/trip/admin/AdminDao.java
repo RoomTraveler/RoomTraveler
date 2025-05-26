@@ -2,12 +2,14 @@ package com.ssafy.trip.admin;
 
 import com.ssafy.trip.region.model.Sido;
 import com.ssafy.trip.region.model.Gugun;
+import com.ssafy.trip.user.User;
 
 import java.util.List;
 import java.util.Map;
 import java.sql.SQLException;
 
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 
 /**
  * 관리자 기능을 위한 데이터 접근 객체 인터페이스
@@ -73,4 +75,31 @@ public interface AdminDao {
      * @return 저장된 구군 수
      */
     int importGuguns(int sidoCode, List<Gugun> guguns) throws SQLException;
+
+    /**
+     * 필터링 및 페이징 조건에 맞는 전체 호스트 목록을 조회합니다.
+     * (users 테이블에서 role='HOST'인 사용자 대상)
+     * @param params 필터링(status, keyword), 페이징(offset, limit), 정렬(sortBy, sortDirection) 파라미터
+     * @return 호스트(User) 목록
+     * @throws SQLException SQL 예외 발생 시
+     */
+    List<User> findAllHostsFiltered(Map<String, Object> params) throws SQLException;
+
+    /**
+     * 필터링 조건에 맞는 전체 호스트 수를 조회합니다.
+     * (users 테이블에서 role='HOST'인 사용자 대상)
+     * @param params 필터링(status, keyword) 파라미터
+     * @return 전체 호스트 수
+     * @throws SQLException SQL 예외 발생 시
+     */
+    long countAllHostsFiltered(Map<String, Object> params) throws SQLException;
+
+    // 조건에 따른 사용자 목록 조회 (페이지네이션)
+    List<User> findUsersByAdmin(@Param("params") Map<String, Object> params);
+
+    // 조건에 따른 총 사용자 수 조회
+    int countUsersByAdmin(@Param("params") Map<String, Object> params);
+
+    // 관리자에 의한 사용자 역할 변경
+    int updateUserRole(@Param("userId") Long userId, @Param("newRole") String newRole);
 }

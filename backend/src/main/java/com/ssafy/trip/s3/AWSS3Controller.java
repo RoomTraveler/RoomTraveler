@@ -8,13 +8,16 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 
 @RestController
 @RequiredArgsConstructor
 public class AWSS3Controller {
     private final AWSS3Service awsS3Service;
 
-    // S3 서버에 이미지 업로드
+    // 단일 파일 업로드
     @PostMapping("/s3")
     public BaseResponse<String> uploadFile(@RequestPart MultipartFile multipartFile) throws IOException {
         String fileName = null;
@@ -24,16 +27,21 @@ public class AWSS3Controller {
         return BaseResponse.onSuccess(fileName);
     }
 
-    // S3 서버에 저장된 이미지 교체
+    // 다중 파일 업로드
+    @PostMapping("/s3/multi")
+    public BaseResponse<List<String>> uploadFiles(@RequestPart List<MultipartFile> files) throws IOException {
+        List<String> urls = awsS3Service.uploadFiles(files);
+        return BaseResponse.onSuccess(urls);
+    }
+
+    // 단일 파일 교체
     @PatchMapping("/s3")
     public BaseResponse<String> modifyFile(
             @RequestParam("fileUrl") String fileUrl,
             @RequestPart MultipartFile multipartFile
     ) throws IOException {
         if (fileUrl != null && !fileUrl.isBlank()) {
-            // 안전하게 파일명 추출
-            String fileName = fileUrl.substring(fileUrl.lastIndexOf("/") + 1);
-            awsS3Service.deleteImage(fileName);
+            awsS3Service.deleteImage(fileUrl);
 
             if (multipartFile != null && !multipartFile.isEmpty()) {
                 String newFileUrl = awsS3Service.uploadFile(multipartFile);
@@ -41,5 +49,19 @@ public class AWSS3Controller {
             }
         }
         throw new BaseException(ErrorCode.AWS_S3_ERROR);
+    }
+
+    // 단일 파일 삭제
+    @DeleteMapping("/s3")
+    public BaseResponse<Boolean> deleteFile(@RequestParam("fileUrl") String fileUrl) {
+        boolean result = awsS3Service.deleteImage(fileUrl);
+        return BaseResponse.onSuccess(result);
+    }
+
+    // 다중 파일 삭제
+    @DeleteMapping("/s3/multi")
+    public BaseResponse<Boolean> deleteFiles(@RequestBody List<String> fileUrls) {
+        awsS3Service.deleteFiles(fileUrls);
+        return BaseResponse.onSuccess(true);
     }
 }

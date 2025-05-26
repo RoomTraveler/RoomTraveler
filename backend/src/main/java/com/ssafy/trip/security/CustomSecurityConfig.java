@@ -4,14 +4,13 @@ import com.ssafy.trip.security.jwt.JwtAuthenticationFilter;
 import com.ssafy.trip.security.jwt.JwtUtil;
 import com.ssafy.trip.security.jwt.JwtVerificationFilter;
 import java.util.Arrays;
-import java.util.List;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.access.hierarchicalroles.RoleHierarchy;
 import org.springframework.security.access.hierarchicalroles.RoleHierarchyImpl;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -49,6 +48,7 @@ public class CustomSecurityConfig {
     }
 
     @Bean
+    @Order(1)
     SecurityFilterChain apiSecurityFilterChain(HttpSecurity http,
                                                @Qualifier("corsConfigurationSource")CorsConfigurationSource corsConfig,
                                                CustomUserDetailsService userDetailsService,
@@ -62,10 +62,24 @@ public class CustomSecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
         http.authorizeHttpRequests(authorize ->
-                authorize.requestMatchers("api/ai/**", "/api/user/auth/**", "/api/user/refresh", "/api/map/**", "/api/attractions/**", "/api/plans/**", "/swagger-ui/**", "/v3/api-docs/**", "/ws").permitAll()
-                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                authorize.requestMatchers(
+                        "/api/user/auth/**",
+                                "/api/user/refresh",
+                                "/api/map/**",
+                                "/api/attractions/**",
+                                "/api/plans/**",
+                                "/swagger-ui/**",
+                                "/v3/api-docs/**",
+                        "/api/accommodations/**",
+                                "/api/reviews/**").permitAll()
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/events/**",
+                                "/api/stats/**",
+                                "/api/region/**").permitAll()
+                        .requestMatchers("/api/host/register").hasRole("USER")
+                        .requestMatchers("/api/admin/**", "/api/events/**","/api/stats/**","/api/region/**").hasRole("ADMIN")
                         .requestMatchers("/api/host/**").hasAnyRole("HOST", "ADMIN")
-                        .requestMatchers("/api/notifications/**", "/api/cart/**").hasAnyRole("USER", "HOST", "ADMIN")
+                        .requestMatchers("/api/notifications/**", "/api/cart","/api/cart/**").hasAnyRole("USER", "HOST", "ADMIN")
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().permitAll());
 
@@ -79,17 +93,13 @@ public class CustomSecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(
-                List.of("http://localhost:5173")
-        );
-        configuration.setAllowedMethods(
-                List.of("GET","POST","PUT","DELETE","OPTIONS","PATCH")
-        );
-        configuration.setAllowedHeaders(List.of("*"));
+        configuration.setAllowedOrigins(Arrays.asList("http://localhost:5173", "http://localhost:3000"));
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
+        configuration.setAllowedHeaders(Arrays.asList("*"));
+        configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/api/**", configuration);
-        source.registerCorsConfiguration("/member/checkEmail", configuration);
+        source.registerCorsConfiguration("/**", configuration);
 
         return source;
     }

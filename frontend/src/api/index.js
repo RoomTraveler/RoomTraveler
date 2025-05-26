@@ -1,42 +1,27 @@
 import axios from "axios";
 import { useUserStore } from "@/store/userStore";
 import router from "@/router";
+import { storeToRefs } from "pinia";  // 추가
 
 const BASE_URL = "http://localhost:8080";
 
-const instance = axios.create({
-  baseURL: BASE_URL,
-  timeout: 5000,
-  headers: {
-    "Content-Type": "application/json",
-  },
+const api = axios.create({
+    baseURL: BASE_URL,
+    timeout: 5000,
 });
 
-// 요청 인터셉터
-instance.interceptors.request.use(
-  (config) => {
-    console.log("[API Interceptor - Request] URL:", config.url);
-    const userStore = useUserStore();
-    const accessToken = userStore._tokens?.access_token;
-
-    if (accessToken) {
-      console.log("[API Interceptor - Request] Access Token FOUND:", accessToken);
-      config.headers.Authorization = `Bearer ${accessToken}`;
-      console.log("[API Interceptor - Request] Authorization header SET:", config.headers.Authorization);
-    } else {
-      console.warn("[API Interceptor - Request] Access Token NOT FOUND. Headers:", config.headers);
-    }
-
-    if (config.url === "/api/user/auth/login" && config.method === "post") {
-      config.headers["Content-Type"] = "application/x-www-form-urlencoded";
-    }
-
-    return config;
-  },
-  (error) => {
-    console.error("[요청 오류]:", error);
-    return Promise.reject(error);
-  }
+// 모든 요청에 토큰 자동 주입 인터셉터
+api.interceptors.request.use(
+    (config) => {
+        const userStore = useUserStore();
+        const { tokens } = storeToRefs(userStore);
+        const accessToken = tokens.value?.access_token;
+        if (accessToken) {
+            config.headers.Authorization = `Bearer ${accessToken}`;
+        }
+        return config; // 설정 반환 로직 복원
+    },
+    (error) => Promise.reject(error) // 에러 처리 콜백 복원
 );
 
 let isRefreshing = false;
@@ -97,48 +82,9 @@ instance.interceptors.response.use(
   }
 );
 
-const apiNoAuth = axios.create({
-  baseURL: "http://localhost:8080",
-  timeout: 30000,
+const apiNoAuth = axios.create({ // apiNoAuth 인스턴스 생성 복원
+    baseURL: BASE_URL,
+    timeout: 1000,
 });
 
-apiNoAuth.interceptors.request.use(
-  async (config) => {
-    console.log("[요청 발신]: ", config.method, config.url, config.data);
-    handleTask(true);
-    return config;
-  },
-  (error) => {
-    console.log("[요청 실패]: ", error);
-    handleTask(false);
-    return Promise.reject(error);
-  }
-);
-
-apiNoAuth.interceptors.response.use(
-  (response) => {
-    console.log("[응답 수신 2]: ", response.status, response.data);
-    handleTask(false);
-    return response;
-  },
-  async (error) => {
-    console.log("[오류 수신 2]: ", error);
-    handleTask(false);
-    return Promise.reject(error);
-  }
-);
-
-import { useCommonStore } from "@/store/common";
-const handleTask = (add) => {
-  const commonStore = useCommonStore();
-  if (add) {
-    commonStore.addTask();
-  } else {
-    commonStore.removeTask();
-  }
-};
-
-export default {
-  api: instance,
-  apiNoAuth,
-};
+export default { api, apiNoAuth }; // 모듈 export 복원

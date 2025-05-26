@@ -1,56 +1,142 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper
-  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
-  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.ssafy.trip.accommodation.dao.FavoriteDao">
+<mapper namespace="com.ssafy.trip.favorite.dao.FavoriteDao">
 
     <!-- 새 즐겨찾기 추가 -->
-    <insert id="insert" useGeneratedKeys="true" keyProperty="favoriteId">
+    <insert id="insert" useGeneratedKeys="true" keyProperty="favoriteId" parameterType="com.ssafy.trip.favorite.model.Favorite">
         INSERT INTO favorites (user_id, accommodation_id)
         VALUES (#{userId}, #{accommodationId})
     </insert>
 
     <!-- 즐겨찾기 삭제 -->
-    <delete id="delete">
-        DELETE FROM favorites 
+    <delete id="delete" parameterType="map">
+        DELETE FROM favorites
         WHERE favorite_id = #{favoriteId} AND user_id = #{userId}
     </delete>
 
+    <!-- Accommodation 엔티티로 숙소 정보 매핑 -->
+    <resultMap id="simpleAccommodationResultMap" type="com.ssafy.trip.accommodation.model.Accommodation">
+        <id property="accommodationId" column="accommodation_id"/>
+        <result property="title" column="accommodation_title"/>
+        <result property="address" column="accommodation_address"/>
+        <result property="mainImageUrl" column="main_image_url"/>
+        <result property="accommodationType" column="accommodation_type"/>
+    </resultMap>
+
+    <!-- FavoriteResponseDto에 Accommodation 포함 -->
+    <resultMap id="favoriteResponseResultMap" type="com.ssafy.trip.favorite.model.FavoriteResponseDto">
+        <id property="favoriteId" column="favorite_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="createdAt" column="created_at"/>
+        <association property="accommodation" resultMap="simpleAccommodationResultMap"/>
+    </resultMap>
+
     <!-- 사용자의 모든 즐겨찾기 조회 -->
-    <select id="selectByUserId" resultType="com.ssafy.trip.accommodation.model.Favorite">
-        SELECT f.favorite_id, f.user_id, f.accommodation_id, f.created_at,
-               a.title as accommodation_title, a.address as accommodation_address,
-               (SELECT i.image_url FROM images i 
-                WHERE i.reference_id = a.accommodation_id 
-                AND i.reference_type = 'ACCOMMODATION' 
-                AND i.is_main = true 
-                LIMIT 1) as main_image_url
+    <select id="selectByUserId" resultMap="favoriteResponseResultMap">
+        SELECT
+        f.favorite_id, f.user_id, f.created_at,
+        a.accommodation_id, a.title as accommodation_title, a.address as accommodation_address, a.accommodation_type,
+        (SELECT i.image_url FROM images i
+        WHERE i.reference_id = a.accommodation_id
+        AND i.reference_type = 'ACCOMMODATION'
+        AND i.is_main = true
+        LIMIT 1) as main_image_url
         FROM favorites f
         JOIN accommodations a ON f.accommodation_id = a.accommodation_id
-        WHERE f.user_id = #{userId}
+        WHERE f.user_id = #{userId} AND f.deleted_at IS NULL
         ORDER BY f.created_at DESC
     </select>
 
     <!-- 사용자가 특정 숙소를 즐겨찾기에 추가했는지 확인 -->
-    <select id="selectByUserIdAndAccommodationId" resultType="com.ssafy.trip.accommodation.model.Favorite">
+    <select id="selectByUserIdAndAccommodationId" resultType="com.ssafy.trip.favorite.model.Favorite" parameterType="map">
         SELECT favorite_id, user_id, accommodation_id, created_at
         FROM favorites
-        WHERE user_id = #{userId} AND accommodation_id = #{accommodationId}
+        WHERE user_id = #{userId} AND accommodation_id = #{accommodationId} AND deleted_at IS NULL
     </select>
 
     <!-- 즐겨찾기 ID로 즐겨찾기 조회 -->
-    <select id="selectById" resultType="com.ssafy.trip.accommodation.model.Favorite">
+    <select id="selectById" resultType="com.ssafy.trip.favorite.model.Favorite">
         SELECT f.favorite_id, f.user_id, f.accommodation_id, f.created_at,
-               a.title as accommodation_title, a.address as accommodation_address,
-               (SELECT i.image_url FROM images i 
-                WHERE i.reference_id = a.accommodation_id 
-                AND i.reference_type = 'ACCOMMODATION' 
-                AND i.is_main = true 
-                LIMIT 1) as main_image_url
+        a.title as accommodation_title, a.address as accommodation_address,
+        (SELECT i.image_url FROM images i
+        WHERE i.reference_id = a.accommodation_id
+        AND i.reference_type = 'ACCOMMODATION'
+        AND i.is_main = true
+        LIMIT 1) as main_image_url
         FROM favorites f
         JOIN accommodations a ON f.accommodation_id = a.accommodation_id
-        WHERE f.favorite_id = #{favoriteId}
+        WHERE f.favorite_id = #{favoriteId} AND f.deleted_at IS NULL
     </select>
+
+    <!-- (이하 기타 기능 동일) -->
+    <resultMap id="favoriteResultMap" type="com.ssafy.trip.favorite.model.FavoriteDto">
+        <id property="favoriteId" column="favorite_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="accommodationId" column="accommodation_id"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="deletedAt" column="deleted_at"/>
+    </resultMap>
+
+    <insert id="addFavorite" parameterType="com.ssafy.trip.favorite.model.FavoriteDto" useGeneratedKeys="true" keyProperty="favoriteId">
+        INSERT INTO favorites (user_id, accommodation_id, created_at)
+        VALUES (#{userId}, #{accommodationId}, NOW())
+    </insert>
+
+    <update id="removeFavorite" parameterType="map">
+        UPDATE favorites
+        SET deleted_at = NOW()
+        WHERE user_id = #{userId}
+        AND accommodation_id = #{accommodationId}
+        AND deleted_at IS NULL
+    </update>
+
+    <update id="removeFavoriteById" parameterType="map">
+        UPDATE favorites
+        SET deleted_at = NOW()
+        WHERE favorite_id = #{favoriteId}
+        AND user_id = #{userId}
+        AND deleted_at IS NULL
+    </update>
+
+    <select id="findFavoritesByUserId" resultMap="favoriteResultMap">
+        SELECT favorite_id, user_id, accommodation_id, created_at, deleted_at
+        FROM favorites
+        WHERE user_id = #{userId}
+        AND deleted_at IS NULL
+        ORDER BY created_at DESC
+    </select>
+
+    <select id="findFavorite" resultMap="favoriteResultMap">
+        SELECT favorite_id, user_id, accommodation_id, created_at, deleted_at
+        FROM favorites
+        WHERE user_id = #{userId}
+        AND accommodation_id = #{accommodationId}
+        AND deleted_at IS NULL
+    </select>
+
+    <select id="findFavoriteById" resultMap="favoriteResultMap">
+        SELECT favorite_id, user_id, accommodation_id, created_at, deleted_at
+        FROM favorites
+        WHERE favorite_id = #{favoriteId}
+        AND deleted_at IS NULL
+    </select>
+
+    <select id="findFavoriteEvenIfDeleted" resultMap="favoriteResultMap">
+        SELECT favorite_id, user_id, accommodation_id, created_at, deleted_at
+        FROM favorites
+        WHERE user_id = #{userId}
+        AND accommodation_id = #{accommodationId}
+        LIMIT 1
+    </select>
+
+    <update id="recoverFavorite" parameterType="long">
+        UPDATE favorites
+        SET deleted_at = NULL
+        WHERE favorite_id = #{favoriteId}
+        AND deleted_at IS NOT NULL
+    </update>
 
 </mapper>

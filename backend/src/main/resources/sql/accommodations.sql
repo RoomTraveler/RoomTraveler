@@ -1,29 +1,46 @@
 -- 숙소 테이블
 CREATE TABLE accommodations (
-    accommodation_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-    host_id BIGINT UNSIGNED NOT NULL,
-    title VARCHAR(100) NOT NULL,
-    description TEXT NOT NULL,
-    address VARCHAR(255) NOT NULL,
-    sido_code INT NOT NULL,
-    gugun_code INT NOT NULL,
-    latitude DECIMAL(20,17) NULL,
-    longitude DECIMAL(20,17) NULL,
-    accommodation_type VARCHAR(50) NULL,
-    phone VARCHAR(20) NULL,
-    email VARCHAR(100) NULL,
-    website VARCHAR(255) NULL,
-    check_in_time TIME NOT NULL,
-    check_out_time TIME NOT NULL,
-    amenities TEXT NULL,
-    status ENUM('ACTIVE', 'INACTIVE', 'PENDING_REVIEW') NOT NULL DEFAULT 'PENDING_REVIEW',
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    PRIMARY KEY (accommodation_id),
-    FOREIGN KEY (host_id) REFERENCES users(user_id) ON DELETE CASCADE,
-    FOREIGN KEY (sido_code) REFERENCES sidos(sido_code),
-    FOREIGN KEY (gugun_code) REFERENCES guguns(gugun_code)
+                                accommodation_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+                                host_id BIGINT UNSIGNED NOT NULL,
+                                title VARCHAR(100) NOT NULL,
+                                description TEXT NOT NULL,
+                                address VARCHAR(255) NOT NULL,
+                                sido_code INT NOT NULL,
+                                gugun_code INT NOT NULL,
+                                latitude DECIMAL(20,17) NULL,
+                                longitude DECIMAL(20,17) NULL,
+                                accommodation_type VARCHAR(50) NULL,
+                                phone VARCHAR(20) NULL,
+                                email VARCHAR(100) NULL,
+                                website VARCHAR(255) NULL,
+                                check_in_time TIME NOT NULL,
+                                check_out_time TIME NOT NULL,
+                                amenities TEXT NULL,
+                                status ENUM('ACTIVE', 'INACTIVE', 'PENDING_REVIEW', 'REJECTED') NOT NULL DEFAULT 'PENDING_REVIEW',
+                                avg_review_rating DECIMAL(3,2) NOT NULL DEFAULT 0.00 COMMENT '평균 리뷰 점수 (0~5점, 소수 2자리)',
+                                review_count INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '리뷰 개수',
+                                recommend_score DECIMAL(8,4) NOT NULL DEFAULT 0.0000 COMMENT '추천 점수 (평균별점 × log(리뷰수+1))',
+                                min_room_price DECIMAL(10,2) NOT NULL DEFAULT 0.00 COMMENT '숙소 내 객실 최저가',
+                                max_room_price DECIMAL(10,2) NOT NULL DEFAULT 0.00 COMMENT '숙소 내 객실 최고가',
+                                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                                PRIMARY KEY (accommodation_id),
+                                FOREIGN KEY (host_id) REFERENCES users(user_id) ON DELETE CASCADE,
+                                FOREIGN KEY (sido_code) REFERENCES sidos(sido_code),
+                                FOREIGN KEY (gugun_code) REFERENCES guguns(gugun_code)
 );
+
+
+
+ALTER TABLE accommodations
+    ADD COLUMN avg_review_rating DECIMAL(3,2) NOT NULL DEFAULT 0.00 AFTER status,
+    ADD COLUMN review_count INT UNSIGNED NOT NULL DEFAULT 0 AFTER avg_review_rating,
+    ADD COLUMN recommend_score DECIMAL(8,4) NOT NULL DEFAULT 0.0000;
+
+ALTER TABLE accommodations
+    ADD COLUMN min_room_price DECIMAL(10, 2) DEFAULT 0.00 COMMENT '숙소 내 객실 최저가',
+    ADD COLUMN max_room_price DECIMAL(10, 2) DEFAULT 0.00 COMMENT '숙소 내 객실 최고가';
+
 
 -- 객실 테이블
 CREATE TABLE IF NOT EXISTS rooms (
@@ -69,6 +86,7 @@ WHERE
     original_price IS NULL; -- 아직 설정되지 않은 행에 대해서만 실행 (선택적)
 
 UPDATE rooms SET status = 'ACTIVE' WHERE status = 'AVAILABLE';
+
 -- 이미지 테이블
 CREATE TABLE images (
     image_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -99,7 +117,6 @@ CREATE TABLE reservations (
     total_price DECIMAL(10,2) NOT NULL,
     status ENUM('PENDING', 'CONFIRMED', 'CANCELLED', 'COMPLETED', 'NO_SHOW') NOT NULL DEFAULT 'PENDING',
     payment_status ENUM('UNPAID', 'PAID', 'REFUNDED', 'PARTIALLY_REFUNDED') NOT NULL DEFAULT 'UNPAID',
-    special_requests TEXT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (reservation_id),

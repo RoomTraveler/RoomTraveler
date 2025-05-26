@@ -9,44 +9,16 @@
     <section class="section">
       <div class="section-title">숙소 유형</div>
       <div class="category-grid">
-        <!-- 모텔 카테고리 -->
-        <router-link :to="{ name: 'AccommodationList', query: { accommodationType: 'MOTEL' } }" class="category-item">
+        <router-link
+          v-for="cat in categories"
+          :key="cat.value"
+          :to="{ name: 'AccommodationList', query: { accommodationType: cat.value } }"
+          class="category-item"
+        >
           <div class="category-image-container">
-            <img src="/img/accommodationMotel.png" alt="모텔" class="category-image" />
+            <img :src="cat.img" :alt="cat.label" class="category-image" />
           </div>
-          <div class="category-name">모텔</div>
-        </router-link>
-
-        <!-- 호텔/리조트 카테고리 -->
-        <router-link :to="{ name: 'AccommodationList', query: { accommodationType: 'HOTEL' } }" class="category-item">
-          <div class="category-image-container">
-            <img src="/img/accommodationHotel.png" alt="호텔/리조트" class="category-image" />
-          </div>
-          <div class="category-name">호텔/리조트</div>
-        </router-link>
-
-        <!-- 펜션/풀빌라 카테고리 -->
-        <router-link :to="{ name: 'AccommodationList', query: { accommodationType: 'PENSION' } }" class="category-item">
-          <div class="category-image-container">
-            <img src="/img/accommodationPension.png" alt="펜션/풀빌라" class="category-image" />
-          </div>
-          <div class="category-name">펜션/풀빌라</div>
-        </router-link>
-
-        <!-- 프리미엄 카테고리 -->
-        <router-link :to="{ name: 'AccommodationList', query: { accommodationType: 'PREMIUM' } }" class="category-item">
-          <div class="category-image-container">
-            <img src="/img/accommodationPremium.png" alt="프리미엄" class="category-image" />
-          </div>
-          <div class="category-name">프리미엄</div>
-        </router-link>
-
-        <!-- 글램핑/캠핑 카테고리 -->
-        <router-link :to="{ name: 'AccommodationList', query: { accommodationType: 'CAMPING' } }" class="category-item">
-          <div class="category-image-container">
-            <img src="/img/accommodationCamping.png" alt="글램핑/캠핑" class="category-image" />
-          </div>
-          <div class="category-name">글램핑/캠핑</div>
+          <div class="category-name">{{ cat.label }}</div>
         </router-link>
       </div>
     </section>
@@ -55,103 +27,133 @@
     <section class="section">
       <div class="section-title">
         진행중인 이벤트
-        <router-link to="/events" class="view-all">전체보기 <i class="bi bi-chevron-right"></i></router-link>
+        <router-link to="/event" class="view-all"> 전체보기 <i class="bi bi-chevron-right"></i> </router-link>
       </div>
-      <div class="event-slider">
-        <!-- 이벤트 1 -->
-        <div class="event-card">
-          <img src="https://via.placeholder.com/800x300?text=Event+1" alt="이벤트 1" class="event-image" />
-          <div class="event-info">
-            <div class="event-title">여름 휴가 특별 할인</div>
-            <div class="event-period">2025.05.15 ~ 2025.06.30</div>
-          </div>
-        </div>
-
-        <!-- 이벤트 2 -->
-        <div class="event-card">
-          <img src="https://via.placeholder.com/800x300?text=Event+2" alt="이벤트 2" class="event-image" />
-          <div class="event-info">
-            <div class="event-title">신규 회원 첫 예약 50% 할인</div>
-            <div class="event-period">2025.05.01 ~ 2025.05.31</div>
-          </div>
-        </div>
+      <div v-if="isLoadingEvents" class="p-3 text-center text-muted">이벤트 로딩 중...</div>
+      <div v-if="!isLoadingEvents && fetchEventsError" class="p-3 text-center text-danger">{{ fetchEventsError }}</div>
+      <div v-if="!isLoadingEvents && !fetchEventsError && homeEvents.length === 0" class="p-3 text-center text-muted">
+        진행중인 이벤트가 없습니다.
       </div>
+      <swiper
+        v-if="!isLoadingEvents && !fetchEventsError && homeEvents.length > 0"
+        :modules="swiperEventModules"
+        :slides-per-view="2"
+        :space-between="15"
+        navigation
+        :pagination="{ clickable: true }"
+        :breakpoints="{
+          320: { slidesPerView: 1, spaceBetween: 10 },
+          768: { slidesPerView: 2, spaceBetween: 15 },
+          1024: { slidesPerView: 2, spaceBetween: 15 },
+        }"
+        class="event-carousel"
+      >
+        <swiper-slide v-for="event in homeEvents" :key="event.id">
+          <router-link :to="{ name: 'EventDetail', params: { eventId: event.id } }" class="event-card-link">
+            <div class="event-card">
+              <img :src="event.image" :alt="event.title" class="event-image" />
+              <div class="event-info">
+                <div class="event-title">{{ event.title }}</div>
+                <div class="event-period">{{ event.date }}</div>
+              </div>
+            </div>
+          </router-link>
+        </swiper-slide>
+      </swiper>
     </section>
 
-    <!-- 지역별 인기 숙소 섹션 -->
+    <!-- 인기 추천 숙소 섹션 -->
     <section class="section">
       <div class="section-title">
-        지역별 인기 숙소
-        <router-link :to="{ name: 'AccommodationList', query: { sort: 'POPULAR' } }" class="view-all"
-          >전체보기 <i class="bi bi-chevron-right"></i
-        ></router-link>
+        인기 추천 숙소
+        <!-- 전체보기 링크는 특정 유형으로 한정하기 어려우므로, 일단 AccommodationList의 인기순으로 연결 -->
+        <router-link :to="{ name: 'AccommodationList', query: { sort: 'POPULAR' } }" class="view-all">
+          전체보기 <i class="bi bi-chevron-right"></i>
+        </router-link>
       </div>
 
-      <!-- 지역 탭 -->
-      <div class="region-tabs">
-        <button class="region-tab active">서울</button>
-        <button class="region-tab">부산</button>
-        <button class="region-tab">제주</button>
-        <button class="region-tab">강원</button>
-        <button class="region-tab">경기</button>
+      <!-- 숙소 유형 탭 버튼 -->
+      <div class="accommodation-type-tabs">
+        <button
+          v-for="tab in accommodationTypeTabs"
+          :key="tab.code"
+          class="type-tab"
+          :class="{ active: selectedAccommodationTypeCode === tab.code }"
+          @click="selectAccommodationType(tab.code)"
+        >
+          {{ tab.name }}
+        </button>
       </div>
 
-      <!-- 인라인 호텔 리스트 -->
-      <div class="region-hotel-list">
-        <!-- 호텔 1 -->
-        <div class="region-hotel-item">
-          <div class="hotel-image">
-            <img src="https://via.placeholder.com/200x150?text=Hotel+1" alt="호텔 이미지" />
-          </div>
-          <div class="hotel-info">
-            <div class="hotel-rating"><i class="bi bi-star-fill"></i> 4.9 <span class="rating-count">(412)</span></div>
-            <div class="hotel-price">220,000원</div>
-          </div>
+      <!-- 선택된 유형의 숙소 목록 캐러셀 -->
+      <div v-if="currentPopularAccommodations">
+        <div v-if="currentPopularAccommodations.isLoading" class="p-3 text-center text-muted">
+          {{ currentPopularAccommodations.name }} 숙소 로딩 중...
         </div>
-
-        <!-- 호텔 2 -->
-        <div class="region-hotel-item">
-          <div class="hotel-image">
-            <img src="https://via.placeholder.com/200x150?text=Hotel+2" alt="호텔 이미지" />
-          </div>
-          <div class="hotel-info">
-            <div class="hotel-rating"><i class="bi bi-star-fill"></i> 4.8 <span class="rating-count">(356)</span></div>
-            <div class="hotel-price">180,000원</div>
-          </div>
+        <div
+          v-if="!currentPopularAccommodations.isLoading && currentPopularAccommodations.error"
+          class="p-3 text-center text-danger"
+        >
+          {{ currentPopularAccommodations.error }}
         </div>
-
-        <!-- 호텔 3 -->
-        <div class="region-hotel-item">
-          <div class="hotel-image">
-            <img src="https://via.placeholder.com/200x150?text=Hotel+3" alt="호텔 이미지" />
-          </div>
-          <div class="hotel-info">
-            <div class="hotel-rating"><i class="bi bi-star-fill"></i> 4.7 <span class="rating-count">(289)</span></div>
-            <div class="hotel-price">170,000원</div>
-          </div>
+        <div
+          v-if="
+            !currentPopularAccommodations.isLoading &&
+            !currentPopularAccommodations.error &&
+            currentPopularAccommodations.accommodations.length === 0
+          "
+          class="p-3 text-center text-muted"
+        >
+          해당 유형의 인기 숙소 정보가 없습니다.
         </div>
-
-        <!-- 호텔 4 -->
-        <div class="region-hotel-item">
-          <div class="hotel-image">
-            <img src="https://via.placeholder.com/200x150?text=Hotel+4" alt="호텔 이미지" />
-          </div>
-          <div class="hotel-info">
-            <div class="hotel-rating"><i class="bi bi-star-fill"></i> 4.9 <span class="rating-count">(198)</span></div>
-            <div class="hotel-price">250,000원</div>
-          </div>
-        </div>
-
-        <!-- 호텔 5 -->
-        <div class="region-hotel-item">
-          <div class="hotel-image">
-            <img src="https://via.placeholder.com/200x150?text=Hotel+5" alt="호텔 이미지" />
-          </div>
-          <div class="hotel-info">
-            <div class="hotel-rating"><i class="bi bi-star-fill"></i> 4.6 <span class="rating-count">(245)</span></div>
-            <div class="hotel-price">195,000원</div>
-          </div>
-        </div>
+        <swiper
+          v-if="
+            !currentPopularAccommodations.isLoading &&
+            !currentPopularAccommodations.error &&
+            currentPopularAccommodations.accommodations.length > 0
+          "
+          :modules="swiperAccommodationModules"
+          :slides-per-view="4"
+          :space-between="15"
+          navigation
+          :pagination="{ clickable: true }"
+          :breakpoints="{
+            320: { slidesPerView: 1, spaceBetween: 10 },
+            640: { slidesPerView: 2, spaceBetween: 10 },
+            768: { slidesPerView: 3, spaceBetween: 15 },
+            1024: { slidesPerView: 4, spaceBetween: 15 },
+          }"
+          :key="selectedAccommodationTypeCode"
+          class="accommodation-carousel mt-3"
+        >
+          <swiper-slide
+            v-for="hotelStat in currentPopularAccommodations.accommodations"
+            :key="hotelStat.accommodationId"
+          >
+            <router-link
+              :to="{ name: 'AccommodationDetail', params: { accommodationId: hotelStat.accommodationId } }"
+              class="region-hotel-item"
+            >
+              <div class="hotel-image">
+                <img
+                  :src="hotelStat.accommodationMainImageUrl || 'https://via.placeholder.com/200x150?text=Hotel'"
+                  :alt="hotelStat.accommodationTitle || '호텔 이미지'"
+                />
+              </div>
+              <div class="hotel-info">
+                <div class="hotel-title">
+                  {{ hotelStat.accommodationTitle || "숙소 ID: " + hotelStat.accommodationId }}
+                </div>
+                <div class="hotel-rating">
+                  <i class="bi bi-star-fill"></i>
+                  {{ hotelStat.popularityScore ? hotelStat.popularityScore.toFixed(1) : "N/A" }}
+                  <span class="rating-count">({{ hotelStat.reviewCount || 0 }})</span>
+                </div>
+                <div class="hotel-price">가격 정보 필요</div>
+              </div>
+            </router-link>
+          </swiper-slide>
+        </swiper>
       </div>
     </section>
 
@@ -159,54 +161,55 @@
     <section class="section">
       <div class="section-title">
         인기 여행지
-        <router-link :to="{ name: 'AccommodationList', query: { sort: 'POPULAR' } }" class="view-all"
-          >전체보기 <i class="bi bi-chevron-right"></i
-        ></router-link>
+        <router-link :to="{ name: 'AccommodationList', query: { sort: 'POPULAR' } }" class="view-all">
+          전체보기 <i class="bi bi-chevron-right"></i>
+        </router-link>
       </div>
-      <div class="destination-grid">
-        <div class="destination-card">
-          <img src="https://via.placeholder.com/300x200?text=Seoul" alt="서울" class="destination-image" />
-          <div class="destination-name">서울</div>
-        </div>
-        <div class="destination-card">
-          <img src="https://via.placeholder.com/300x200?text=Busan" alt="부산" class="destination-image" />
-          <div class="destination-name">부산</div>
-        </div>
-        <div class="destination-card">
-          <img src="https://via.placeholder.com/300x200?text=Jeju" alt="제주" class="destination-image" />
-          <div class="destination-name">제주</div>
-        </div>
-        <div class="destination-card">
-          <img src="https://via.placeholder.com/300x200?text=Gangneung" alt="강릉" class="destination-image" />
-          <div class="destination-name">강릉</div>
-        </div>
-        <div class="destination-card">
-          <img src="https://via.placeholder.com/300x200?text=Gyeongju" alt="경주" class="destination-image" />
-          <div class="destination-name">경주</div>
-        </div>
+      <div v-if="isLoadingDestinations" class="p-3 text-center text-muted">인기 여행지 로딩 중...</div>
+      <div v-if="!isLoadingDestinations && fetchDestinationsError" class="p-3 text-center text-danger">
+        {{ fetchDestinationsError }}
       </div>
+      <div
+        v-if="!isLoadingDestinations && !fetchDestinationsError && destinations.length === 0"
+        class="p-3 text-center text-muted"
+      >
+        인기 여행지 정보가 없습니다.
+      </div>
+      <swiper
+        v-if="!isLoadingDestinations && !fetchDestinationsError && destinations.length > 0"
+        :modules="swiperDestinationModules"
+        :slides-per-view="4"
+        :space-between="20"
+        navigation
+        :pagination="{ clickable: true }"
+        :breakpoints="{
+          320: { slidesPerView: 1, spaceBetween: 10 },
+          576: { slidesPerView: 2, spaceBetween: 15 },
+          768: { slidesPerView: 3, spaceBetween: 20 },
+          1024: { slidesPerView: 4, spaceBetween: 20 },
+        }"
+        class="destination-carousel"
+      >
+        <swiper-slide v-for="dest in destinations" :key="dest.code">
+          <router-link
+            :to="{ name: 'AccommodationList', query: { sidoCode: dest.code, regionName: dest.name, sort: 'POPULAR' } }"
+            class="destination-card"
+          >
+            <img
+              :src="dest.sidoImgUrl || 'https://via.placeholder.com/300x200?text=' + dest.name"
+              :alt="dest.name"
+              class="destination-image"
+            />
+            <div class="destination-name">{{ dest.name }}</div>
+          </router-link>
+        </swiper-slide>
+      </swiper>
     </section>
 
     <!-- 사용자 계정 섹션 (로그인 시에만 표시) -->
     <section v-if="isLoggedIn" class="section">
       <div class="section-title">내 계정</div>
       <div class="user-menu-grid">
-        <router-link to="/user/profile" class="user-menu-item">
-          <i class="bi bi-person-circle"></i>
-          <span>내 정보</span>
-        </router-link>
-        <router-link to="/reservation/my-reservations" class="user-menu-item">
-          <i class="bi bi-calendar-check"></i>
-          <span>예약 내역</span>
-        </router-link>
-        <router-link to="/accommodation/favorites" class="user-menu-item">
-          <i class="bi bi-heart"></i>
-          <span>찜 목록</span>
-        </router-link>
-        <router-link to="/review/my-reviews" class="user-menu-item">
-          <i class="bi bi-star"></i>
-          <span>내 리뷰</span>
-        </router-link>
         <router-link v-if="isHost || isAdmin" to="/accommodation/my-accommodations" class="user-menu-item">
           <i class="bi bi-house"></i>
           <span>내 숙소</span>
@@ -220,37 +223,204 @@
   </Layout>
 </template>
 
-<script>
+<script setup>
+import { ref, computed, onMounted, watch } from "vue";
 import Layout from "@/components/layout/Layout.vue";
 import { useUserStore } from "@/store/userStore";
+import axios from "axios";
+import { format, subDays } from "date-fns";
 
-export default {
-  name: "HomeView",
-  components: {
-    Layout,
-  },
-  setup() {
-    const userStore = useUserStore();
-    return { userStore };
-  },
-  computed: {
-    isLoggedIn() {
-      return this.userStore.isAuthenticated;
-    },
-    user() {
-      return this.userStore.user;
-    },
-    userId() {
-      return this.userStore.user?.id;
-    },
-    isAdmin() {
-      return this.userStore.userRole === "ADMIN";
-    },
-    isHost() {
-      return this.userStore.userRole === "HOST";
-    },
-  },
+// Swiper imports
+import { Swiper, SwiperSlide } from "swiper/vue";
+// import "swiper/css"; // 전역 등록으로 인해 제거
+// import "swiper/css/navigation"; // 전역 등록으로 인해 제거
+// import "swiper/css/pagination"; // 전역 등록으로 인해 제거
+import { Navigation, Pagination } from "swiper/modules";
+
+// 유저 store
+const userStore = useUserStore();
+
+// 로그인, 권한
+const isLoggedIn = computed(() => userStore.isAuthenticated);
+const isAdmin = computed(() => userStore.userRole === "ADMIN");
+const isHost = computed(() => userStore.userRole === "HOST");
+
+// 숙소 카테고리
+const categories = [
+  { label: "모텔", value: "MOTEL", img: "/img/accommodationMotel.png" },
+  { label: "호텔/리조트", value: "HOTEL", img: "/img/accommodationHotel.png" },
+  { label: "펜션/풀빌라", value: "PENSION", img: "/img/accommodationPension.png" },
+  { label: "프리미엄", value: "PREMIUM", img: "/img/accommodationPremium.png" },
+  { label: "글램핑/캠핑", value: "CAMPING", img: "/img/accommodationCamping.png" },
+];
+
+const homeEvents = ref([]);
+const isLoadingEvents = ref(true);
+const fetchEventsError = ref(null);
+const swiperEventModules = [Navigation, Pagination]; // 이벤트 캐러셀용 Swiper 모듈
+
+// 진행중인 이벤트 중 일부를 가져오는 함수
+const fetchHomeEvents = async () => {
+  isLoadingEvents.value = true;
+  fetchEventsError.value = null;
+  console.log("[AccommodationHome.vue] Fetching home events...");
+  try {
+    const response = await axios.get("/api/events");
+    console.log("[AccommodationHome.vue] API response for events:", response.data);
+
+    const allFetchedEvents = (response.data.result || response.data.data || response.data || []).map((event) => {
+      const eventStatus =
+        event.status === "ONGOING"
+          ? "진행중"
+          : event.status === "ENDED"
+            ? "종료"
+            : event.status === "HIDDEN"
+              ? "숨김"
+              : event.status;
+      const eventDate = event.startDate && event.endDate ? `${event.startDate}~${event.endDate}` : "상시 진행";
+
+      return {
+        id: event.eventId,
+        title: event.title,
+        image: event.mainImageUrl || "https://via.placeholder.com/280x200?text=Event",
+        date: eventDate,
+        status: eventStatus,
+        createdAt: event.createdAt,
+      };
+    });
+    console.log(
+      "[AccommodationHome.vue] All fetched events (before sort/slice with mapped status/date). 각 이벤트의 ID 값 확인 (event.id -> router-link에서 eventId로 사용됨):",
+      allFetchedEvents.map((e) => ({ id: e.id, title: e.title }))
+    );
+
+    const sortedEvents = allFetchedEvents.sort((a, b) => {
+      const dateA = new Date(a.createdAt || 0);
+      const dateB = new Date(b.createdAt || 0);
+      return dateB - dateA;
+    });
+
+    const topEvents = sortedEvents.slice(0, 6);
+    console.log("[AccommodationHome.vue] Top 6 sorted events:", JSON.parse(JSON.stringify(topEvents)));
+
+    homeEvents.value = topEvents.filter((event) => event.status === "진행중");
+    console.log(
+      "[AccommodationHome.vue] Filtered '진행중' events for home:",
+      JSON.parse(JSON.stringify(homeEvents.value))
+    );
+
+    if (homeEvents.value.length === 0) {
+      console.log("[AccommodationHome.vue] No '진행중' events found after filtering.");
+    }
+  } catch (error) {
+    console.error("[AccommodationHome.vue] Error fetching events for home:", error);
+    fetchEventsError.value = "이벤트 정보를 가져오는데 실패했습니다.";
+    homeEvents.value = [];
+  }
+  isLoadingEvents.value = false;
 };
+
+onMounted(() => {
+  fetchHomeEvents();
+});
+
+// 인기 추천 숙소
+const accommodationTypeTabs = ref([
+  { code: "ALL", name: "전체", accommodations: [], isLoading: true, error: null, fetched: false },
+  { code: "MOTEL", name: "모텔", accommodations: [], isLoading: true, error: null, fetched: false },
+  { code: "HOTEL", name: "호텔 & 리조트", accommodations: [], isLoading: true, error: null, fetched: false },
+  { code: "PENSION", name: "펜션 & 풀빌라", accommodations: [], isLoading: true, error: null, fetched: false },
+  { code: "PREMIUM", name: "프리미엄", accommodations: [], isLoading: true, error: null, fetched: false }, // 백엔드 지원 확인 필요
+  { code: "CAMPING", name: "글램핑 & 캠핑", accommodations: [], isLoading: true, error: null, fetched: false }, // 백엔드 지원 확인 필요
+]);
+const selectedAccommodationTypeCode = ref(null);
+const swiperAccommodationModules = [Navigation, Pagination];
+
+// 선택된 숙소 유형의 데이터를 반환하는 computed property
+const currentPopularAccommodations = computed(() => {
+  if (!selectedAccommodationTypeCode.value) return null;
+  return accommodationTypeTabs.value.find((tab) => tab.code === selectedAccommodationTypeCode.value);
+});
+
+// 특정 숙소 유형의 인기 숙소 통계 가져오기
+const fetchPopularAccommodationsByType = async (typeCode) => {
+  const typeConfig = accommodationTypeTabs.value.find((tab) => tab.code === typeCode);
+  if (!typeConfig || typeConfig.fetched) return;
+
+  typeConfig.isLoading = true;
+  typeConfig.error = null;
+  try {
+    const yesterday = format(subDays(new Date(), 1), "yyyy-MM-dd");
+    const params = {
+      statsType: "ACCOMMODATION",
+      periodType: "DAILY",
+      periodValue: yesterday,
+      orderBy: "popularity_score DESC",
+      limit: 10,
+    };
+    // "전체" 탭이 아닐 경우에만 accommodationType 파라미터 추가
+    if (typeConfig.code !== "ALL") {
+      params.accommodationType = typeConfig.code;
+    }
+    // "프리미엄", "글램핑/캠핑" 등 새로운 유형은 백엔드에서 해당 accommodationType 값으로 필터링을 지원해야 합니다.
+
+    const response = await axios.get("/api/stats/popularity", { params });
+    typeConfig.accommodations = (response.data || []).map((acc) => ({ ...acc }));
+    typeConfig.fetched = true;
+  } catch (error) {
+    console.error(`Error fetching popular accommodations for type ${typeConfig.code}:`, error);
+    typeConfig.error = "인기 숙소 정보를 가져오는데 실패했습니다.";
+    typeConfig.accommodations = [];
+  }
+  typeConfig.isLoading = false;
+};
+
+// 탭 선택 함수
+const selectAccommodationType = (typeCode) => {
+  selectedAccommodationTypeCode.value = typeCode;
+  fetchPopularAccommodationsByType(typeCode); // 선택된 탭의 데이터 로드 (아직 로드 안됐으면)
+};
+
+// 인기 여행지
+const destinations = ref([]); // API로부터 인기 여행지(시도) 목록을 받아올 ref
+const isLoadingDestinations = ref(true);
+const fetchDestinationsError = ref(null);
+const swiperDestinationModules = [Navigation, Pagination]; // Swiper 모듈
+
+const fetchPopularDestinations = async () => {
+  isLoadingDestinations.value = true;
+  fetchDestinationsError.value = null;
+  try {
+    const yesterday = format(subDays(new Date(), 1), "yyyy-MM-dd");
+    const popularityParams = {
+      statsType: "REGION",
+      regionType: "SIDO",
+      periodType: "DAILY",
+      periodValue: yesterday,
+      orderBy: "popularity_score DESC",
+      limit: 8,
+    };
+    const popularityResponse = await axios.get("/api/stats/popularity", { params: popularityParams });
+    destinations.value = (popularityResponse.data || []).map((stat) => ({
+      code: stat.regionCode,
+      name: stat.sidoName || `지역코드 ${stat.regionCode}`,
+      sidoImgUrl: stat.sidoImgUrl || "",
+    }));
+  } catch (error) {
+    console.error("Error fetching popular destinations:", error);
+    fetchDestinationsError.value = "인기 여행지 정보를 가져오는데 실패했습니다.";
+    destinations.value = [];
+  }
+  isLoadingDestinations.value = false;
+};
+
+onMounted(() => {
+  fetchHomeEvents();
+  if (accommodationTypeTabs.value.length > 0) {
+    // 첫 번째 탭을 기본으로 선택하고 데이터 로드
+    selectAccommodationType(accommodationTypeTabs.value[0].code);
+  }
+  fetchPopularDestinations();
+});
 </script>
 
 <style scoped>
@@ -366,143 +536,138 @@ export default {
   font-size: 16px;
 }
 
-/* 이벤트 슬라이더 스타일 */
-.event-slider {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
-  gap: 20px;
-  margin-bottom: 30px;
-  background-color: #ffffff; /* 흰색 배경 추가 */
+/* 이벤트 슬라이더 스타일 -> 이벤트 캐러셀 스타일 */
+.event-carousel .swiper-slide {
+  display: flex;
+  justify-content: center;
 }
 
-.event-card {
+.event-carousel .event-card-link {
+  display: block;
+  width: 100%; /* 슬라이드 너비에 맞게 조정 */
+  max-width: 460px; /* 카드 최대 너비 늘림 (기존 300px) */
+  text-decoration: none;
+  color: inherit;
+}
+
+.event-carousel .event-card {
+  border: 1px solid #eee;
   border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  transition: transform 0.3s ease;
-  cursor: pointer;
-  background-color: #ffffff; /* 흰색 배경 추가 */
+  background-color: #fff;
+  transition: box-shadow 0.2s ease-in-out;
+  height: 100%; /* 슬라이드 높이에 맞게 카드 높이 조정 */
 }
 
-.event-card:hover {
-  transform: translateY(-5px);
+.event-carousel .event-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-.event-image {
+.event-carousel .event-image {
   width: 100%;
-  height: 200px;
-  object-fit: cover;
+  height: 216px; /* 이미지 높이 유지 또는 조절 */
+  object-fit: contain; /* cover -> contain 으로 변경 */
+  background-color: #f8f9fa; /* 이미지가 컨테이너보다 작을 경우 배경색 */
 }
 
-.event-info {
-  padding: 15px;
-  background-color: #ffffff; /* 흰색 배경 추가 */
+.event-carousel .event-info {
+  padding: 12px;
+  background-color: #ffffff;
 }
 
-.event-title {
+.event-carousel .event-title {
   font-weight: bold;
-  font-size: 18px;
-  margin-bottom: 5px;
-}
-
-.event-period {
-  color: #666;
-  font-size: 14px;
-}
-
-/* 지역 탭 스타일 */
-.region-tabs {
-  display: flex;
-  overflow-x: auto;
-  margin-bottom: 20px;
-  padding-bottom: 5px;
-  background-color: #ffffff; /* 흰색 배경 추가 */
-}
-
-.region-tab {
-  padding: 8px 20px;
-  margin-right: 10px;
-  background-color: #ffffff; /* 기본 배경 흰색으로 변경 */
-  border: 1px solid #ddd;
-  border-radius: 20px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
+  font-size: 1rem; /* 폰트 크기 조정 */
+  margin-bottom: 4px;
   white-space: nowrap;
-  transition: all 0.2s;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.region-tab.active {
-  background-color: var(--yanolja-red); /* 활성 탭은 기존 색상 유지 */
-  color: white;
-  border-color: var(--yanolja-red);
+.event-carousel .event-period {
+  color: #666;
+  font-size: 0.85rem; /* 폰트 크기 조정 */
 }
 
-.region-tab:hover:not(.active) {
-  background-color: #f0f0f0; /* hover 시 약간 어두운 흰색 계열로 변경 */
+/* Swiper Navigation/Pagination 버튼 색상 (다른 캐러셀과 일관성 유지) */
+:deep(.event-carousel .swiper-button-next),
+:deep(.event-carousel .swiper-button-prev) {
+  color: var(--yanolja-red);
 }
 
-/* 지역별 인기 숙소 인라인 스타일 */
-.region-hotel-list {
+:deep(.event-carousel .swiper-pagination-bullet-active) {
+  background-color: var(--yanolja-red);
+}
+
+/* 지역별 인기 숙소 -> 인기 추천 숙소 공통 캐러셀 스타일 */
+.accommodation-carousel .swiper-slide {
   display: flex;
-  overflow-x: auto;
-  gap: 15px;
-  padding: 5px 0;
-  scrollbar-width: thin;
-  background-color: #ffffff; /* 흰색 배경 추가 */
+  justify-content: center;
 }
 
-.region-hotel-item {
-  flex: 0 0 auto;
-  width: 200px;
+.accommodation-carousel .region-hotel-item {
+  width: 100%;
+  max-width: 220px; /* 아이템 최대 너비 설정 (선택적) */
+  display: block;
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   transition: transform 0.3s ease;
-  background-color: #ffffff; /* 이미 흰색 배경 */
+  background-color: #fff;
+  margin-bottom: 5px; /* 슬라이드 간 약간의 마진 */
 }
 
-.region-hotel-item:hover {
+.accommodation-carousel .region-hotel-item:hover {
   transform: translateY(-5px);
 }
 
-.hotel-image {
+.accommodation-carousel .hotel-image {
   width: 100%;
   height: 150px;
   overflow: hidden;
-  background-color: #ffffff; /* 흰색 배경 추가 */
+  background-color: #f0f0f0;
 }
-
-.hotel-image img {
+.accommodation-carousel .hotel-image img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
-
-.hotel-info {
+.accommodation-carousel .hotel-info {
   padding: 10px;
-  background-color: #ffffff; /* 흰색 배경 추가 */
 }
-
-.hotel-rating {
-  font-size: 14px;
-  margin-bottom: 5px;
+.accommodation-carousel .hotel-title {
+  font-weight: bold;
+  font-size: 1rem;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-
-.hotel-rating i {
+.accommodation-carousel .hotel-rating {
+  font-size: 0.85rem;
+  margin-bottom: 4px;
+}
+.accommodation-carousel .hotel-rating i {
   color: #ffb700;
-  margin-right: 3px;
 }
-
-.rating-count {
+.accommodation-carousel .rating-count {
   color: #666;
-  font-size: 12px;
+  font-size: 0.75rem;
 }
-
-.hotel-price {
+.accommodation-carousel .hotel-price {
   font-weight: bold;
   color: var(--yanolja-red);
-  font-size: 16px;
+  font-size: 0.9rem;
+}
+
+/* Swiper Navigation/Pagination 버튼 색상 (인기 여행지와 동일하게 적용) */
+:deep(.accommodation-carousel .swiper-button-next),
+:deep(.accommodation-carousel .swiper-button-prev) {
+  color: var(--yanolja-red);
+}
+
+:deep(.accommodation-carousel .swiper-pagination-bullet-active) {
+  background-color: var(--yanolja-red);
 }
 
 /* 목적지 그리드 스타일 */
@@ -531,6 +696,7 @@ export default {
   width: 100%;
   height: 150px;
   object-fit: cover;
+  background-color: #f0f0f0; /* 이미지 로딩 전 배경색 */
 }
 
 .destination-name {
@@ -585,38 +751,38 @@ export default {
     height: 300px;
   }
 
-  .banner-image {
-    height: 100%;
-  }
+  /* .banner-image 삭제 (위에서 이미 처리됨) */
 
   .category-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(3, 1fr); /* 모바일에서는 3개씩 */
     gap: 10px;
   }
-
-  .event-slider {
-    grid-template-columns: 1fr;
+  .category-item {
+    font-size: 14px; /* 모바일에서 카테고리 이름 폰트 약간 줄임 */
+  }
+  .category-name {
+    font-size: 14px;
   }
 
-  .region-tabs {
-    padding-bottom: 10px;
+  .event-carousel {
+    /* 슬라이더는 가로 스크롤 유지 */
+  }
+  .event-card-link {
+    min-width: 240px; /* 모바일에서 카드 너비 약간 줄임 */
   }
 
-  .region-tab {
-    padding: 6px 15px;
-    font-size: 13px;
+  .destination-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); /* 모바일에서 너비 줄임 */
   }
-
-  .region-hotel-list {
-    gap: 10px;
-  }
-
-  .region-hotel-item {
-    width: 160px;
-  }
-
-  .hotel-image {
+  .destination-image {
     height: 120px;
+  }
+
+  .user-menu-grid {
+    grid-template-columns: repeat(2, 1fr); /* 모바일에서 2개씩 */
+  }
+  .user-menu-item span {
+    font-size: 14px;
   }
 }
 
@@ -635,11 +801,12 @@ body {
 }
 
 .card {
+  /* 범용 카드 스타일 - 이벤트 카드 등 다른 곳에서 이미 사용 중일 수 있음 */
   border-radius: 10px;
   overflow: hidden;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   margin-bottom: 20px;
-  background-color: #ffffff; /* 흰색 배경 추가 또는 확인 */
+  background-color: #ffffff;
   transition:
     transform 0.3s ease-in-out,
     box-shadow 0.3s ease-in-out;
@@ -652,7 +819,7 @@ body {
 
 .card-body {
   padding: 15px;
-  background-color: #ffffff; /* 흰색 배경 추가 */
+  background-color: #ffffff;
 }
 
 .card-title {
@@ -667,36 +834,96 @@ body {
   margin-bottom: 10px;
 }
 
-.btn {
-  margin-top: 10px;
-}
-
-.btn-yanolja {
-  background-color: var(--yanolja-red);
-  color: white;
-  border: none;
-}
-
-.btn-yanolja:hover {
-  background-color: #d01c33;
-  color: white;
-}
+/* .btn, .btn-yanolja 는 이미 잘 정의되어 있음 */
 
 .section {
-  background-color: #ffffff !important; /* 이미 흰색 배경 */
+  padding: 30px 0; /* 섹션 상하 패딩 추가 */
+  background-color: #ffffff !important;
 }
 
 .section-title {
+  font-size: 22px; /* 섹션 타이틀 크기 조정 */
   font-weight: bold;
   margin-bottom: 20px;
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
+.section-title .view-all {
+  /* 전체보기 링크 스타일 */
+  font-size: 14px;
+  color: var(--yanolja-dark-gray);
+  text-decoration: none;
+  font-weight: normal;
+}
+.section-title .view-all:hover {
+  text-decoration: underline;
+}
+.section-title .view-all i {
+  font-size: 12px;
+  vertical-align: middle;
+}
 
 .loading {
+  /* 범용 로딩 스타일 */
   text-align: center;
   padding: 20px;
-  background-color: #ffffff; /* 흰색 배경 추가 */
+  background-color: #ffffff;
+}
+
+/* Swiper 캐러셀 스타일 추가 */
+.destination-carousel .swiper-slide {
+  display: flex;
+  justify-content: center;
+}
+
+.destination-carousel .destination-card {
+  width: 100%; /* 슬라이드 너비에 맞춤 */
+  display: block; /* 링크 전체 클릭 가능하도록 */
+}
+
+/* Swiper Navigation 버튼 색상 (필요시 추가) */
+:deep(.swiper-button-next),
+:deep(.swiper-button-prev) {
+  color: var(--yanolja-red); /* Your preferred color */
+}
+
+:deep(.swiper-pagination-bullet-active) {
+  background-color: var(--yanolja-red);
+}
+
+.accommodation-type-tabs {
+  display: flex;
+  overflow-x: auto;
+  margin-bottom: 20px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid #eee;
+}
+
+.type-tab {
+  padding: 8px 18px;
+  margin-right: 10px;
+  background-color: #fff;
+  border: 1px solid #ddd;
+  border-radius: 20px; /* 더 둥글게 */
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #555;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease-in-out;
+}
+
+.type-tab.active {
+  background-color: var(--yanolja-red);
+  color: white;
+  border-color: var(--yanolja-red);
+  font-weight: 600;
+}
+
+.type-tab:hover:not(.active) {
+  background-color: #f8f9fa;
+  border-color: #ccc;
+  color: #333;
 }
 </style>

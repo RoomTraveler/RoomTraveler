@@ -1,29 +1,31 @@
 <template>
-  <span v-if="unreadCount > 0" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-    {{ unreadCount > 99 ? '99+' : unreadCount }}
+  <span
+      v-if="unreadCount > 0"
+      class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+      role="status"
+  >
+    {{ badgeText }}
     <span class="visually-hidden">읽지 않은 알림</span>
   </span>
 </template>
 
-<script>
+<script setup>
+// props 정의
 /**
- * 알림 카운트 컴포넌트
- * 
- * 이 컴포넌트는 사용자의 읽지 않은 알림 개수를 표시합니다.
- * 주로 헤더의 알림 아이콘 옆에 배지 형태로 표시됩니다.
+ * 읽지 않은 알림 개수를 받아와서 배지로 표시합니다.
+ * @type {{ unreadCount: number }}
  */
-export default {
-  name: 'NotificationCount',
-  props: {
-    /**
-     * 읽지 않은 알림 개수
-     */
-    unreadCount: {
-      type: Number,
-      default: 0
-    }
+const props = defineProps({
+  unreadCount: {
+    type: Number,
+    default: 0
   }
-};
+});
+
+// 표시할 텍스트 계산
+const badgeText = computed(() => {
+  return props.unreadCount > 99 ? '99+' : String(props.unreadCount);
+});
 </script>
 
 <style scoped>

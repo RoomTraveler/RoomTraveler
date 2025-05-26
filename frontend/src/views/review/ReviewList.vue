@@ -1,6 +1,7 @@
 <template>
   <Layout>
     <div class="container mt-5">
+      <!-- 로딩 스피너 -->
       <div v-if="loading" class="text-center py-5">
         <div class="spinner-border text-primary" role="status">
           <span class="visually-hidden">로딩 중...</span>
@@ -8,11 +9,13 @@
         <p class="mt-2">리뷰 정보를 불러오는 중입니다...</p>
       </div>
 
+      <!-- 에러 메시지 -->
       <div v-else-if="error" class="alert alert-danger" role="alert">
         {{ error }}
       </div>
 
       <div v-else>
+        <!-- 헤더 및 리뷰 작성 버튼 -->
         <div class="row mb-4">
           <div class="col">
             <h2>리뷰 목록</h2>
@@ -27,36 +30,35 @@
             </router-link>
           </div>
         </div>
-        
+
         <!-- 평점 요약 -->
-        <div class="rating-summary">
+        <div class="bg-light rounded p-4 mb-4">
           <div class="row align-items-center">
-            <div class="col-md-3 text-center">
-              <h1 class="display-4 fw-bold">
+            <div class="col-md-3 text-center mb-3 mb-md-0">
+              <h1 class="display-4 fw-bold mb-2">
                 {{ averageRating ? averageRating.toFixed(1) : '0.0' }}
               </h1>
-              <div class="star-rating">
+              <div class="star-rating mb-1">
                 <template v-for="i in 5" :key="i">
                   <i v-if="i <= Math.floor(averageRating)" class="bi bi-star-fill"></i>
-                  <i v-else-if="i <= Math.floor(averageRating) + 0.5" class="bi bi-star-half"></i>
                   <i v-else class="bi bi-star"></i>
                 </template>
               </div>
               <p class="text-muted">{{ reviewCount }}개 리뷰</p>
             </div>
             <div class="col-md-9">
-              <!-- 평점 분포 -->
+              <!-- 평점 분포(Progress Bar) -->
               <div v-for="rating in [5, 4, 3, 2, 1]" :key="rating" class="row align-items-center mb-2">
                 <div class="col-2">{{ rating }}점</div>
                 <div class="col-8">
-                  <div class="progress">
-                    <div 
-                      class="progress-bar" 
-                      role="progressbar" 
-                      :style="{ width: calculatePercentage(rating) + '%' }" 
-                      :aria-valuenow="calculatePercentage(rating)" 
-                      aria-valuemin="0" 
-                      aria-valuemax="100"
+                  <div class="progress" style="height:10px;">
+                    <div
+                        class="progress-bar bg-warning"
+                        role="progressbar"
+                        :style="{ width: calculatePercentage(rating) + '%' }"
+                        :aria-valuenow="calculatePercentage(rating)"
+                        aria-valuemin="0"
+                        aria-valuemax="100"
                     ></div>
                   </div>
                 </div>
@@ -65,49 +67,42 @@
             </div>
           </div>
         </div>
-        
+
         <!-- 리뷰가 없는 경우 -->
         <div v-if="reviews.length === 0" class="alert alert-info">
           아직 리뷰가 없습니다. 첫 번째 리뷰를 작성해보세요!
         </div>
-        
-        <!-- 리뷰 목록 -->
+
+        <!-- 리뷰 카드 목록 -->
         <div class="row">
-          <div v-for="review in reviews" :key="review.reviewId" class="col-md-6">
-            <div class="card review-card">
+          <div v-for="review in reviews" :key="review.reviewId" class="col-md-6 mb-4">
+            <div class="card h-100 shadow-sm review-card">
               <div class="card-body">
-                <div class="review-header">
-                  <h5 class="card-title">{{ review.title }}</h5>
-                  <div class="star-rating">
-                    <i v-for="n in 5" :key="n" class="bi" 
-                       :class="n <= review.rating ? 'bi-star-fill' : 'bi-star'"></i>
+                <!-- 리뷰 제목, 별점 -->
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <h5 class="card-title mb-0">{{ review.title }}</h5>
+                  <div class="star-rating ms-2">
+                    <i v-for="n in 5" :key="n" class="bi" :class="n <= review.rating ? 'bi-star-fill' : 'bi-star'"></i>
                   </div>
                 </div>
-                <div class="review-meta">
+                <!-- 리뷰 메타 정보 -->
+                <div class="mb-2 text-secondary small">
                   <span><i class="bi bi-person-circle"></i> {{ review.username }}</span>
-                  <span class="ms-3"><i class="bi bi-calendar3"></i> 
-                    {{ formatDate(review.stayDate) }}
-                  </span>
-                  <span class="ms-3"><i class="bi bi-clock"></i> 
-                    {{ formatDate(review.createdAt) }}
-                  </span>
+                  <span class="ms-3"><i class="bi bi-calendar3"></i> {{ formatDate(review.stayDate) }}</span>
+                  <span class="ms-3"><i class="bi bi-clock"></i> {{ formatDate(review.createdAt) }}</span>
                 </div>
-                <p class="review-content">{{ review.content }}</p>
-                
-                <!-- 리뷰 작성자 또는 관리자만 수정/삭제 가능 -->
-                <div v-if="isAuthorOrAdmin(review)" class="d-flex justify-content-end">
-                  <router-link 
-                    :to="`/review/edit/${review.reviewId}`" 
-                    class="btn btn-sm btn-outline-primary me-2"
-                  >
-                    수정
-                  </router-link>
-                  <button 
-                    @click="confirmDelete(review.reviewId)" 
-                    class="btn btn-sm btn-outline-danger"
-                  >
-                    삭제
-                  </button>
+                <!-- 리뷰 본문 -->
+                <p class="review-content mb-3">{{ review.content }}</p>
+                <!-- 수정/삭제 버튼 -->
+                <div v-if="isAuthorOrAdmin(review)" class="d-flex justify-content-end gap-2">
+                  <router-link
+                      :to="`/review/edit/${review.reviewId}`"
+                      class="btn btn-sm btn-outline-primary"
+                  >수정</router-link>
+                  <button
+                      @click="confirmDelete(review.reviewId)"
+                      class="btn btn-sm btn-outline-danger"
+                  >삭제</button>
                 </div>
               </div>
             </div>
@@ -118,198 +113,115 @@
   </Layout>
 </template>
 
-<script>
+<script setup>
 /**
- * 리뷰 목록 컴포넌트
- * 
- * 이 컴포넌트는 특정 숙소에 대한 리뷰 목록을 표시합니다.
- * 평점 요약, 평점 분포, 리뷰 목록을 제공하며, 리뷰 작성/수정/삭제 기능을 포함합니다.
+ * 리뷰 목록 컴포넌트 (Bootstrap5 + Vue3 컴포지션)
+ *
+ * 숙소별 리뷰 목록, 평점, 분포, CRUD 버튼을 제공.
  */
-import { mapState, mapActions } from 'vuex';
-import Layout from '@/components/layout/Layout.vue';
+import { ref, computed, onMounted } from 'vue'
+import { useStore } from 'vuex'
+import { useRoute } from 'vue-router'
+import Layout from '@/components/layout/Layout.vue'
 
-export default {
-  name: 'ReviewList',
-  components: {
-    Layout
-  },
-  props: {
-    // URL 파라미터로부터 숙소 ID를 받음
-    accommodationId: {
-      type: [String, Number],
-      required: true
-    }
-  },
-  data() {
-    return {
-      loading: true,
-      error: null,
-      reviews: [],
-      accommodationTitle: '',
-      reviewCount: 0,
-      averageRating: 0,
-      ratingDistribution: {}
-    };
-  },
-  computed: {
-    ...mapState({
-      isLoggedIn: state => state.user.isLoggedIn,
-      userId: state => state.user.user?.id,
-      userRole: state => state.user.user?.role
-    }),
-    
-    /**
-     * 숙소 ID (숫자 타입)
-     */
-    numericAccommodationId() {
-      return parseInt(this.accommodationId);
-    },
-    
-    /**
-     * 사용자가 관리자인지 여부
-     */
-    isAdmin() {
-      return this.userRole === 'ADMIN';
-    }
-  },
-  created() {
-    // 리뷰 목록 로드
-    this.loadReviews();
-  },
-  methods: {
-    ...mapActions('review', ['fetchReviewsByAccommodation', 'deleteReview']),
-    
-    /**
-     * 리뷰 목록 로드
-     */
-    async loadReviews() {
-      this.loading = true;
-      this.error = null;
-      
-      try {
-        // 리뷰 정보 가져오기
-        const result = await this.fetchReviewsByAccommodation(this.numericAccommodationId);
-        
-        this.reviews = result.reviews;
-        this.accommodationTitle = result.accommodationTitle;
-        this.reviewCount = result.reviewCount;
-        this.averageRating = result.averageRating;
-        this.ratingDistribution = result.ratingDistribution;
-      } catch (error) {
-        console.error('리뷰 목록을 불러오는 중 오류가 발생했습니다:', error);
-        this.error = '리뷰 목록을 불러올 수 없습니다. 다시 시도해주세요.';
-      } finally {
-        this.loading = false;
-      }
-    },
-    
-    /**
-     * 평점 분포 백분율 계산
-     * @param {number} rating - 평점 (1-5)
-     * @returns {number} 백분율 (0-100)
-     */
-    calculatePercentage(rating) {
-      const count = this.ratingDistribution[rating] || 0;
-      return this.reviewCount > 0 ? (count / this.reviewCount) * 100 : 0;
-    },
-    
-    /**
-     * 리뷰 작성자 또는 관리자인지 확인
-     * @param {Object} review - 리뷰 객체
-     * @returns {boolean} 리뷰 작성자 또는 관리자인지 여부
-     */
-    isAuthorOrAdmin(review) {
-      return this.isLoggedIn && (review.userId === this.userId || this.isAdmin);
-    },
-    
-    /**
-     * 리뷰 삭제 확인
-     * @param {number} reviewId - 삭제할 리뷰 ID
-     */
-    confirmDelete(reviewId) {
-      if (confirm('정말 삭제하시겠습니까?')) {
-        this.deleteReviewItem(reviewId);
-      }
-    },
-    
-    /**
-     * 리뷰 삭제 처리
-     * @param {number} reviewId - 삭제할 리뷰 ID
-     */
-    async deleteReviewItem(reviewId) {
-      try {
-        await this.deleteReview(reviewId);
-        // 리뷰 목록 새로고침
-        this.loadReviews();
-      } catch (error) {
-        console.error('리뷰 삭제 중 오류가 발생했습니다:', error);
-        alert('리뷰 삭제에 실패했습니다. 다시 시도해주세요.');
-      }
-    },
-    
-    /**
-     * 날짜 포맷팅 (YYYY-MM-DD)
-     * @param {string|Date} date - 포맷팅할 날짜
-     * @returns {string} 포맷팅된 날짜 문자열
-     */
-    formatDate(date) {
-      if (!date) return '';
-      
-      const d = new Date(date);
-      const year = d.getFullYear();
-      const month = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
-      
-      return `${year}-${month}-${day}`;
-    }
+// 라우트, 스토어
+const route = useRoute()
+const store = useStore()
+
+// 숙소ID (props 대신 라우트에서)
+const accommodationId = computed(() => route.params.accommodationId || route.query.accommodationId)
+
+// 상태 변수
+const loading = ref(true)
+const error = ref(null)
+const reviews = ref([])
+const accommodationTitle = ref('')
+const reviewCount = ref(0)
+const averageRating = ref(0)
+const ratingDistribution = ref({})
+
+// 유저 정보
+const isLoggedIn = computed(() => store.state.user.isLoggedIn)
+const userId = computed(() => store.state.user.user?.id)
+const userRole = computed(() => store.state.user.user?.role)
+const isAdmin = computed(() => userRole.value === 'ADMIN')
+
+// 최초 마운트 시 리뷰 불러오기
+onMounted(loadReviews)
+
+// 리뷰 불러오기
+async function loadReviews() {
+  loading.value = true
+  error.value = null
+  try {
+    // review 모듈에 fetchReviewsByAccommodation 액션 필요
+    const result = await store.dispatch('review/fetchReviewsByAccommodation', parseInt(accommodationId.value))
+    reviews.value = result.reviews
+    accommodationTitle.value = result.accommodationTitle
+    reviewCount.value = result.reviewCount
+    averageRating.value = result.averageRating
+    ratingDistribution.value = result.ratingDistribution
+  } catch (e) {
+    error.value = '리뷰 목록을 불러올 수 없습니다. 다시 시도해주세요.'
+    console.error(e)
+  } finally {
+    loading.value = false
   }
-};
+}
+
+// 평점 분포(%) 계산
+function calculatePercentage(rating) {
+  const count = ratingDistribution.value[rating] || 0
+  return reviewCount.value > 0 ? (count / reviewCount.value) * 100 : 0
+}
+
+// 리뷰 작성자 or 관리자 판별
+function isAuthorOrAdmin(review) {
+  return isLoggedIn.value && (review.userId === userId.value || isAdmin.value)
+}
+
+// 리뷰 삭제 확인
+function confirmDelete(reviewId) {
+  if (confirm('정말 삭제하시겠습니까?')) {
+    deleteReviewItem(reviewId)
+  }
+}
+
+// 리뷰 삭제 처리
+async function deleteReviewItem(reviewId) {
+  try {
+    await store.dispatch('review/deleteReview', reviewId)
+    loadReviews()
+  } catch (e) {
+    alert('리뷰 삭제에 실패했습니다. 다시 시도해주세요.')
+    console.error(e)
+  }
+}
+
+// 날짜 포맷 (YYYY-MM-DD)
+function formatDate(date) {
+  if (!date) return ''
+  const d = new Date(date)
+  const yyyy = d.getFullYear()
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  return `${yyyy}-${mm}-${dd}`
+}
 </script>
 
 <style scoped>
-/* 리뷰 목록 스타일 */
+/* 별점 스타일 (부트스트랩 색상 활용) */
 .star-rating {
   color: #FFD700;
   font-size: 1.2rem;
 }
-
 .review-card {
-  margin-bottom: 20px;
-  transition: transform 0.3s;
+  transition: transform 0.2s;
 }
-
 .review-card:hover {
-  transform: translateY(-5px);
+  transform: translateY(-4px) scale(1.01);
 }
-
-.review-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.review-meta {
-  color: #6c757d;
-  font-size: 0.9rem;
-}
-
 .review-content {
-  margin-top: 15px;
   white-space: pre-line;
-}
-
-.rating-summary {
-  background-color: #f8f9fa;
-  padding: 20px;
-  border-radius: 10px;
-  margin-bottom: 30px;
-}
-
-.progress {
-  height: 10px;
-}
-
-.progress-bar {
-  background-color: #FFD700;
 }
 </style>

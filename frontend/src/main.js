@@ -19,6 +19,15 @@ import "bootstrap-icons/font/bootstrap-icons.css"; // Bootstrap Icons CSS 추가
 import axios from "axios"; // axios import
 import piniaPersist from "pinia-plugin-persistedstate";
 
+// Swiper CSS 추가
+import "swiper/css";
+import "swiper/css/navigation";
+import "swiper/css/pagination";
+// import 'swiper/css/scrollbar'; // 필요 시 추가
+
+// Toast UI Editor CSS 추가
+import "@toast-ui/editor/dist/toastui-editor.css";
+
 // Axios 기본 설정 (중요!)
 // axios.defaults.baseURL = 'http://localhost:8080'; // 백엔드 주소에 맞게 설정 (Vite 프록시 사용 시 불필요할 수 있음)
 axios.defaults.withCredentials = true; // 모든 요청에 쿠키를 포함하도록 설정
@@ -36,18 +45,36 @@ app.use(pinia);
 
 // 앱 마운트 전에 사용자 정보 로드 시도
 async function initializeApp() {
-  const userStore = useUserStore();
-  console.log("[main.js] Initializing app, attempting to fetch current user...");
-  try {
-    await userStore.fetchCurrentUser();
-    console.log("[main.js] fetchCurrentUser completed. User state:", JSON.parse(JSON.stringify(userStore.user)));
-  } catch (e) {
-    console.error("[main.js] Failed to fetch current user on app load:", e);
+  const userStore = useUserStore(); // Pinia 인스턴스가 앱에 등록된 후 스토어 사용
+  console.log("[main.js] Initializing app.");
+
+  // persisted state (_tokens)는 자동으로 로드됨.
+  // sessionStorage의 user는 각 컴포넌트나 라우트 가드에서 loadUserFromStorage()를 호출하여 필요시 로드 가능.
+
+  // 토큰이 이미 스토어에 있고 (persist 플러그인에 의해 복원됨), 스토어에 사용자 정보가 아직 없거나 불완전하면 가져옴.
+  if (userStore.tokens?.access_token && (!userStore.user || !userStore.user.id || !userStore.user.createdAt)) {
+    console.log("[main.js] Access token found and user data is missing or incomplete, attempting to fetch current user...");
+    try {
+      await userStore.fetchCurrentUser();
+      console.log("[main.js] fetchCurrentUser completed on app load. User state:", JSON.parse(JSON.stringify(userStore.user)));
+    } catch (e) {
+      console.error("[main.js] Failed to fetch current user on app load:", e);
+      // 여기서 에러 발생 시 (예: 토큰 만료로 401) 자동 로그아웃 처리도 고려 가능
+      // if (e?.response?.status === 401 || e?.response?.status === 403) {
+      //   await userStore.logout();
+      // }
+    }
+  } else if (userStore.user?.id && userStore.user?.createdAt) {
+    console.log("[main.js] User data (including createdAt) already available from persisted state or previous fetch.");
+  } else if (userStore.tokens?.access_token) {
+    console.log("[main.js] Access token found, but user data might be fetched on demand by components (e.g. UserProfile).");
+  } else {
+    console.log("[main.js] No access token found. User needs to login. Data will be fetched on demand.");
   }
 
-  app.use(router); // 라우터는 사용자 정보 로드 후 또는 병렬로 설정 가능
-  app.use(ElementPlus, { locale: koKR });
-  app.mount("#app");
+  app.use(router); // 라우터 설정
+  app.use(ElementPlus, { locale: koKR }); // ElementPlus 설정
+  app.mount("#app"); // 앱 마운트
   console.log("[main.js] App mounted.");
 }
 

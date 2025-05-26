@@ -286,6 +286,8 @@ export default axios;
 ```bash
 rmdir /s /q node_modules
 del package-lock.json
+
+
 npm install
 npm install vite@5 @vitejs/plugin-vue@5 -D
 npm install tailwindcss@latest @tailwindcss/vite@latest -D
@@ -296,6 +298,9 @@ npm install vuedraggable@next
 npm install @vueuse/motion
 npm install bootstrap-icons
 npm install bootstrap
+npm install chart.js
+npm install @toast-ui/editor
+npm install swiper
 ```
 
 2. 개발 서버 실행:

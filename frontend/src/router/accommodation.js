@@ -28,17 +28,22 @@ export const accommodationRoutes = [
     props: true,
     meta: { title: "객실 상세" },
   },
-  { path: "/accommodation/cart", name: "AccommodationCart", component: AccommodationCart, meta: { title: "장바구니" } },
+  {
+    path: "/accommodation/cart",
+    name: "AccommodationCart",
+    component: AccommodationCart,
+    meta: { title: "장바구니", requiresAuth: true },
+  },
   {
     path: "/accommodation/favorites",
     name: "AccommodationFavorite",
     component: AccommodationFavorite,
-    meta: { title: "찜한 숙소" },
+    meta: { title: "찜한 숙소", requiresAuth: true },
   },
   {
     path: "/accommodation/cart/checkout",
     name: "AccommodationCartCheckout",
     component: AccommodationCartCheckout,
-    meta: { title: "예약 확인" },
+    meta: { title: "예약 확인", requiresAuth: true },
   },
 ];

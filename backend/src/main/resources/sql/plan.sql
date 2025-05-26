@@ -6,8 +6,6 @@ CREATE TABLE IF NOT EXISTS `ssafytrip`.`contenttypes` (
                                                           `content_type_name` VARCHAR(45) NULL DEFAULT NULL COMMENT '콘텐츠타입이름',
     PRIMARY KEY (`content_type_id`))
     ENGINE = InnoDB
-    DEFAULT CHARACTER SET = utf8mb4
-    COLLATE = utf8mb4_0900_ai_ci
     COMMENT = '콘텐츠타입정보테이블';
 
 
@@ -47,8 +45,6 @@ CREATE TABLE IF NOT EXISTS `ssafytrip`.`attractions` (
     REFERENCES `ssafytrip`.`contenttypes` (`content_type_id`))
     ENGINE = InnoDB
     AUTO_INCREMENT = 107559
-    DEFAULT CHARACTER SET = utf8mb4
-    COLLATE = utf8mb4_0900_ai_ci
     COMMENT = '명소정보테이블';
 
 
@@ -67,9 +63,7 @@ CREATE TABLE IF NOT EXISTS `ssafytrip`.`plan` (
     FOREIGN KEY (`user_id`)
     REFERENCES `ssafytrip`.`users` (`user_id`))
     ENGINE = InnoDB
-    AUTO_INCREMENT = 3
-    DEFAULT CHARACTER SET = utf8mb4
-    COLLATE = utf8mb4_0900_ai_ci;
+    AUTO_INCREMENT = 3;
 
 
 -- -----------------------------------------------------
@@ -90,9 +84,7 @@ CREATE TABLE IF NOT EXISTS `ssafytrip`.`plan_attraction` (
     FOREIGN KEY (`plan_id`)
     REFERENCES `ssafytrip`.`plan` (`plan_id`))
     ENGINE = InnoDB
-    AUTO_INCREMENT = 9
-    DEFAULT CHARACTER SET = utf8mb4
-    COLLATE = utf8mb4_0900_ai_ci;
+    AUTO_INCREMENT = 9;
 
 -- 관광지 좋아요 테이블
 CREATE TABLE IF NOT EXISTS `ssafytrip`.`attraction_likes` (
@@ -107,10 +99,7 @@ CREATE TABLE IF NOT EXISTS `ssafytrip`.`attraction_likes` (
     CONSTRAINT `fk_attraction_likes_attraction`
     FOREIGN KEY (`attraction_id`)
     REFERENCES `ssafytrip`.`attractions` (`no`)
-    ) ENGINE = InnoDB
-    DEFAULT CHARACTER SET = utf8mb4
-    COLLATE = utf8mb4_0900_ai_ci;
-
+    ) ENGINE = InnoDB;
 -- 여행 계획 좋아요 테이블
 CREATE TABLE IF NOT EXISTS `ssafytrip`.`plan_likes` (
                                                         `id` bigint unsigned NOT NULL AUTO_INCREMENT,
@@ -124,10 +113,7 @@ CREATE TABLE IF NOT EXISTS `ssafytrip`.`plan_likes` (
     CONSTRAINT `fk_plan_likes_plan`
     FOREIGN KEY (`plan_id`)
     REFERENCES `ssafytrip`.`plan` (`plan_id`)
-    ) ENGINE = InnoDB
-    DEFAULT CHARACTER SET = utf8mb4
-    COLLATE = utf8mb4_0900_ai_ci;
-
+    ) ENGINE = InnoDB;
 -- 리뷰리뷰
 -- CREATE TABLE attraction_review (
 --                                    review_id BIGINT AUTO_INCREMENT PRIMARY KEY,

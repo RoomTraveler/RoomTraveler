@@ -8,6 +8,7 @@
         </div>
       </div>
 
+      <!-- 로딩 스피너 -->
       <div v-if="loading" class="text-center py-5">
         <div class="spinner-border text-primary" role="status">
           <span class="visually-hidden">로딩 중...</span>
@@ -15,27 +16,35 @@
         <p class="mt-2">리뷰 정보를 불러오는 중입니다...</p>
       </div>
 
+      <!-- 에러 메시지 -->
       <div v-else-if="error" class="alert alert-danger" role="alert">
         {{ error }}
       </div>
 
+      <!-- 리뷰 수정 폼 -->
       <div v-else class="card">
         <div class="card-body">
-          <form @submit.prevent="submitReview">
-            <!-- 평점 선택 -->
+          <form @submit.prevent="submitReview" autocomplete="off">
+            <!-- 평점(별점) 선택 -->
             <div class="mb-3">
-              <label class="form-label">평점</label>
-              <div class="rating">
-                <input type="radio" id="star5" v-model="review.rating" value="5" required />
-                <label for="star5" title="5점"></label>
-                <input type="radio" id="star4" v-model="review.rating" value="4" />
-                <label for="star4" title="4점"></label>
-                <input type="radio" id="star3" v-model="review.rating" value="3" />
-                <label for="star3" title="3점"></label>
-                <input type="radio" id="star2" v-model="review.rating" value="2" />
-                <label for="star2" title="2점"></label>
-                <input type="radio" id="star1" v-model="review.rating" value="1" />
-                <label for="star1" title="1점"></label>
+              <label class="form-label d-block mb-1">평점</label>
+              <div class="d-flex flex-row-reverse justify-content-end star-rating">
+                <template v-for="n in 5" :key="n">
+                  <input
+                      class="btn-check"
+                      :id="`star${n}`"
+                      type="radio"
+                      v-model="review.rating"
+                      :value="n"
+                      required
+                  />
+                  <label
+                      class="btn btn-outline-warning px-2 py-0"
+                      :for="`star${n}`"
+                      :title="`${n}점`"
+                      style="font-size:2rem;"
+                  >&#9733;</label>
+                </template>
               </div>
               <div class="form-text">별점을 선택해주세요 (필수)</div>
             </div>
@@ -43,46 +52,49 @@
             <!-- 제목 입력 -->
             <div class="mb-3">
               <label for="title" class="form-label">제목</label>
-              <input 
-                type="text" 
-                class="form-control" 
-                id="title" 
-                v-model="review.title" 
-                required
-                placeholder="리뷰 제목을 입력해주세요"
-              >
+              <input
+                  id="title"
+                  type="text"
+                  class="form-control"
+                  v-model="review.title"
+                  required
+                  maxlength="60"
+                  placeholder="리뷰 제목을 입력해주세요"
+              />
             </div>
 
             <!-- 내용 입력 -->
             <div class="mb-3">
               <label for="content" class="form-label">내용</label>
-              <textarea 
-                class="form-control" 
-                id="content" 
-                v-model="review.content" 
-                rows="5" 
-                required
-                placeholder="숙소에 대한 경험을 자세히 적어주세요. 다른 여행자들에게 도움이 됩니다."
+              <textarea
+                  id="content"
+                  class="form-control"
+                  v-model="review.content"
+                  rows="5"
+                  required
+                  maxlength="1000"
+                  placeholder="숙소에 대한 경험을 자세히 적어주세요. 다른 여행자들에게 도움이 됩니다."
               ></textarea>
             </div>
 
             <!-- 숙박 날짜 선택 -->
             <div class="mb-3">
               <label for="stayDate" class="form-label">숙박 날짜</label>
-              <input 
-                type="date" 
-                class="form-control" 
-                id="stayDate" 
-                v-model="review.stayDate" 
-                required
-                :max="today"
-              >
+              <input
+                  id="stayDate"
+                  type="date"
+                  class="form-control"
+                  v-model="review.stayDate"
+                  required
+                  :max="today"
+              />
             </div>
 
-            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-              <router-link 
-                :to="`/accommodation/detail/${review.accommodationId}`" 
-                class="btn btn-secondary"
+            <!-- 버튼 그룹 -->
+            <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+              <router-link
+                  :to="`/accommodation/detail/${review.accommodationId}`"
+                  class="btn btn-outline-secondary"
               >
                 취소
               </router-link>
@@ -95,166 +107,117 @@
   </Layout>
 </template>
 
-<script>
+<script setup>
 /**
- * 리뷰 수정 컴포넌트
- * 
- * 이 컴포넌트는 기존 리뷰를 수정하는 폼을 제공합니다.
- * 기존 리뷰 정보를 불러와 폼에 표시하고, 수정된 내용을 서버에 전송합니다.
+ * 리뷰 수정 페이지 (Bootstrap5 + Vue3 컴포지션)
+ *
+ * 기존 리뷰를 로딩해 폼에 바인딩, 수정 후 서버에 저장.
  */
-import { mapActions } from 'vuex';
-import Layout from '@/components/layout/Layout.vue';
+import { ref, onMounted, computed } from 'vue'
+import { useStore } from 'vuex'
+import { useRoute, useRouter } from 'vue-router'
+import Layout from '@/components/layout/Layout.vue'
 
-export default {
-  name: 'ReviewEditForm',
-  components: {
-    Layout
-  },
-  props: {
-    // URL 파라미터로부터 리뷰 ID를 받음
-    reviewId: {
-      type: [String, Number],
-      required: true
+// 현재 라우트, 라우터, Vuex 스토어 사용
+const route = useRoute()
+const router = useRouter()
+const store = useStore()
+
+// 리뷰 ID (props 대신 라우트 파라미터 사용)
+const reviewId = computed(() => route.params.reviewId || route.query.reviewId)
+
+// 폼 관련 상태
+const loading = ref(true)
+const error = ref(null)
+const review = ref({
+  reviewId: null,
+  accommodationId: null,
+  rating: 5,
+  title: '',
+  content: '',
+  stayDate: getTodayFormatted()
+})
+
+// 오늘 날짜 (max값 용)
+const today = getTodayFormatted()
+
+// 최초 렌더시 리뷰 정보 불러오기
+onMounted(loadReview)
+
+// 리뷰 정보 불러오기 (비동기)
+async function loadReview() {
+  loading.value = true
+  error.value = null
+  try {
+    // review 모듈에 fetchReview 액션 필요
+    const data = await store.dispatch('review/fetchReview', reviewId.value)
+    review.value = {
+      ...data,
+      rating: parseInt(data.rating), // radio 바인딩용 숫자
+      stayDate: formatDate(data.stayDate)
     }
-  },
-  data() {
-    return {
-      loading: true,
-      error: null,
-      review: {
-        reviewId: null,
-        accommodationId: null,
-        rating: '5',
-        title: '',
-        content: '',
-        stayDate: this.getTodayFormatted()
-      },
-      today: this.getTodayFormatted()
-    };
-  },
-  created() {
-    // 리뷰 정보 로드
-    this.loadReview();
-  },
-  methods: {
-    ...mapActions('review', ['fetchReview', 'updateReview']),
-    
-    /**
-     * 리뷰 정보 로드
-     */
-    async loadReview() {
-      this.loading = true;
-      this.error = null;
-      
-      try {
-        // 리뷰 정보 가져오기
-        const reviewData = await this.fetchReview(this.reviewId);
-        
-        // 리뷰 데이터 설정
-        this.review = {
-          ...reviewData,
-          rating: reviewData.rating.toString(), // 문자열로 변환 (라디오 버튼 바인딩용)
-          stayDate: this.formatDate(reviewData.stayDate) // 날짜 포맷팅
-        };
-      } catch (error) {
-        console.error('리뷰 정보를 불러오는 중 오류가 발생했습니다:', error);
-        this.error = '리뷰 정보를 불러올 수 없습니다. 다시 시도해주세요.';
-      } finally {
-        this.loading = false;
-      }
-    },
-    
-    /**
-     * 리뷰 수정 제출 처리
-     */
-    async submitReview() {
-      try {
-        // 리뷰 데이터 준비
-        const reviewData = {
-          reviewId: parseInt(this.reviewId),
-          accommodationId: this.review.accommodationId,
-          rating: parseInt(this.review.rating),
-          title: this.review.title,
-          content: this.review.content,
-          stayDate: this.review.stayDate
-        };
-        
-        // 리뷰 수정 API 호출
-        await this.updateReview(reviewData);
-        
-        // 성공 시 숙소 상세 페이지로 이동
-        this.$router.push(`/accommodation/detail/${this.review.accommodationId}`);
-      } catch (error) {
-        console.error('리뷰 수정 중 오류가 발생했습니다:', error);
-        alert('리뷰 수정에 실패했습니다. 다시 시도해주세요.');
-      }
-    },
-    
-    /**
-     * 오늘 날짜를 YYYY-MM-DD 형식으로 반환
-     */
-    getTodayFormatted() {
-      const today = new Date();
-      const yyyy = today.getFullYear();
-      const mm = String(today.getMonth() + 1).padStart(2, '0');
-      const dd = String(today.getDate()).padStart(2, '0');
-      return `${yyyy}-${mm}-${dd}`;
-    },
-    
-    /**
-     * 날짜 포맷팅 (YYYY-MM-DD)
-     */
-    formatDate(date) {
-      if (!date) return this.getTodayFormatted();
-      
-      const d = new Date(date);
-      if (isNaN(d.getTime())) return this.getTodayFormatted();
-      
-      const yyyy = d.getFullYear();
-      const mm = String(d.getMonth() + 1).padStart(2, '0');
-      const dd = String(d.getDate()).padStart(2, '0');
-      return `${yyyy}-${mm}-${dd}`;
-    }
+  } catch (e) {
+    error.value = '리뷰 정보를 불러올 수 없습니다. 다시 시도해주세요.'
+    console.error(e)
+  } finally {
+    loading.value = false
   }
-};
+}
+
+// 리뷰 수정 제출
+async function submitReview() {
+  try {
+    const reviewData = {
+      reviewId: parseInt(reviewId.value),
+      accommodationId: review.value.accommodationId,
+      rating: parseInt(review.value.rating),
+      title: review.value.title,
+      content: review.value.content,
+      stayDate: review.value.stayDate
+    }
+    // review 모듈에 updateReview 액션 필요
+    await store.dispatch('review/updateReview', reviewData)
+    router.push(`/accommodation/detail/${review.value.accommodationId}`)
+  } catch (e) {
+    alert('리뷰 수정에 실패했습니다. 다시 시도해주세요.')
+    console.error(e)
+  }
+}
+
+// 오늘 날짜 반환 (YYYY-MM-DD)
+function getTodayFormatted() {
+  const today = new Date()
+  const yyyy = today.getFullYear()
+  const mm = String(today.getMonth() + 1).padStart(2, '0')
+  const dd = String(today.getDate()).padStart(2, '0')
+  return `${yyyy}-${mm}-${dd}`
+}
+
+// 날짜 포맷 (YYYY-MM-DD)
+function formatDate(date) {
+  if (!date) return getTodayFormatted()
+  const d = new Date(date)
+  if (isNaN(d.getTime())) return getTodayFormatted()
+  const yyyy = d.getFullYear()
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  return `${yyyy}-${mm}-${dd}`
+}
 </script>
 
 <style scoped>
-/* 별점 선택 스타일 */
-.rating {
-  display: flex;
-  flex-direction: row-reverse;
-  justify-content: flex-end;
-}
-
-.rating > input {
-  display: none;
-}
-
-.rating > label {
-  position: relative;
-  width: 1.1em;
-  font-size: 2.5em;
+/* Bootstrap 스타일에 맞춘 별점(Star Rating) - 커스텀 최소화 */
+.star-rating label {
   color: #FFD700;
   cursor: pointer;
+  transition: color 0.2s;
 }
-
-.rating > label::before {
-  content: "\2605";
-  position: absolute;
-  opacity: 0;
+.star-rating input[type="radio"]:checked + label,
+.star-rating label:hover,
+.star-rating label:hover ~ label {
+  color: #FFA500;
 }
-
-.rating > label:hover:before,
-.rating > label:hover ~ label:before {
-  opacity: 1 !important;
-}
-
-.rating > input:checked ~ label:before {
-  opacity: 1;
-}
-
-.rating > input:checked ~ label:hover:before {
-  opacity: 1;
+.star-rating input[type="radio"] {
+  display: none;
 }
 </style>

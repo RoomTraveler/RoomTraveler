@@ -1,72 +1,77 @@
 <template>
-  <div class="w-full px-4 py-3 flex flex-col justify-between bg-white" style="min-height: 198px">
+  <div class="w-100 px-3 py-3 d-flex flex-column justify-content-between bg-white" style="min-height:198px;">
     <!-- 상단: 숙박 정보 및 상세보기 -->
-    <div class="flex justify-between items-start mb-2">
+    <div class="d-flex justify-content-between align-items-start mb-2">
       <div>
-        <p class="text-xs font-semibold text-gray-700">숙박</p>
-        <p class="text-xxs text-gray-500">
+        <p class="small fw-semibold text-secondary mb-1">숙박</p>
+        <p class="text-muted mb-0" style="font-size:11px;">
           체크인 {{ roomInfo.checkInTime || "15:00" }} ~ 체크아웃 {{ roomInfo.checkOutTime || "11:00" }}
         </p>
       </div>
-      <button @click="viewDetail" class="text-xxs text-gray-400 hover:text-gray-600 flex items-center">
-        상세보기 <i class="bi bi-chevron-right text-xxs ml-0.5"></i>
+      <button @click="viewDetail" class="btn btn-link btn-sm p-0 text-secondary" style="font-size:11px;">
+        상세보기 <i class="bi bi-chevron-right ms-1"></i>
       </button>
     </div>
 
     <!-- 중단: 남은 객실, 가격, 정책 -->
     <div class="mb-3">
-      <div class="flex justify-between items-end mb-0.5">
+      <div class="d-flex justify-content-between align-items-end mb-1">
         <p
-          v-if="roomInfo.minAvailableCount !== undefined && roomInfo.minAvailableCount > 0"
-          class="text-xs font-semibold text-orange-600"
+            v-if="roomInfo.minAvailableCount !== undefined && roomInfo.minAvailableCount > 0"
+            class="small fw-semibold text-warning mb-0"
         >
           남은객실 {{ roomInfo.minAvailableCount }}개
         </p>
-        <p v-else-if="roomInfo.minAvailableCount === 0" class="text-xs font-semibold text-red-600">매진</p>
-        <div v-else></div>
-        <!-- 남은 객실 정보 없을 때 공간 유지용 -->
-
+        <p
+            v-else-if="roomInfo.minAvailableCount === 0"
+            class="small fw-semibold text-danger mb-0"
+        >
+          매진
+        </p>
+        <div v-else style="min-width:60px;"></div>
         <div>
-          <span class="text-xl font-bold text-gray-800">{{ formattedPrice }}</span>
-          <span v-if="formattedPrice !== '가격문의'" class="text-sm text-gray-800 ml-0.5">원</span>
+          <span class="fw-bold fs-5 text-dark">{{ formattedPrice }}</span>
+          <span v-if="formattedPrice !== '가격문의'" class="ms-1 text-secondary" style="font-size:15px;">원</span>
         </div>
       </div>
 
-      <div class="text-right mb-1">
+      <div class="text-end mb-1">
         <span
-          v-if="roomInfo.originalPrice && roomInfo.discountRate && roomInfo.discountRate > 0"
-          class="text-xs text-gray-400 line-through mr-1"
+            v-if="roomInfo.originalPrice && roomInfo.discountRate && roomInfo.discountRate > 0"
+            class="text-decoration-line-through text-muted small me-1"
         >
           {{ formatPrice(roomInfo.originalPrice) }}
         </span>
-        <span v-if="roomInfo.discountRate && roomInfo.discountRate > 0" class="text-sm font-bold text-red-500">
+        <span v-if="roomInfo.discountRate && roomInfo.discountRate > 0" class="fw-bold text-danger small">
           {{ Math.round(roomInfo.discountRate * 100) }}%
         </span>
       </div>
 
-      <div class="text-right mb-1">
-        <span class="text-xxs bg-gray-100 text-gray-600 px-1 py-0.5 rounded-sm font-medium">회원 최대할인가</span>
-        <i class="bi bi-info-circle text-gray-400 text-xxs ml-0.5 cursor-pointer" title="가격 관련 상세 정보"></i>
+      <div class="text-end mb-1">
+        <span class="badge bg-light text-secondary fw-normal" style="font-size:10px;">
+          회원 최대할인가
+        </span>
+        <i class="bi bi-info-circle text-muted ms-1" style="font-size:10px;" title="가격 관련 상세 정보"></i>
       </div>
 
-      <p class="text-xxs text-gray-500 mt-1 text-right">
+      <p class="text-end text-muted mt-1 mb-0" style="font-size:10px;">
         {{ roomInfo.cancellationPolicy || "취소 및 환불 불가" }}
-        <i class="bi bi-info-circle text-gray-400 text-xxs ml-0.5 cursor-pointer" title="취소/환불 규정 보기"></i>
+        <i class="bi bi-info-circle text-muted ms-1" style="font-size:10px;" title="취소/환불 규정 보기"></i>
       </p>
     </div>
 
     <!-- 하단: 버튼들 -->
-    <div class="flex items-center justify-end gap-x-1.5 mt-auto">
+    <div class="d-flex align-items-center justify-content-end gap-2 mt-auto">
       <button
-        @click="addToCart"
-        class="bg-white border border-gray-300 text-gray-500 hover:bg-gray-50 rounded-sm flex items-center justify-center p-2"
-        aria-label="장바구니 담기"
+          @click="addToCart"
+          class="btn btn-outline-secondary btn-sm d-flex align-items-center justify-content-center"
+          aria-label="장바구니 담기"
       >
-        <i class="bi bi-cart text-xl"></i>
+        <i class="bi bi-cart fs-5"></i>
       </button>
       <button
-        @click="bookRoom"
-        class="bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-sm text-sm py-2 px-3"
+          @click="bookRoom"
+          class="btn btn-primary btn-sm fw-semibold px-3"
       >
         예약하기
       </button>
@@ -80,7 +85,6 @@ import { computed, PropType } from "vue";
 interface RoomInfoFromCard {
   roomId: number;
   name?: string;
-  // RoomCard에서 전달되는 모든 Room 속성 + minAvailableCount
   packageName?: string;
   defaultCapacity?: number;
   capacity?: number | string;
@@ -89,8 +93,8 @@ interface RoomInfoFromCard {
   price?: number;
   originalPrice?: number;
   discountRate?: number;
-  stock?: number; // 이 prop은 minAvailableCount로 대체될 수 있음. stock은 총 객실 수 개념에 가까움
-  minAvailableCount?: number; // 백엔드에서 받아오는 남은 객실 수
+  stock?: number;
+  minAvailableCount?: number;
   cancellationPolicy?: string;
   checkInTime?: string;
   checkOutTime?: string;
@@ -142,15 +146,8 @@ const addToCart = () => {
 </script>
 
 <style scoped>
-.truncate {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+/* Bootstrap에서 지원하지 않는 아주 작은 폰트 크기만 약간 보정 */
+.badge, .text-end span, .text-end i {
+  vertical-align: middle;
 }
-.text-xxs {
-  /* 10px */
-  font-size: 0.625rem;
-  line-height: 0.875rem;
-}
-/* Bootstrap Icons CDN은 이미 index.html 또는 main.ts 등에 추가되어 있다고 가정합니다. */
 </style>

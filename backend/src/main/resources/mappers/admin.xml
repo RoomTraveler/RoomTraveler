@@ -24,6 +24,15 @@
         FROM accommodations
     </select>
 
+
+
+    <select id="selectAccommodationTypeCounts" resultType="map">
+        SELECT accommodation_type, COUNT(*) as count
+        FROM accommodations
+        GROUP BY accommodation_type
+    </select>
+
+
     <!-- 예약 통계 정보 조회 -->
     <select id="getReservationStatistics" resultType="java.util.HashMap">
         SELECT 
@@ -72,5 +81,144 @@
         </foreach>
         ON DUPLICATE KEY UPDATE gugun_name = VALUES(gugun_name)
     </insert>
+
+    <!-- 전체 호스트 목록 조회 (페이징 및 필터링) -->
+    <select id="findAllHostsFiltered" parameterType="map" resultType="com.ssafy.trip.user.User">
+        SELECT
+            u.user_id as userId,
+            u.username,
+            u.email,
+            u.phone,
+            u.profile_image as profileImage,
+            u.role,
+            u.status as userAccountStatus,
+            u.created_at as createdAt,
+            u.updated_at as updatedAt,
+            h.business_name as businessName,
+            h.business_number as businessNumber,
+            h.status as hostRegistrationStatus
+        FROM users u
+        LEFT JOIN hosts h ON u.user_id = h.user_id
+        WHERE u.role = 'HOST'
+        <if test="status != null and status != ''">
+            AND h.status = #{status}
+        </if>
+        <if test="keyword != null and keyword != ''">
+            AND (
+                u.username LIKE CONCAT('%', #{keyword}, '%') OR
+                u.email LIKE CONCAT('%', #{keyword}, '%') OR
+                u.user_id LIKE CONCAT('%', #{keyword}, '%') OR
+                h.business_name LIKE CONCAT('%', #{keyword}, '%') OR
+                h.business_number LIKE CONCAT('%', #{keyword}, '%')
+            )
+        </if>
+        <if test="sortBy != null and sortBy != '' and sortDirection != null and sortDirection != ''">
+            ORDER BY
+            <choose>
+                <when test="sortBy == 'userId'">u.user_id</when>
+                <when test="sortBy == 'username'">u.username</when>
+                <when test="sortBy == 'email'">u.email</when>
+                <when test="sortBy == 'createdAt'">u.created_at</when>
+                <when test="sortBy == 'businessName'">h.business_name</when>
+                <when test="sortBy == 'hostRegistrationStatus'">h.status</when>
+                <otherwise>u.created_at</otherwise>
+            </choose>
+            <choose>
+                <when test="sortDirection == 'ASC'">ASC</when>
+                <otherwise>DESC</otherwise>
+            </choose>
+        </if>
+        <if test="limit != null and offset != null">
+            LIMIT #{limit} OFFSET #{offset}
+        </if>
+    </select>
+
+    <!-- 전체 호스트 수 조회 (필터링) -->
+    <select id="countAllHostsFiltered" parameterType="map" resultType="long">
+        SELECT COUNT(DISTINCT u.user_id)
+        FROM users u
+        LEFT JOIN hosts h ON u.user_id = h.user_id
+        WHERE u.role = 'HOST'
+        <if test="status != null and status != ''">
+            AND h.status = #{status}
+        </if>
+        <if test="keyword != null and keyword != ''">
+            AND (
+                u.username LIKE CONCAT('%', #{keyword}, '%') OR
+                u.email LIKE CONCAT('%', #{keyword}, '%') OR
+                u.user_id LIKE CONCAT('%', #{keyword}, '%') OR
+                h.business_name LIKE CONCAT('%', #{keyword}, '%') OR
+                h.business_number LIKE CONCAT('%', #{keyword}, '%')
+            )
+        </if>
+    </select>
+
+    <!-- 조건에 따른 사용자 목록 조회 (페이지네이션) -->
+    <select id="findUsersByAdmin" parameterType="map" resultType="com.ssafy.trip.user.User">
+        SELECT
+            user_id AS userId,
+            username,
+            email,
+            phone,
+            profile_image AS profileImage,
+            role,
+            status AS userAccountStatus,
+            created_at AS createdAt,
+            updated_at AS updatedAt
+        FROM
+            users
+        <where>
+            <if test="params.role != null and params.role != ''">
+                AND role = #{params.role}
+            </if>
+            <if test="params.status != null and params.status != ''">
+                AND status = #{params.status}
+            </if>
+            <if test="params.keyword != null and params.keyword != ''">
+                AND (
+                    username LIKE CONCAT('%', #{params.keyword}, '%')
+                    OR email LIKE CONCAT('%', #{params.keyword}, '%')
+                    OR phone LIKE CONCAT('%', #{params.keyword}, '%')
+                )
+            </if>
+        </where>
+        ORDER BY created_at DESC
+        <if test="params.limit != null and params.offset != null">
+             LIMIT #{params.limit} OFFSET #{params.offset}
+        </if>
+    </select>
+
+    <!-- 조건에 따른 총 사용자 수 조회 -->
+    <select id="countUsersByAdmin" parameterType="map" resultType="int">
+        SELECT
+            COUNT(*)
+        FROM
+            users
+        <where>
+            <if test="params.role != null and params.role != ''">
+                AND role = #{params.role}
+            </if>
+            <if test="params.status != null and params.status != ''">
+                AND status = #{params.status}
+            </if>
+            <if test="params.keyword != null and params.keyword != ''">
+                AND (
+                    username LIKE CONCAT('%', #{params.keyword}, '%')
+                    OR email LIKE CONCAT('%', #{params.keyword}, '%')
+                    OR phone LIKE CONCAT('%', #{params.keyword}, '%')
+                )
+            </if>
+        </where>
+    </select>
+
+    <!-- 관리자에 의한 사용자 역할 변경 -->
+    <update id="updateUserRole" parameterType="map">
+        UPDATE users
+        SET
+            role = #{newRole},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE
+            user_id = #{userId}
+    </update>
 
 </mapper>

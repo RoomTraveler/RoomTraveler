@@ -1,0 +1,252 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.ssafy.trip.stats.dao.PopularityStatsDao">
+
+    <resultMap id="popularityStatsResultMap" type="com.ssafy.trip.stats.model.PopularityStats">
+        <id property="id" column="id"/>
+        <result property="statsType" column="stats_type"/>
+        <result property="regionType" column="region_type"/>
+        <result property="regionCode" column="region_code"/>
+        <result property="sidoName" column="sido_name"/>
+        <result property="sidoImgUrl" column="sido_img_url"/>
+        <result property="accommodationId" column="accommodation_id"/>
+        <result property="accommodationTitle" column="accommodation_title"/>
+        <result property="accommodationMainImageUrl" column="accommodation_main_image_url"/>
+        <result property="accommodationType" column="accommodation_type"/>
+        <result property="periodType" column="period_type"/>
+        <result property="periodValue" column="period_value"/>
+        <result property="reservationCount" column="reservation_count"/>
+        <result property="viewCount" column="view_count"/>
+        <result property="reviewCount" column="review_count"/>
+        <result property="popularityScore" column="popularity_score"/>
+        <result property="topNRank" column="top_n_rank"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <!-- 
+        Popularity Score 가중치 예시:
+        - 예약: 5점
+        - 리뷰: 3점
+        - 조회: 1점
+        popularity_score = (reservation_count * 5) + (review_count * 3) + (view_count * 1)
+     -->
+
+    <insert id="upsertStats" parameterType="com.ssafy.trip.stats.model.PopularityStats">
+        INSERT INTO popularity_stats (
+            stats_type, region_type, region_code, accommodation_id, accommodation_type, 
+            period_type, period_value, 
+            reservation_count, view_count, review_count, popularity_score, top_n_rank,
+            created_at, updated_at
+        )
+        VALUES (
+            #{statsType}, #{regionType, jdbcType=VARCHAR}, #{regionCode, jdbcType=INTEGER}, 
+            #{accommodationId, jdbcType=BIGINT}, #{accommodationType, jdbcType=VARCHAR},
+            #{periodType}, #{periodValue}, 
+            #{reservationCount, jdbcType=INTEGER}, 
+            #{viewCount, jdbcType=INTEGER}, 
+            #{reviewCount, jdbcType=INTEGER}, 
+            #{popularityScore, jdbcType=DOUBLE}, 
+            #{topNRank, jdbcType=INTEGER},
+            NOW(), NOW()
+        )
+        ON DUPLICATE KEY UPDATE
+            reservation_count = VALUES(reservation_count),
+            view_count = VALUES(view_count),
+            review_count = VALUES(review_count),
+            popularity_score = VALUES(popularity_score),
+            top_n_rank = VALUES(top_n_rank),
+            updated_at = NOW()
+    </insert>
+
+    <select id="findStatsByCriteria" parameterType="map" resultMap="popularityStatsResultMap">
+        SELECT 
+            ps.*,
+            a.title as accommodation_title,
+            img.image_url as accommodation_main_image_url,
+            s.sido_name as sido_name,
+            s.sido_img_url as sido_img_url
+        FROM popularity_stats ps
+        LEFT JOIN accommodations a ON ps.accommodation_id = a.accommodation_id
+        LEFT JOIN images img ON ps.accommodation_id = img.reference_id 
+            AND img.reference_type = 'ACCOMMODATION' 
+            AND img.is_main = true
+        LEFT JOIN sidos s ON ps.region_type = 'SIDO' AND ps.region_code = s.sido_code
+        <where>
+            <if test="statsType != null">AND ps.stats_type = #{statsType}</if>
+            <if test="regionType != null">AND ps.region_type = #{regionType}</if>
+            <if test="regionCode != null">AND ps.region_code = #{regionCode}</if>
+            <if test="accommodationId != null">AND ps.accommodation_id = #{accommodationId}</if>
+            <if test="accommodationType != null">AND ps.accommodation_type = #{accommodationType}</if>
+            <if test="periodType != null">AND ps.period_type = #{periodType}</if>
+            <if test="periodValue != null">AND ps.period_value = #{periodValue}</if>
+            <if test="startDate != null and endDate != null">
+                AND ps.period_value BETWEEN #{startDate} AND #{endDate}
+            </if>
+        </where>
+        <!-- 필요한 경우 정렬 조건 추가 -->
+        <if test="orderBy != null">
+            ORDER BY ${orderBy}
+        </if>
+        <if test="limit != null">
+            LIMIT #{limit}
+        </if>
+        <if test="offset != null">
+            OFFSET #{offset}
+        </if>
+    </select>
+
+    <select id="findAccommodationStats" resultMap="popularityStatsResultMap">
+        SELECT *
+        FROM popularity_stats
+        WHERE accommodation_id = #{accommodationId}
+          AND period_type = #{periodType}
+          AND period_value = #{periodValue}
+          AND stats_type = 'ACCOMMODATION'
+        LIMIT 1
+    </select>
+    
+    <!-- 공통으로 사용될 점수 계산 SQL 조각 -->
+    <sql id="calculatePopularityScore">
+        (COALESCE(reservation_count, 0) * 5) + (COALESCE(review_count, 0) * 3) + (COALESCE(view_count, 0) * 1)
+    </sql>
+
+    <update id="incrementAccommodationViewCount">
+        INSERT INTO popularity_stats (stats_type, accommodation_id, period_type, period_value, view_count, popularity_score, created_at, updated_at)
+        VALUES ('ACCOMMODATION', #{accommodationId}, 'DAILY', #{periodValue}, #{increment}, #{increment} * 1, NOW(), NOW())
+        ON DUPLICATE KEY UPDATE
+            view_count = view_count + VALUES(view_count),
+            popularity_score = <include refid="calculatePopularityScore" />,
+            updated_at = NOW();
+    </update>
+
+    <update id="incrementAccommodationReservationCount">
+        INSERT INTO popularity_stats (stats_type, accommodation_id, period_type, period_value, reservation_count, popularity_score, created_at, updated_at)
+        VALUES ('ACCOMMODATION', #{accommodationId}, 'DAILY', #{periodValue}, #{increment}, #{increment} * 5, NOW(), NOW())
+        ON DUPLICATE KEY UPDATE
+            reservation_count = reservation_count + VALUES(reservation_count),
+            popularity_score = <include refid="calculatePopularityScore" />,
+            updated_at = NOW();
+    </update>
+
+    <update id="incrementAccommodationReviewCount">
+        INSERT INTO popularity_stats (stats_type, accommodation_id, period_type, period_value, review_count, popularity_score, created_at, updated_at)
+        VALUES ('ACCOMMODATION', #{accommodationId}, 'DAILY', #{periodValue}, #{increment}, #{increment} * 3, NOW(), NOW())
+        ON DUPLICATE KEY UPDATE
+            review_count = review_count + VALUES(review_count),
+            popularity_score = <include refid="calculatePopularityScore" />,
+            updated_at = NOW();
+    </update>
+
+    <!-- incrementAccommodationViewCount 쿼리 아래, 기존 sumDailyStatsForPeriod_* 쿼리들을 대체 -->
+    <select id="sumDailyStatsForPeriod" resultType="com.ssafy.trip.stats.model.PopularityStats">
+        SELECT 
+            <if test="statsType == 'ACCOMMODATION'">
+                accommodation_id as accommodationId,
+            </if>
+            <if test="statsType == 'REGION'">
+                region_type as regionType,
+                region_code as regionCode,
+            </if>
+            <if test="statsType == 'TYPE'">
+                accommodation_type as accommodationType,
+            </if>
+            <if test="statsType == 'TYPE_REGION'">
+                accommodation_type as accommodationType,
+                region_type as regionType,
+                region_code as regionCode,
+            </if>
+            SUM(view_count) as viewCount,
+            SUM(reservation_count) as reservationCount,
+            SUM(review_count) as reviewCount
+        FROM popularity_stats
+        WHERE period_type = 'DAILY'
+          AND period_value BETWEEN #{startDate} AND #{endDate}
+          AND stats_type = #{statsType}
+        <choose>
+            <when test="statsType == 'ACCOMMODATION'">
+                AND accommodation_id IS NOT NULL
+                GROUP BY accommodation_id
+            </when>
+            <when test="statsType == 'REGION'">
+                AND region_type IS NOT NULL AND region_code IS NOT NULL
+                GROUP BY region_type, region_code
+            </when>
+            <when test="statsType == 'TYPE'">
+                AND accommodation_type IS NOT NULL
+                GROUP BY accommodation_type
+            </when>
+            <when test="statsType == 'TYPE_REGION'">
+                AND accommodation_type IS NOT NULL AND region_type IS NOT NULL AND region_code IS NOT NULL
+                GROUP BY accommodation_type, region_type, region_code
+            </when>
+            <otherwise>
+                <!-- 유효하지 않은 statsType이면 아무것도 반환하지 않도록 (또는 에러 발생) -->
+                AND 1=0 
+            </otherwise>
+        </choose>
+    </select>
+
+    <insert id="upsertBulkStats" parameterType="java.util.List">
+        INSERT INTO popularity_stats (
+            stats_type, region_type, region_code, accommodation_id, accommodation_type, 
+            period_type, period_value, 
+            reservation_count, view_count, review_count, popularity_score, top_n_rank,
+            created_at, updated_at
+        )
+        VALUES 
+        <foreach collection="list" item="item" separator=",">
+            (
+                #{item.statsType}, #{item.regionType, jdbcType=VARCHAR}, #{item.regionCode, jdbcType=INTEGER}, 
+                #{item.accommodationId, jdbcType=BIGINT}, #{item.accommodationType, jdbcType=VARCHAR},
+                #{item.periodType}, #{item.periodValue}, 
+                #{item.reservationCount, jdbcType=INTEGER}, 
+                #{item.viewCount, jdbcType=INTEGER}, 
+                #{item.reviewCount, jdbcType=INTEGER}, 
+                #{item.popularityScore, jdbcType=DOUBLE}, 
+                #{item.topNRank, jdbcType=INTEGER},
+                NOW(), NOW()
+            )
+        </foreach>
+        ON DUPLICATE KEY UPDATE
+            reservation_count = VALUES(reservation_count),
+            view_count = VALUES(view_count),
+            review_count = VALUES(review_count),
+            popularity_score = VALUES(popularity_score),
+            top_n_rank = VALUES(top_n_rank), -- upsert 시 랭크도 같이 업데이트 할 수 있음
+            updated_at = NOW()
+    </insert>
+
+    <update id="updateBatchRank" parameterType="java.util.List">
+        <foreach collection="list" item="item" separator=";">
+            UPDATE popularity_stats
+            SET top_n_rank = #{item.topNRank, jdbcType=INTEGER},
+                updated_at = NOW()
+            WHERE id = #{item.id}
+        </foreach>
+    </update>
+
+    <select id="findTopNByScore" resultMap="popularityStatsResultMap">
+        SELECT 
+            ps.*,
+            a.title as accommodation_title,
+            img.image_url as accommodation_main_image_url,
+            s.sido_name as sido_name,
+            s.sido_img_url as sido_img_url
+        FROM popularity_stats ps
+        LEFT JOIN accommodations a ON ps.accommodation_id = a.accommodation_id
+        LEFT JOIN images img ON ps.accommodation_id = img.reference_id 
+            AND img.reference_type = 'ACCOMMODATION' 
+            AND img.is_main = true
+        LEFT JOIN sidos s ON ps.region_type = 'SIDO' AND ps.region_code = s.sido_code
+        WHERE ps.stats_type = #{statsType}
+          AND ps.period_type = #{periodType}
+          AND ps.period_value = #{periodValue}
+        ORDER BY ps.popularity_score DESC, ps.reservation_count DESC, ps.view_count DESC, ps.review_count DESC
+        LIMIT #{limit}
+    </select>
+
+</mapper> 

@@ -1,15 +1,27 @@
 CREATE TABLE hosts (
-                       host_id                   BIGINT UNSIGNED NOT NULL,   -- users.user_id 와 1:1 매핑
-                       business_name             VARCHAR(100)     NOT NULL,  -- 업체명
-                       business_reg_no           VARCHAR(50)      NOT NULL,  -- 사업자 등록번호
-                       bank_account              VARCHAR(100)     NOT NULL,  -- 정산 계좌 정보
-                       profile_text              TEXT             NULL,      -- 호스트 소개글
-                       host_status               ENUM('PENDING','APPROVED','REJECTED')
-                            NOT NULL DEFAULT 'PENDING',-- 심사 상태
-                       created_at                DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                       updated_at                DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP
-                           ON UPDATE CURRENT_TIMESTAMP,
-                       PRIMARY KEY (host_id),
-                       FOREIGN KEY (host_id) REFERENCES users(user_id)
-                           ON DELETE CASCADE
-)
+                       host_id             BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '호스트 PK',
+                       user_id             BIGINT UNSIGNED NOT NULL COMMENT '회원 PK (users.user_id)', -- ← 여기!
+                       business_number     VARCHAR(20) NOT NULL UNIQUE COMMENT '사업자 등록번호',
+                       business_name       VARCHAR(100) NOT NULL COMMENT '상호명',
+                       ceo_name            VARCHAR(50) NOT NULL COMMENT '대표자명',
+                       business_address    VARCHAR(255) NOT NULL COMMENT '사업장 주소',
+                       business_phone      VARCHAR(20) COMMENT '사업장 전화번호',
+                       business_license    VARCHAR(255) NOT NULL COMMENT '사업자 등록증 이미지 URL',
+                       business_license_expire DATE COMMENT '사업자 등록증 만료일',
+                       license_resubmit_url VARCHAR(255) COMMENT '사업자 등록증 재제출 이미지 URL',
+                       license_resubmitted_at DATETIME COMMENT '사업자 등록증 재제출 일시',
+                       bank_name           VARCHAR(30) NOT NULL COMMENT '정산 은행명',
+                       bank_account        VARCHAR(30) NOT NULL COMMENT '정산 계좌번호',
+                       bank_owner          VARCHAR(50) NOT NULL COMMENT '정산 예금주명',
+                       description         TEXT COMMENT '호스트 자기소개',
+                       latitude            DECIMAL(10,7) COMMENT '위도',
+                       longitude           DECIMAL(10,7) COMMENT '경도',
+                       status              VARCHAR(20) DEFAULT 'WAIT' COMMENT '상태(WAIT: 심사중, ACTIVE: 승인, REJECT: 반려)',
+                       admin_comment       VARCHAR(255) COMMENT '관리자 심사 코멘트',
+                       approved_at         DATETIME COMMENT '최초 승인일',
+                       rejected_at         DATETIME COMMENT '최초 반려일',
+                       business_type       VARCHAR(50) COMMENT '사업자 업종(호텔, 펜션 등)',
+                       created_at          DATETIME DEFAULT CURRENT_TIMESTAMP,
+                       updated_at          DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                       FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+);

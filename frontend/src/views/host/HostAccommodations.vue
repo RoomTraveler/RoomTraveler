@@ -1,396 +1,349 @@
 <template>
   <div class="container mt-5 mb-5">
-    <h1 class="mb-4">
-      <i class="bi bi-houses"></i> 호스트 숙소 관리
-    </h1>
-    
-    <!-- 알림 메시지 표시 -->
-    <div v-if="message" class="alert alert-success alert-dismissible fade show" role="alert">
-      {{ message }}
-      <button type="button" class="btn-close" @click="message = ''" aria-label="Close"></button>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h1 class="mb-0"><i class="bi bi-collection-fill me-2"></i>내 숙소 관리</h1>
+      <RouterLink
+        v-if="host?.hostId && host?.status === 'ACTIVE'"
+        to="/host/accommodations/new"
+        class="btn btn-primary"
+      >
+        <i class="bi bi-plus-circle-fill me-1"></i> 새 숙소 등록
+      </RouterLink>
     </div>
-    
-    <!-- 숙소 통계 -->
-    <div class="row mb-4">
-      <div class="col-md-3">
-        <div class="card stats-card">
-          <div class="card-body">
-            <h5 class="card-title">총 숙소</h5>
-            <p class="card-text fs-2">{{ accommodations.length }}</p>
-          </div>
-        </div>
-      </div>
-      <div class="col-md-3">
-        <div class="card stats-card">
-          <div class="card-body">
-            <h5 class="card-title">총 객실</h5>
-            <p class="card-text fs-2">{{ totalRooms }}</p>
-          </div>
-        </div>
-      </div>
-      <div class="col-md-3">
-        <div class="card stats-card">
-          <div class="card-body">
-            <h5 class="card-title">활성 숙소</h5>
-            <p class="card-text fs-2">{{ activeAccommodations }}</p>
-          </div>
-        </div>
-      </div>
-      <div class="col-md-3">
-        <div class="card stats-card">
-          <div class="card-body">
-            <h5 class="card-title">평균 평점</h5>
-            <p class="card-text fs-2">
-              <span class="text-warning">
-                <i class="bi bi-star-fill"></i>
-              </span>
-              <span>{{ averageRating }}</span>
-            </p>
-          </div>
-        </div>
-      </div>
+
+    <div v-if="loading" class="text-center py-5">
+      <div class="spinner-border text-primary" role="status"><span class="visually-hidden">로딩 중...</span></div>
     </div>
-    
-    <!-- 숙소 목록 -->
-    <div v-if="accommodations.length === 0" class="alert alert-info">
-      <i class="bi bi-info-circle"></i> 등록된 숙소가 없습니다. 아래 + 버튼을 클릭하여 새 숙소를 등록하세요.
+    <div v-else-if="error" class="alert alert-danger">{{ error }}</div>
+    <div v-else-if="!host?.hostId || host?.status !== 'ACTIVE'" class="alert alert-warning text-center">
+      <p v-if="!host?.hostId">호스트 정보를 불러올 수 없거나 아직 호스트로 등록되지 않았습니다.</p>
+      <p v-else-if="host?.status === 'WAIT'">호스트 승인 대기 중입니다. 승인 후 숙소를 등록하고 관리할 수 있습니다.</p>
+      <p v-else-if="host?.status === 'REJECT'">호스트 등록이 반려되었습니다. 호스트 정보를 확인해주세요.</p>
+      <RouterLink v-if="!host?.hostId" to="/host/new" class="btn btn-success mt-2">호스트 등록하기</RouterLink>
+      <RouterLink v-else :to="`/host/detail/${host.hostId}`" class="btn btn-info mt-2">내 호스트 정보 보기</RouterLink>
     </div>
-    
-    <div v-else class="row">
-      <div v-for="accommodation in accommodations" :key="accommodation.accommodationId" class="col-md-6 col-lg-4 mb-4">
-        <div class="card accommodation-card">
-          <img 
-            :src="accommodation.mainImageUrl || require('@/assets/default-accommodation.jpg')" 
-            class="card-img-top" 
-            :alt="accommodation.title"
-          >
-          <div class="card-header d-flex justify-content-between align-items-center">
-            <h5 class="card-title mb-0">{{ accommodation.title }}</h5>
-            <span :class="getStatusBadgeClass(accommodation.status)">
-              {{ getStatusText(accommodation.status) }}
-            </span>
+    <div v-else>
+      <!-- 알림 메시지 -->
+      <div v-if="routeMessage" class="alert alert-success alert-dismissible fade show" role="alert">
+        {{ routeMessage }}
+        <button type="button" class="btn-close" @click="clearRouteMessage" aria-label="Close"></button>
+      </div>
+
+      <!-- 숙소 통계 -->
+      <div class="row g-3 mb-4">
+        <div class="col-md-3 col-6">
+          <SummaryCard title="총 숙소" :value="allAccommodations.length" icon="bi-houses" color="primary" />
+        </div>
+        <div class="col-md-3 col-6">
+          <SummaryCard title="운영중 숙소" :value="activeAccommodationsCount" icon="bi-house-check" color="success" />
+        </div>
+        <div class="col-md-3 col-6">
+          <SummaryCard
+            title="검토중 숙소"
+            :value="pendingAccommodationsCount"
+            icon="bi-house-exclamation"
+            color="warning"
+          />
+        </div>
+        <div class="col-md-3 col-6">
+          <SummaryCard title="총 객실 수" :value="totalRoomsCount" icon="bi-door-open" color="info" />
+        </div>
+      </div>
+
+      <!-- 숙소 필터 -->
+      <div class="card card-body mb-4">
+        <div class="row g-2 align-items-end">
+          <div class="col-md-4">
+            <label for="filterTitle" class="form-label">숙소명 검색</label>
+            <input
+              type="text"
+              id="filterTitle"
+              class="form-control"
+              v-model="filters.title"
+              placeholder="숙소 이름으로 검색..."
+            />
           </div>
-          <div class="card-body">
-            <p class="card-text">
-              <i class="bi bi-geo-alt"></i> {{ accommodation.address }}
-            </p>
-            <p class="card-text">
-              <i class="bi bi-telephone"></i> {{ accommodation.phone }}
-            </p>
-            <!-- 객실 정보 -->
-            <div class="mt-3">
-              <h6>객실</h6>
-              <div v-if="!getRooms(accommodation.accommodationId).length">
-                <p class="text-muted">등록된 객실이 없습니다.</p>
-              </div>
-              <div v-else>
-                <div 
-                  v-for="(room, index) in getRooms(accommodation.accommodationId)" 
-                  :key="room.roomId" 
-                  class="room-card p-2"
-                  :class="{ 'mb-2': index !== getRooms(accommodation.accommodationId).length - 1 }"
-                >
-                  <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                      <strong>{{ room.name }}</strong>
-                      <span class="ms-2 text-muted">
-                        {{ formatCurrency(room.price) }}
-                      </span>
-                    </div>
-                    <div>
-                      <router-link 
-                        :to="`/accommodation/update-room-form?roomId=${room.roomId}`" 
-                        class="btn btn-sm btn-outline-primary"
-                      >
-                        <i class="bi bi-pencil"></i>
-                      </router-link>
-                      <button 
-                        class="btn btn-sm btn-outline-danger" 
-                        @click="deleteRoom(room.roomId)"
-                      >
-                        <i class="bi bi-trash"></i>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <!-- 객실 추가 버튼 -->
-              <router-link 
-                :to="`/accommodation/register-room-form?accommodationId=${accommodation.accommodationId}`" 
-                class="btn btn-sm btn-outline-success w-100 mt-2"
-              >
-                <i class="bi bi-plus-circle"></i> 객실 추가
-              </router-link>
-            </div>
+          <div class="col-md-3">
+            <label for="filterStatus" class="form-label">상태</label>
+            <select id="filterStatus" class="form-select" v-model="filters.status">
+              <option value="">전체 상태</option>
+              <option value="ACTIVE">운영중</option>
+              <option value="INACTIVE">비활성</option>
+              <option value="PENDING_REVIEW">검토중</option>
+              <option value="REJECTED">반려됨</option>
+            </select>
           </div>
-          <div class="card-footer">
-            <div class="d-flex justify-content-between">
-              <router-link 
-                :to="`/accommodation/detail?accommodationId=${accommodation.accommodationId}`" 
-                class="btn btn-sm btn-info"
-              >
-                <i class="bi bi-eye"></i> 보기
-              </router-link>
-              <div>
-                <router-link 
-                  :to="`/accommodation/update-form?accommodationId=${accommodation.accommodationId}`" 
-                  class="btn btn-sm btn-primary"
-                >
-                  <i class="bi bi-pencil"></i> 수정
-                </router-link>
-                <button 
-                  class="btn btn-sm btn-danger" 
-                  @click="deleteAccommodation(accommodation.accommodationId)"
-                >
-                  <i class="bi bi-trash"></i> 삭제
-                </button>
-              </div>
-            </div>
+          <div class="col-md-3">
+            <label for="filterSort" class="form-label">정렬</label>
+            <select id="filterSort" class="form-select" v-model="filters.sortBy">
+              <option value="createdAtDesc">최신 등록순</option>
+              <option value="titleAsc">이름 오름차순</option>
+              <option value="reviewCountDesc">리뷰 많은순</option>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <button class="btn btn-secondary w-100" @click="resetFilters">
+              <i class="bi bi-arrow-clockwise"></i> 초기화
+            </button>
           </div>
         </div>
+      </div>
+
+      <!-- 숙소 목록 -->
+      <div v-if="paginatedAccommodations.length === 0" class="alert alert-light text-center">
+        <i class="bi bi-info-circle me-1"></i> 표시할 숙소가 없습니다.
+        <span v-if="filters.title || filters.status">다른 조건으로 검색해보세요.</span>
+        <span v-else>새로운 숙소를 등록해보세요!</span>
+      </div>
+      <div v-else class="row g-4">
+        <div
+          v-for="accommodation in paginatedAccommodations"
+          :key="accommodation.accommodationId"
+          class="col-md-6 col-lg-4"
+        >
+          <AccommodationCard
+            :accommodation="accommodation"
+            :host-id="host.hostId"
+            @deleted="triggerLoadAccommodations"
+            @status-updated="triggerLoadAccommodations"
+          />
+        </div>
+      </div>
+
+      <!-- 페이지네이션 -->
+      <div v-if="totalPages > 1" class="d-flex justify-content-center mt-4">
+        <nav aria-label="Page navigation">
+          <ul class="pagination">
+            <li class="page-item" :class="{ disabled: currentPage === 1 }">
+              <a class="page-link" href="#" @click.prevent="changePage(currentPage - 1)">&laquo;</a>
+            </li>
+            <li v-for="page in totalPages" :key="page" class="page-item" :class="{ active: currentPage === page }">
+              <a class="page-link" href="#" @click.prevent="changePage(page)">{{ page }}</a>
+            </li>
+            <li class="page-item" :class="{ disabled: currentPage === totalPages }">
+              <a class="page-link" href="#" @click.prevent="changePage(currentPage + 1)">&raquo;</a>
+            </li>
+          </ul>
+        </nav>
       </div>
     </div>
-    
-    <!-- 숙소 추가 버튼 -->
-    <router-link to="/accommodation/register-form" class="add-btn">
-      <i class="bi bi-plus-lg"></i>
-    </router-link>
   </div>
 </template>
 
-<script>
-export default {
-  name: 'HostAccommodations',
-  data() {
-    return {
-      // 알림 메시지
-      message: '',
-      
-      // 숙소 목록
-      accommodations: [],
-      
-      // 객실 목록 (숙소 ID별로 그룹화)
-      roomsByAccommodation: {},
-      
-      // 통계 데이터
-      totalRooms: 0,
-      activeAccommodations: 0,
-      averageRating: 0
-    };
-  },
-  created() {
-    // URL 쿼리 파라미터에서 메시지 가져오기
-    if (this.$route.query.message) {
-      this.message = this.$route.query.message;
-    }
-    
-    // 숙소 및 객실 데이터 로드
-    this.loadAccommodations();
-  },
-  methods: {
-    // 숙소 및 객실 데이터 로드
-    async loadAccommodations() {
-      try {
-        // API 호출
-        const response = await fetch('/api/host/accommodations');
-        if (!response.ok) {
-          throw new Error('숙소 정보를 불러오는데 실패했습니다.');
-        }
-        
-        const data = await response.json();
-        this.accommodations = data.accommodations;
-        this.roomsByAccommodation = data.roomsByAccommodation;
-        
-        // 통계 계산
-        this.calculateStatistics();
-      } catch (error) {
-        console.error('숙소 정보 로드 중 오류가 발생했습니다:', error);
-        this.message = '숙소 정보를 불러오는데 실패했습니다.';
-      }
-    },
-    
-    // 통계 계산
-    calculateStatistics() {
-      // 총 객실 수 계산
-      this.totalRooms = Object.values(this.roomsByAccommodation)
-        .reduce((total, rooms) => total + rooms.length, 0);
-      
-      // 활성 숙소 수 계산
-      this.activeAccommodations = this.accommodations
-        .filter(acc => acc.status === 'ACTIVE')
-        .length;
-      
-      // 평균 평점 계산
-      const totalRating = this.accommodations
-        .reduce((sum, acc) => sum + (acc.rating || 0), 0);
-      
-      this.averageRating = this.accommodations.length > 0
-        ? (totalRating / this.accommodations.length).toFixed(1)
-        : '0.0';
-    },
-    
-    // 숙소 ID에 해당하는 객실 목록 반환
-    getRooms(accommodationId) {
-      return this.roomsByAccommodation[accommodationId] || [];
-    },
-    
-    // 객실 삭제
-    async deleteRoom(roomId) {
-      if (!confirm('정말로 이 객실을 삭제하시겠습니까?')) {
-        return;
-      }
-      
-      try {
-        // API 호출
-        const response = await fetch(`/api/rooms/${roomId}`, {
-          method: 'DELETE'
-        });
-        
-        if (!response.ok) {
-          throw new Error('객실 삭제에 실패했습니다.');
-        }
-        
-        // 객실 목록 다시 로드
-        this.loadAccommodations();
-        this.message = '객실이 삭제되었습니다.';
-      } catch (error) {
-        console.error('객실 삭제 중 오류가 발생했습니다:', error);
-        this.message = '객실 삭제에 실패했습니다.';
-      }
-    },
-    
-    // 숙소 삭제
-    async deleteAccommodation(accommodationId) {
-      if (!confirm('정말로 이 숙소를 삭제하시겠습니까? 모든 객실 정보도 함께 삭제됩니다.')) {
-        return;
-      }
-      
-      try {
-        // API 호출
-        const response = await fetch(`/api/accommodations/${accommodationId}`, {
-          method: 'DELETE'
-        });
-        
-        if (!response.ok) {
-          throw new Error('숙소 삭제에 실패했습니다.');
-        }
-        
-        // 숙소 목록 다시 로드
-        this.loadAccommodations();
-        this.message = '숙소가 삭제되었습니다.';
-      } catch (error) {
-        console.error('숙소 삭제 중 오류가 발생했습니다:', error);
-        this.message = '숙소 삭제에 실패했습니다.';
-      }
-    },
-    
-    // 숙소 상태에 따른 배지 클래스 반환
-    getStatusBadgeClass(status) {
-      const baseClass = 'status-badge';
-      switch (status) {
-        case 'ACTIVE': return `${baseClass} status-active`;
-        case 'INACTIVE': return `${baseClass} status-inactive`;
-        case 'PENDING_REVIEW': return `${baseClass} status-pending`;
-        default: return baseClass;
-      }
-    },
-    
-    // 숙소 상태 텍스트 반환
-    getStatusText(status) {
-      switch (status) {
-        case 'ACTIVE': return '활성';
-        case 'INACTIVE': return '비활성';
-        case 'PENDING_REVIEW': return '검토중';
-        default: return status;
-      }
-    },
-    
-    // 금액 포맷팅
-    formatCurrency(amount) {
-      return new Intl.NumberFormat('ko-KR', {
-        style: 'currency',
-        currency: 'KRW',
-        maximumFractionDigits: 0
-      }).format(amount);
-    }
-  }
+<script setup>
+import { ref, computed, watch } from "vue";
+import { useRoute, useRouter, RouterLink } from "vue-router";
+import { useUserStore } from "@/store/userStore.js";
+import AccommodationCard from "@/components/host/HostAccommodationCard.vue";
+import SummaryCard from "@/components/common/SummaryCard.vue";
+import { getHostAccommodations } from "@/api/hostApi.js";
+import apiUtils from "@/api/index";
+import { ElMessage } from "element-plus";
+
+const { api } = apiUtils;
+
+const route = useRoute();
+const router = useRouter();
+const userStore = useUserStore();
+
+const host = ref(null);
+const allAccommodations = ref([]);
+const loading = ref(true);
+const error = ref("");
+const routeMessage = ref(route.query.message || "");
+
+const filters = ref({
+  title: route.query.title || "",
+  status: route.query.status || "",
+  sortBy: route.query.sortBy || "createdAtDesc",
+});
+const currentPage = ref(parseInt(route.query.page) || 1);
+const itemsPerPage = 12;
+const totalDbItems = ref(0);
+
+const clearRouteMessage = () => {
+  routeMessage.value = "";
+  const { message, ...queryWithoutMessage } = route.query;
+  router.replace({ query: queryWithoutMessage });
 };
+
+// 실제 API만 사용하는 함수로 변경
+async function fetchHostAndAccommodations() {
+  if (!userStore.isAuthenticated || !userStore.user?.id) {
+    loading.value = false;
+    host.value = null;
+    allAccommodations.value = [];
+    totalDbItems.value = 0;
+    return;
+  }
+
+  loading.value = true;
+  error.value = "";
+  try {
+    if (!host.value || host.value.userId !== userStore.user.id) {
+      const hostResponse = await api.get(`/api/host/user/${userStore.user.id}`);
+      host.value = hostResponse.data;
+    }
+
+    if (!host.value) {
+      allAccommodations.value = [];
+      totalDbItems.value = 0;
+      loading.value = false;
+      return;
+    }
+
+    if (host.value && host.value.status === "ACTIVE") {
+      // 실제 API만 호출
+      const response = await getHostAccommodations(
+        host.value.hostId,
+        filters.value.status || null,
+        filters.value.title || null,
+        currentPage.value,
+        itemsPerPage
+      );
+      allAccommodations.value = response.content || [];
+      totalDbItems.value = response.totalElements || 0;
+    } else {
+      allAccommodations.value = [];
+      totalDbItems.value = 0;
+    }
+  } catch (e) {
+    if (e.response && e.response.status === 404 && e.config.url.includes("/api/host/user/")) {
+      host.value = null;
+      error.value = "호스트 정보를 찾을 수 없습니다. 호스트로 등록해주세요.";
+    } else {
+      error.value = e.message || "데이터 로드 중 오류 발생";
+      console.error("Error fetching host details or accommodations:", e);
+    }
+    allAccommodations.value = [];
+    totalDbItems.value = 0;
+  } finally {
+    loading.value = false;
+  }
+}
+
+const triggerLoadAccommodations = () => {
+  fetchHostAndAccommodations();
+};
+
+const activeAccommodationsCount = computed(
+  () => allAccommodations.value.filter((acc) => acc.status === "ACTIVE").length
+);
+const pendingAccommodationsCount = computed(
+  () => allAccommodations.value.filter((acc) => acc.status === "PENDING_REVIEW").length
+);
+const totalRoomsCount = computed(() => allAccommodations.value.reduce((sum, acc) => sum + (acc.rooms?.length || 0), 0));
+
+const filteredAndSortedAccommodations = computed(() => {
+  let accommodationsToDisplay = [...allAccommodations.value];
+
+  accommodationsToDisplay.sort((a, b) => {
+    if (filters.value.sortBy === "titleAsc") {
+      return a.title.localeCompare(b.title);
+    }
+    if (filters.value.sortBy === "reviewCountDesc") {
+      return (b.reviewCount || 0) - (a.reviewCount || 0);
+    }
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  });
+  return accommodationsToDisplay;
+});
+
+const totalPages = computed(() => Math.ceil(totalDbItems.value / itemsPerPage));
+
+const paginatedAccommodations = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage;
+  const end = start + itemsPerPage;
+  return filteredAndSortedAccommodations.value.slice(start, end);
+});
+
+function changePage(page) {
+  if (page >= 1 && page <= totalPages.value && page !== currentPage.value) {
+    currentPage.value = page;
+    updateRouterQuery();
+  }
+}
+
+function resetFilters() {
+  filters.value.title = "";
+  filters.value.status = "";
+  filters.value.sortBy = "createdAtDesc";
+  currentPage.value = 1;
+  updateRouterQuery();
+}
+
+function updateRouterQuery() {
+  const query = {};
+  if (filters.value.title) query.title = filters.value.title;
+  if (filters.value.status) query.status = filters.value.status;
+  if (filters.value.sortBy && filters.value.sortBy !== "createdAtDesc") query.sortBy = filters.value.sortBy;
+  if (currentPage.value > 1) query.page = currentPage.value.toString();
+
+  if (routeMessage.value && route.query.message) {
+    query.message = route.query.message;
+  }
+
+  router.push({ query: Object.keys(query).length > 0 ? query : {} });
+}
+
+// userStore 또는 쿼리 변경에 따라 호출
+watch(
+  () => [userStore.isAuthenticated, userStore.user?.id],
+  async ([isAuth, userId]) => {
+    if (isAuth && userId) {
+      if (!route.query.page && !route.query.title && !route.query.status && !route.query.sortBy) {
+        await fetchHostAndAccommodations();
+      }
+    } else {
+      loading.value = false;
+      host.value = null;
+      allAccommodations.value = [];
+      totalDbItems.value = 0;
+      error.value = isAuth ? "사용자 ID를 찾을 수 없습니다." : "";
+    }
+  },
+  { immediate: true, deep: true }
+);
+
+watch(
+  () => route.query,
+  async (newQuery, oldQuery) => {
+    const newPage = parseInt(newQuery.page) || 1;
+    const newTitle = newQuery.title || "";
+    const newStatus = newQuery.status || "";
+    const newSortBy = newQuery.sortBy || "createdAtDesc";
+
+    let needsDataFetch = false;
+
+    if (currentPage.value !== newPage) {
+      currentPage.value = newPage;
+      needsDataFetch = true;
+    }
+    if (filters.value.title !== newTitle) {
+      filters.value.title = newTitle;
+      needsDataFetch = true;
+    }
+    if (filters.value.status !== newStatus) {
+      filters.value.status = newStatus;
+      needsDataFetch = true;
+    }
+    if (filters.value.sortBy !== newSortBy) {
+      filters.value.sortBy = newSortBy;
+    }
+
+    if (needsDataFetch && userStore.isAuthenticated && userStore.user?.id) {
+      await fetchHostAndAccommodations();
+    } else if (needsDataFetch && (!userStore.isAuthenticated || !userStore.user?.id)) {
+      allAccommodations.value = [];
+      totalDbItems.value = 0;
+    }
+  },
+  { deep: true, immediate: true }
+);
 </script>
 
 <style scoped>
-/* 숙소 카드 스타일 */
-.accommodation-card {
-  margin-bottom: 20px;
-  border-radius: 10px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  transition: transform 0.3s ease;
-  height: 100%;
-}
-.accommodation-card:hover {
-  transform: translateY(-5px);
-}
-
-/* 객실 카드 스타일 */
-.room-card {
-  margin-bottom: 15px;
-  border-radius: 8px;
-  border: 1px solid #dee2e6;
-}
-
-/* 이미지 스타일 */
-.card-img-top {
-  height: 200px;
-  object-fit: cover;
-  border-top-left-radius: 10px;
-  border-top-right-radius: 10px;
-}
-
-/* 상태 배지 스타일 */
-.status-badge {
-  font-size: 0.8rem;
-  padding: 5px 10px;
-  border-radius: 20px;
-}
-.status-active {
-  background-color: #198754;
-  color: white;
-}
-.status-inactive {
-  background-color: #dc3545;
-  color: white;
-}
-.status-pending {
-  background-color: #ffc107;
-  color: #212529;
-}
-
-/* 통계 카드 스타일 */
-.stats-card {
-  text-align: center;
-  margin-bottom: 20px;
-}
-
-/* 추가 버튼 스타일 */
-.add-btn {
-  position: fixed;
-  bottom: 30px;
-  right: 30px;
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  background-color: #0d6efd;
-  color: white;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-  z-index: 1000;
-  font-size: 1.5rem;
-  text-decoration: none;
-}
-.add-btn:hover {
-  background-color: #0b5ed7;
-  color: white;
+.alert {
+  font-size: 0.95rem;
 }
 </style>

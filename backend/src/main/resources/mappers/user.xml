@@ -7,26 +7,41 @@
 
     <!-- 새 사용자 등록 -->
     <insert id="insert" useGeneratedKeys="true" keyProperty="userId">
-        <choose>
-            <when test="userId != null">
-                INSERT INTO users (user_id, username, email, password, phone, role, status)
-                VALUES (#{userId}, #{username}, #{email}, #{password}, #{phone}, #{role}, #{status})
-            </when>
-            <otherwise>
-                INSERT INTO users (username, email, password, phone, role, status)
-                VALUES (#{username}, #{email}, #{password}, #{phone}, 'USER', 'ACTIVE')
-            </otherwise>
-        </choose>
+        INSERT INTO users (
+            username, email, password, phone, profile_image, 
+            role, status, refresh, created_at, updated_at
+        )
+        VALUES (
+            #{username}, #{email}, #{password}, #{phone}, #{profileImage}, 
+            <if test="role == null">'USER'</if><if test="role != null">#{role}</if>, 
+            <if test="userAccountStatus == null">'ACTIVE'</if><if test="userAccountStatus != null">#{userAccountStatus}</if>,
+            #{refreshToken},
+            NOW(), NOW()  <!-- 또는 데이터베이스 시스템에 따라 CURRENT_TIMESTAMP -->
+        )
     </insert>
 
     <!-- 로그인 -->
     <select id="login" resultMap="userMap">
-        SELECT * FROM users WHERE email = #{email} AND status = 'ACTIVE'
+        SELECT 
+            u.user_id, u.username, u.email, u.password, u.phone, u.profile_image, u.role, u.status, u.created_at, u.updated_at, u.refresh,
+            h.host_id, h.business_name, h.business_number, h.status AS host_registration_status
+        FROM users u
+        LEFT JOIN hosts h ON u.user_id = h.user_id
+        WHERE u.email = #{email} AND u.status = 'ACTIVE'
     </select>
 
     <!-- 이메일로 사용자 ID 찾기 -->
     <select id="findUserIdByEmail" resultType="long">
-        SELECT user_id FROM users WHERE email = #{email}
+        SELECT user_id FROM users WHERE email = #{email} AND status = 'ACTIVE'
+    </select>
+
+    <select id="findByRole" resultMap="userMap">
+        SELECT 
+            u.user_id, u.username, u.email, u.password, u.phone, u.profile_image, u.role, u.status, u.created_at, u.updated_at, u.refresh,
+            h.host_id, h.business_name, h.business_number, h.status AS host_registration_status
+        FROM users u
+        LEFT JOIN hosts h ON u.user_id = h.user_id
+        WHERE u.role = #{role}
     </select>
 
     <resultMap id="userMap" type="com.ssafy.trip.user.User">
@@ -35,56 +50,118 @@
         <result property="email" column="email" />
         <result property="password" column="password" />
         <result property="phone" column="phone" />
+        <result property="profileImage" column="profile_image" />
         <result property="role" column="role" />
-        <result property="status" column="status" />
+        <result property="userAccountStatus" column="status" />
         <result property="createdAt" column="created_at" />
         <result property="updatedAt" column="updated_at" />
+        <result property="refreshToken" column="refresh" />
+        <result property="hostId" column="host_id" />
+        <result property="businessName" column="business_name" />
+        <result property="businessNumber" column="business_number" />
+        <result property="hostRegistrationStatus" column="host_registration_status" />
     </resultMap>
+
     <select id="getUserByEmail" resultMap="userMap">
-        SELECT * FROM users WHERE email = #{email}
+        SELECT 
+            u.user_id, u.username, u.email, u.password, u.phone, u.profile_image, u.role, u.status, u.created_at, u.updated_at, u.refresh,
+            h.host_id, h.business_name, h.business_number, h.status AS host_registration_status
+        FROM users u
+        LEFT JOIN hosts h ON u.user_id = h.user_id
+        WHERE u.email = #{email}
+    </select>
+
+    <!-- 사용자 ID로 사용자 정보 조회 -->
+    <select id="selectUserById" resultMap="userMap">
+        SELECT 
+            u.user_id, u.username, u.email, u.phone, u.profile_image, u.role, u.status, u.created_at, u.updated_at, u.refresh,
+            h.host_id, h.business_name, h.business_number, h.status AS host_registration_status
+        FROM users u
+        LEFT JOIN hosts h ON u.user_id = h.user_id
+        WHERE u.user_id = #{userId}
     </select>
 
     <!-- 모든 사용자 조회 -->
-    <select id="getUsers" resultType="com.ssafy.trip.user.User">
-        SELECT * FROM users
+    <select id="getUsers" resultMap="userMap">
+        SELECT 
+            u.user_id, u.username, u.email, u.phone, u.profile_image, u.role, u.status, u.created_at, u.updated_at, u.refresh,
+            h.host_id, h.business_name, h.business_number, h.status AS host_registration_status
+        FROM users u
+        LEFT JOIN hosts h ON u.user_id = h.user_id
     </select>
 
-    <!-- 사용자 정보 업데이트 -->
-    <update id="updateUser">
+    <!-- 사용자 정보 업데이트 (이름, 전화번호) -->
+    <update id="updateUserInfo">
         UPDATE users
-        SET username = #{username}
-        <if test="password != null">
-            , password = #{password}
-        </if>
-        WHERE email = #{email}
+        SET 
+            <if test="username != null and username != ''">username = #{username},</if>
+            <if test="phone != null">phone = #{phone},</if>
+            updated_at = CURRENT_TIMESTAMP
+        WHERE user_id = #{userId}
     </update>
 
-    <!-- 사용자 삭제 -->
+    <!-- 사용자 프로필 이미지 업데이트 -->
+    <update id="updateUserProfileImage">
+        UPDATE users
+        SET profile_image = #{profileImage},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE user_id = #{userId}
+    </update>
+
+    <!-- 사용자 비밀번호 업데이트 -->
+    <update id="updateUserPassword">
+        UPDATE users
+        SET password = #{password},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE user_id = #{userId}
+    </update>
+    
+    <!-- 사용자 정보 업데이트 (User.java 객체의 모든 변경 가능한 필드 업데이트용) -->
+    <!-- UserServiceImpl의 updateUser에서 사용 고려 -->
+    <update id="updateUserGeneral">
+        UPDATE users
+        <set>
+            <if test="username != null and username != ''">username = #{username},</if>
+            <if test="password != null and password != ''">password = #{password},</if> <!-- 비밀번호는 암호화되어 넘어와야 함 -->
+            <if test="phone != null">phone = #{phone},</if>
+            <if test="profileImage != null">profile_image = #{profileImage},</if>
+            <if test="role != null and role != ''">role = #{role},</if>
+            <if test="userAccountStatus != null and userAccountStatus != ''">status = #{userAccountStatus},</if>
+            <if test="refreshToken != null">refresh = #{refreshToken},</if>
+            updated_at = CURRENT_TIMESTAMP
+        </set>
+        WHERE user_id = #{userId}
+    </update>
+
+    <!-- 사용자를 email 기준으로 삭제 -->
     <delete id="deleteUser">
         DELETE FROM users WHERE email = #{email}
     </delete>
 
-    <!-- 비밀번호 찾기 -->
+    <!-- 이름과 이메일로 비밀번호 찾기 (현재 서비스 로직에서 사용 비권장) -->
     <select id="findPassword" resultType="String">
         SELECT password FROM users
-        WHERE username = #{username} AND email = #{email}
+        WHERE username = #{username} AND email = #{email} AND status = 'ACTIVE'
     </select>
 
     <update id="updateUserRole">
         UPDATE users
-        SET role = #{role}
+        SET role = #{role},
+            updated_at = CURRENT_TIMESTAMP
         WHERE user_id = #{userId}
     </update>
 
     <update id="updateUserStatus">
         UPDATE users
-        SET status = #{status}
+        SET status = #{status},
+            updated_at = CURRENT_TIMESTAMP
         WHERE user_id = #{userId}
     </update>
 
     <update id="updateUserRefreshToken">
         UPDATE users
-        SET refresh = #{refreshToken}
+        SET refresh = #{refreshToken},
+            updated_at = CURRENT_TIMESTAMP
         WHERE user_id = #{userId}
     </update>
 

@@ -24,9 +24,14 @@
         <result property="checkOutTime" column="check_out_time" />
         <result property="amenities" column="amenities" />
         <result property="status" column="status" />
+        <result property="avgReviewRating" column="avg_review_rating" />
+        <result property="reviewCount" column="review_count" />
+        <result property="recommendScore" column="recommend_score" />
+        <result property="minRoomPrice" column="min_room_price" />
+        <result property="maxRoomPrice" column="max_room_price" />
         <result property="createdAt" column="created_at" />
         <result property="updatedAt" column="updated_at" />
-        <result property="hostName" column="host_name" />
+        <result property="hostName" column="host_business_name" />
         <result property="mainImageUrl" column="main_image_url" />
         <result property="thumbnailImageUrl" column="thumbnail_image_url" />
     </resultMap>
@@ -58,13 +63,19 @@
     <insert id="insert" useGeneratedKeys="true" keyProperty="accommodationId">
         INSERT INTO accommodations (
             host_id, title, description, address, sido_code, gugun_code, 
-            latitude, longitude, status, 
-            check_in_time, check_out_time, amenities, created_at, updated_at
+            latitude, longitude, accommodation_type, phone, email, website, status,
+            check_in_time, check_out_time, amenities, 
+            avg_review_rating, review_count, recommend_score,
+            min_room_price, max_room_price,
+            created_at, updated_at
         )
         VALUES (
             #{hostId}, #{title}, #{description}, #{address}, #{sidoCode}, #{gugunCode}, 
-            #{latitude}, #{longitude}, #{status}, 
-            #{checkInTime}, #{checkOutTime}, #{amenities}, NOW(), NOW()
+            #{latitude}, #{longitude}, #{accommodationType}, #{phone}, #{email}, #{website}, #{status}, 
+            #{checkInTime}, #{checkOutTime}, #{amenities}, 
+            0.0, 0, 0.0,
+            0.0, 0.0,
+            NOW(), NOW()
         )
     </insert>
 
@@ -72,9 +83,9 @@
     <select id="getAccommodationById" resultMap="accommodationResultMap">
         SELECT 
             a.*, 
-            u.username as host_name
+            h.business_name as host_business_name
         FROM accommodations a
-        LEFT JOIN users u ON a.host_id = u.user_id
+        LEFT JOIN hosts h ON a.host_id = h.host_id
         WHERE a.accommodation_id = #{accommodationId}
     </select>
 
@@ -82,9 +93,9 @@
     <select id="getAccommodationsByHostId" resultMap="accommodationResultMap">
         SELECT 
             a.*, 
-            u.username as host_name
+            h.business_name as host_business_name
         FROM accommodations a
-        LEFT JOIN users u ON a.host_id = u.user_id
+        LEFT JOIN hosts h ON a.host_id = h.host_id
         WHERE a.host_id = #{hostId}
     </select>
 
@@ -92,9 +103,9 @@
     <select id="getAccommodationsByRegion" resultMap="accommodationResultMap">
         SELECT 
             a.*, 
-            u.username as host_name
+            h.business_name as host_business_name
         FROM accommodations a
-        LEFT JOIN users u ON a.host_id = u.user_id
+        LEFT JOIN hosts h ON a.host_id = h.host_id
         WHERE a.sido_code = #{sidoCode}
         <if test="gugunCode != null">
             AND a.gugun_code = #{gugunCode}
@@ -105,31 +116,43 @@
     <select id="searchAccommodations" resultMap="accommodationResultMap">
         SELECT 
             a.*, 
-            u.username as host_name
+            h.business_name as host_business_name
         FROM accommodations a
-        LEFT JOIN users u ON a.host_id = u.user_id
-        WHERE a.title LIKE CONCAT('%', #{keyword}, '%')
+        LEFT JOIN hosts h ON a.host_id = h.host_id
+        WHERE (a.title LIKE CONCAT('%', #{keyword}, '%')
         OR a.description LIKE CONCAT('%', #{keyword}, '%')
-        OR a.address LIKE CONCAT('%', #{keyword}, '%')
+        OR a.address LIKE CONCAT('%', #{keyword}, '%'))
+        AND a.status = 'ACTIVE'
     </select>
-
-    <!-- 숙소 정보를 업데이트합니다. -->
-    <update id="updateAccommodation">
+    <!-- 기존 숙소 수정 -->
+    <update id="updateAccommodation" parameterType="com.ssafy.trip.accommodation.model.Accommodation">
         UPDATE accommodations
-        SET 
-            title = #{title},
-            description = #{description},
-            address = #{address},
-            sido_code = #{sidoCode},
-            gugun_code = #{gugunCode},
-            latitude = #{latitude},
-            longitude = #{longitude},
-            check_in_time = #{checkInTime},
-            check_out_time = #{checkOutTime},
-            amenities = #{amenities},
+        <set>
+            <if test="title != null">title = #{title},</if>
+            <if test="accommodationType != null">accommodation_type = #{accommodationType},</if>
+            <if test="description != null">description = #{description},</if>
+            <if test="address != null">address = #{address},</if>
+            <if test="sidoCode != null">sido_code = #{sidoCode},</if>
+            <if test="gugunCode != null">gugun_code = #{gugunCode},</if>
+            <if test="latitude != null">latitude = #{latitude},</if>
+            <if test="longitude != null">longitude = #{longitude},</if>
+            <if test="mainImageUrl != null">main_image_url = #{mainImageUrl},</if>
+            <if test="thumbnailImageUrl != null">thumbnail_image_url = #{thumbnailImageUrl},</if>
+            <if test="phoneNumber != null">phone_number = #{phoneNumber},</if>
+            <if test="checkInTime != null">check_in_time = #{checkInTime},</if>
+            <if test="checkOutTime != null">check_out_time = #{checkOutTime},</if>
+            <if test="amenities != null">amenities = #{amenities},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="minRoomPrice != null">min_room_price = #{minRoomPrice},</if>
+            <if test="maxRoomPrice != null">max_room_price = #{maxRoomPrice},</if>
+            <if test="avgRating != null">avg_rating = #{avgRating},</if>
+            <if test="reviewCount != null">review_count = #{reviewCount},</if>
+            <if test="wishlistCount != null">wishlist_count = #{wishlistCount},</if>
             updated_at = NOW()
+        </set>
         WHERE accommodation_id = #{accommodationId}
     </update>
+
 
     <!-- 숙소 상태를 업데이트합니다. -->
     <update id="updateAccommodationStatus">
@@ -152,9 +175,9 @@
     <select id="getAllAccommodations" resultMap="accommodationResultMap">
         SELECT 
             a.*, 
-            u.username as host_name
+            h.business_name as host_business_name
         FROM accommodations a
-        LEFT JOIN users u ON a.host_id = u.user_id
+        LEFT JOIN hosts h ON a.host_id = h.host_id
         WHERE a.accommodation_id IS NOT NULL
     </select>
 
@@ -164,7 +187,7 @@
         SELECT
             COUNT(*)
         FROM accommodations a
-        LEFT JOIN users u ON a.host_id = u.user_id
+        LEFT JOIN hosts h ON a.host_id = h.host_id
         <where>
             a.accommodation_id IS NOT NULL
 
@@ -197,13 +220,13 @@
                 SELECT 1 FROM rooms r
                 WHERE r.accommodation_id = a.accommodation_id
                 <if test="minPrice != null and maxPrice != null">
-                    AND r.price BETWEEN #{minPrice} AND #{maxPrice}
+                    AND r.price_per_night BETWEEN #{minPrice} AND #{maxPrice}
                 </if>
                 <if test="minPrice != null and maxPrice == null">
-                    AND r.price &gt;= #{minPrice}
+                    AND r.price_per_night &gt;= #{minPrice}
                 </if>
                 <if test="minPrice == null and maxPrice != null">
-                    AND r.price &lt;= #{maxPrice}
+                    AND r.price_per_night &lt;= #{maxPrice}
                 </if>
                 )
             </if>
@@ -224,9 +247,9 @@
     <select id="getFilteredAccommodations" resultMap="accommodationResultMap" parameterType="map">
         SELECT
         a.*,
-        u.username AS host_name
+        h.business_name AS host_business_name
         FROM accommodations a
-        LEFT JOIN users u ON a.host_id = u.user_id
+        LEFT JOIN hosts h ON a.host_id = h.host_id
 
         <where>
             a.accommodation_id IS NOT NULL
@@ -260,13 +283,13 @@
                 SELECT 1 FROM rooms r
                 WHERE r.accommodation_id = a.accommodation_id
                 <if test="minPrice != null and maxPrice != null">
-                    AND r.price BETWEEN #{minPrice} AND #{maxPrice}
+                    AND r.price_per_night BETWEEN #{minPrice} AND #{maxPrice}
                 </if>
                 <if test="minPrice != null and maxPrice == null">
-                    AND r.price &gt;= #{minPrice}
+                    AND r.price_per_night &gt;= #{minPrice}
                 </if>
                 <if test="minPrice == null and maxPrice != null">
-                    AND r.price &lt;= #{maxPrice}
+                    AND r.price_per_night &lt;= #{maxPrice}
                 </if>
                 )
             </if>
@@ -286,16 +309,22 @@
         <if test="sortBy != null and sortBy != ''">
             ORDER BY
             <choose>
-                <!-- <when test="sortBy == 'priceAsc'">a.min_price ASC</when> --> <!-- 임시 주석 처리 -->
-                <!-- <when test="sortBy == 'priceDesc'">a.min_price DESC</when> --> <!-- 임시 주석 처리 -->
-                <when test="sortBy == 'priceAsc'">a.title ASC</when> <!-- 임시로 title 정렬 사용 -->
-                <when test="sortBy == 'priceDesc'">a.title DESC</when> <!-- 임시로 title 정렬 사용 -->
-                <when test="sortBy == 'name'">a.title ASC</when>
-                <when test="sortBy == 'created_at_desc'">a.created_at DESC</when>
-                <otherwise>a.created_at DESC</otherwise>
+                <when test="sortBy == 'title'">a.title</when>
+                <when test="sortBy == 'status'">a.status</when>
+                <when test="sortBy == 'createdAt'">a.created_at</when>
+                <when test="sortBy == 'recommendScore'">a.recommend_score</when>
+                <when test="sortBy == 'reviewCount'">a.review_count</when>
+                <when test="sortBy == 'minRoomPrice'">a.min_room_price</when>
+                <!-- 필요한 다른 정렬 기준 컬럼 추가 -->
+                <otherwise>a.created_at</otherwise> <!-- 잘못된 sortBy 값이 오면 기본 정렬 -->
+            </choose>
+            <choose>
+                <when test="sortDirection == 'ASC'">ASC</when>
+                <when test="sortDirection == 'DESC'">DESC</when>
+                <otherwise>DESC</otherwise> <!-- 기본 정렬 방향 -->
             </choose>
         </if>
-        <if test="sortBy == null or sortBy == ''"> <!-- 기본 정렬 추가 -->
+        <if test="sortBy == null or sortBy == ''"> <!-- 기본 정렬: 최신순 -->
             ORDER BY a.created_at DESC
         </if>
 
@@ -354,12 +383,12 @@
     <select id="getSimilarAccommodations" resultMap="accommodationResultMap" parameterType="map">
         SELECT
             a.*,
-            u.username as host_name,
+            h.business_name as host_business_name,
             sd.sido_name as sido_name,
             gg.gugun_name as gugun_name
         FROM accommodations a
         JOIN accommodations base ON a.sido_code = base.sido_code AND a.gugun_code = base.gugun_code
-        LEFT JOIN users u ON a.host_id = u.user_id
+        LEFT JOIN hosts h ON a.host_id = h.host_id
         LEFT JOIN sido sd ON a.sido_code = sd.sido_code
         LEFT JOIN gugun gg ON a.gugun_code = gg.gugun_code
         WHERE base.accommodation_id = #{accommodationId}
@@ -369,4 +398,47 @@
         ORDER BY RAND()
         LIMIT #{limit}
     </select>
+
+    <!-- 숙소 리뷰 통계 업데이트 -->
+    <update id="updateReviewStats">
+        UPDATE accommodations
+        SET
+            avg_review_rating = #{avgReviewRating, jdbcType=DECIMAL},
+            review_count = #{reviewCount, jdbcType=INTEGER},
+            recommend_score = #{recommendScore, jdbcType=DOUBLE},
+            updated_at = NOW()
+        WHERE accommodation_id = #{accommodationId}
+    </update>
+
+    <!-- 숙소 객실 가격 통계 업데이트 -->
+    <update id="updateRoomPriceStats">
+        UPDATE accommodations
+        SET
+            min_room_price = #{minRoomPrice, jdbcType=DECIMAL},
+            max_room_price = #{maxRoomPrice, jdbcType=DECIMAL},
+            updated_at = NOW()
+        WHERE accommodation_id = #{accommodationId}
+    </update>
+
+    <!-- 숙소 유형별 카운트 (대시보드용) -->
+    <select id="selectAccommodationTypeCounts" resultType="map">
+        SELECT accommodation_type, COUNT(*) AS value
+        FROM accommodations
+        GROUP BY accommodation_type
+    </select>
+
+    <!-- 새 숙소 등록 -->
+    <insert id="insertAccommodation" parameterType="com.ssafy.trip.accommodation.model.Accommodation" useGeneratedKeys="true" keyProperty="accommodationId" keyColumn="accommodation_id">
+        INSERT INTO accommodations (
+            host_id, title, accommodation_type, description, address, sido_code, gugun_code,
+            latitude, longitude, main_image_url, thumbnail_image_url, phone_number,
+            check_in_time, check_out_time, amenities, status, created_at, updated_at
+        ) VALUES (
+            #{hostId}, #{title}, #{accommodationType}, #{description}, #{address}, #{sidoCode}, #{gugunCode},
+            #{latitude}, #{longitude}, #{mainImageUrl}, #{thumbnailImageUrl}, #{phoneNumber},
+            #{checkInTime}, #{checkOutTime}, #{amenities}, #{status}, #{createdAt}, #{updatedAt}
+        )
+    </insert>
+
+
 </mapper>

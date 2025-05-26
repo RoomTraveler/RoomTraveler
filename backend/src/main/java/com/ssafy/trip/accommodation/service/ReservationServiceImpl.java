@@ -8,8 +8,8 @@ import com.ssafy.trip.accommodation.model.Accommodation;
 import com.ssafy.trip.accommodation.model.Reservation;
 import com.ssafy.trip.accommodation.model.Room;
 import com.ssafy.trip.accommodation.model.RoomAvailability;
-// import com.ssafy.trip.review.Review; // Review 모델은 더 이상 직접 사용하지 않음
-// import com.ssafy.trip.review.ReviewService; // ReviewService 의존성 제거
+// import com.ssafy.trip.review.model.Review; // Review 모델은 더 이상 직접 사용하지 않음
+// import com.ssafy.trip.review.service.ReviewService; // ReviewService 의존성 제거
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +29,14 @@ import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 // import java.io.IOException; // MultipartFile 관련 import도 ReviewService와 함께 제거될 수 있음 (현재는 사용되지 않음)
 // import org.springframework.web.multipart.MultipartFile; // ReviewService와 함께 제거될 수 있음 (현재는 사용되지 않음)
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import org.slf4j.LoggerFactory; // 잠시 추가, Slf4j 없을 경우 대비
+import lombok.extern.slf4j.Slf4j; // Slf4j 어노테이션 추가
 
 /**
  * 예약 서비스 구현 클래스
@@ -37,6 +45,7 @@ import lombok.RequiredArgsConstructor;
  */
 @Service
 @RequiredArgsConstructor
+@Slf4j // Slf4j 로거 어노테이션 추가
 public class ReservationServiceImpl implements ReservationService {
 
     private final ReservationDao reservationDao;
@@ -628,5 +637,45 @@ public class ReservationServiceImpl implements ReservationService {
         }
         System.out.println("[ReservationService] Final minAvailableAcrossDates=" + minAvailableAcrossDates + " for room " + room.getRoomId());
         return minAvailableAcrossDates;
+    }
+
+    @Override
+    public Page<Reservation> getReservationsByHostIdWithFiltersAndPaging(Long hostId, String status, String checkInDateStr, String guestName, String sortBy, Pageable pageable) {
+        // 정렬 처리 (sortBy 파라미터 기반)
+        // 예: "createdAtDesc" -> Sort.by(Sort.Direction.DESC, "createdAt")
+        //      "checkInDateAsc" -> Sort.by(Sort.Direction.ASC, "checkInDate")
+        // Pageable 객체에 이미 sort 정보가 포함되어 올 수 있으므로, 서비스 또는 DAO 레벨에서 sortBy 문자열을 해석하여 Sort 객체를 만들고
+        // 이를 PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort) 형태로 조합하여 DAO에 전달할 수 있습니다.
+        // 또는 DAO에서 sortBy 문자열을 직접 사용하여 동적 쿼리를 생성할 수도 있습니다.
+
+        // MyBatis Mapper에 전달할 파라미터맵 생성
+        Map<String, Object> params = new HashMap<>();
+        params.put("hostId", hostId);
+        if (status != null && !status.isEmpty()) {
+            params.put("status", status);
+        }
+        if (checkInDateStr != null && !checkInDateStr.isEmpty()) {
+            try {
+                // 날짜 형식 검증 및 변환 (필요시)
+                LocalDate checkInDate = LocalDate.parse(checkInDateStr, DateTimeFormatter.ISO_LOCAL_DATE);
+                params.put("checkInDate", checkInDate);
+            } catch (DateTimeParseException e) {
+                // 날짜 형식이 잘못된 경우 로그를 남기거나 예외 처리
+                log.warn("Invalid checkInDate format: {}", checkInDateStr);
+                // 또는 params.put("checkInDate", null); 또는 예외 발생
+            }
+        }
+        if (guestName != null && !guestName.trim().isEmpty()) {
+            params.put("guestName", guestName.trim());
+        }
+        params.put("sortBy", sortBy); // DAO에서 이 값을 사용하여 ORDER BY 절 구성
+        params.put("offset", pageable.getOffset());
+        params.put("limit", pageable.getPageSize());
+
+        // DAO 호출
+        List<Reservation> reservations = reservationDao.findReservationsByHostWithFiltersAndPaging(params);
+        long total = reservationDao.countReservationsByHostWithFilters(params);
+
+        return new PageImpl<>(reservations, pageable, total);
     }
 }

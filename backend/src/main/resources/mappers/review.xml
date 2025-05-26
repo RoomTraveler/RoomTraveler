@@ -3,7 +3,7 @@
   PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
   "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.ssafy.trip.review.ReviewDao">
+<mapper namespace="com.ssafy.trip.review.dao.ReviewDao">
 
     <!--
     리뷰 이미지 테이블 (review_images) 생성 DDL 예시:
@@ -23,7 +23,7 @@
     -->
 
     <!-- ReviewImage 결과 매핑 정의 -->
-    <resultMap id="reviewImageResultMap" type="com.ssafy.trip.review.ReviewImage">
+    <resultMap id="reviewImageResultMap" type="com.ssafy.trip.review.model.ReviewImage">
         <id property="imageId" column="image_id" />
         <result property="reviewId" column="review_id" />
         <result property="imageUrl" column="image_url" />
@@ -35,7 +35,7 @@
     </resultMap>
 
     <!-- 결과 매핑 정의 -->
-    <resultMap id="reviewResultMap" type="com.ssafy.trip.review.Review">
+    <resultMap id="reviewResultMap" type="com.ssafy.trip.review.model.Review">
         <id property="reviewId" column="review_id" />
         <result property="accommodationId" column="accommodation_id" />
         <result property="userId" column="user_id" />
@@ -52,7 +52,7 @@
         <result property="accommodationTitle" column="accommodation_title" />
         <result property="userProfileImage" column="user_profile_image" />
         <!-- 리뷰 이미지 목록을 위한 collection 추가 -->
-        <collection property="images" ofType="com.ssafy.trip.review.ReviewImage"
+        <collection property="images" ofType="com.ssafy.trip.review.model.ReviewImage"
                     select="selectReviewImagesByReviewId" column="review_id" />
     </resultMap>
 
@@ -89,6 +89,15 @@
         LEFT JOIN accommodations a ON r.accommodation_id = a.accommodation_id
         WHERE r.user_id = #{userId}
         ORDER BY r.created_at DESC
+    </select>
+
+    <!-- 숙소 ID로 리뷰 통계(평균 별점, 리뷰 수) 조회 -->
+    <select id="selectReviewStatsByAccommodationId" resultType="java.util.Map">
+        SELECT
+            COALESCE(AVG(rating), 0.0) as avg_rating,
+            COUNT(review_id) as review_count
+        FROM reviews
+        WHERE accommodation_id = #{accommodationId} AND status = 'ACTIVE'
     </select>
 
     <!-- 숙소 ID로 리뷰 평균 평점 조회 -->
@@ -237,7 +246,7 @@
 
     <!-- 리뷰 이미지 관련 쿼리 -->
     <!-- 단일 리뷰 이미지 추가 -->
-    <insert id="insertReviewImage" parameterType="com.ssafy.trip.review.ReviewImage" useGeneratedKeys="true" keyProperty="imageId">
+    <insert id="insertReviewImage" parameterType="com.ssafy.trip.review.model.ReviewImage" useGeneratedKeys="true" keyProperty="imageId">
         INSERT INTO review_images (review_id, image_url, is_thumbnail, sort_order, caption)
         VALUES (#{reviewId}, #{imageUrl}, #{isThumbnail}, #{sortOrder}, #{caption})
     </insert>
@@ -308,7 +317,7 @@
     </update>
 
     <!-- (선택적) 이미지의 모든 정보 업데이트 -->
-    <update id="updateReviewImage" parameterType="com.ssafy.trip.review.ReviewImage">
+    <update id="updateReviewImage" parameterType="com.ssafy.trip.review.model.ReviewImage">
         UPDATE review_images
         SET
             image_url = #{imageUrl},

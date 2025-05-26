@@ -1,17 +1,20 @@
 <template>
   <div
-    class="flex flex-row items-stretch max-w-[768px] mx-auto bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden gap-x-0 pl-4"
-    style="min-height: 198px"
-    :class="{ 'disabled-item': !isBookable }"
+      class="d-flex flex-row align-items-stretch mx-auto bg-white rounded shadow border overflow-hidden"
+      style="max-width:768px; min-height:198px; gap:0; padding-left:1rem;"
+      :class="{ 'disabled-item': !isBookable }"
   >
+    <!-- 객실 이미지/캐러셀 카드 -->
     <RoomCard :room="room" @view-detail="emitViewDetail" />
-    <div class="border-l border-gray-200 flex flex-col flex-1">
+
+    <!-- 객실 정보 표시 영역 -->
+    <div class="border-start flex-grow-1 d-flex flex-column h-100">
       <RoomInfoDisplay
-        :room-info="room"
-        @view-detail="emitViewDetail"
-        @book-room="emitBookRoom"
-        @add-to-cart="emitAddToCart"
-        class="h-full"
+          :room-info="room"
+          @view-detail="emitViewDetail"
+          @book-room="emitBookRoom"
+          @add-to-cart="emitAddToCart"
+          class="h-100"
       />
     </div>
   </div>
@@ -22,8 +25,7 @@ import { PropType } from "vue";
 import RoomCard from "./RoomCard.vue";
 import RoomInfoDisplay from "./RoomInfoDisplay.vue";
 
-// Define the Room interface based on what RoomCard and RoomInfoDisplay expect.
-// This should be consistent with the Room interface used in AccommodationDetail.
+// RoomCard, RoomInfoDisplay에서 요구하는 Room 타입을 정의
 interface Room {
   roomId: number;
   name?: string;
@@ -42,9 +44,10 @@ interface Room {
   checkOutTime?: string;
   mainImageUrl?: string;
   imageUrls?: string[];
-  // Add any other fields if necessary based on props of RoomCard/RoomInfoDisplay
+  // 필요에 따라 추가 필드 정의
 }
 
+// props 정의 (객실 정보, 예약 가능 여부)
 const props = defineProps({
   room: {
     type: Object as PropType<Room>,
@@ -52,50 +55,54 @@ const props = defineProps({
   },
   isBookable: {
     type: Boolean,
-    default: true, // 기본적으로 예약 가능하다고 가정
+    default: true, // 기본값: 예약 가능
   },
 });
 
+// 부모 컴포넌트로 이벤트 전달
 const emit = defineEmits(["view-detail", "book-room", "add-to-cart"]);
 
+/**
+ * 상세보기 버튼/이벤트를 클릭했을 때 호출
+ */
 const emitViewDetail = () => {
   if (!props.isBookable) {
-    // 선택적으로 사용자에게 알림 (예: 부모 컴포넌트에서 토스트 메시지)
-    console.log("RoomListItem: View detail for non-bookable room blocked.");
+    // 예약 불가 시 상세보기 차단 (선택)
+    console.log("RoomListItem: 예약 불가 객실 상세보기 차단됨");
     return;
   }
   emit("view-detail", props.room.roomId);
 };
 
+/**
+ * 예약하기 버튼/이벤트를 클릭했을 때 호출
+ */
 const emitBookRoom = () => {
   if (!props.isBookable) {
-    console.log("RoomListItem: Book room for non-bookable room blocked.");
+    console.log("RoomListItem: 예약 불가 객실 예약 차단됨");
     return;
   }
   emit("book-room", props.room.roomId);
 };
 
+/**
+ * 장바구니 담기 버튼/이벤트를 클릭했을 때 호출
+ */
 const emitAddToCart = () => {
   if (!props.isBookable) {
-    console.log("RoomListItem: Add to cart for non-bookable room blocked.");
+    console.log("RoomListItem: 예약 불가 객실 장바구니 차단됨");
     return;
   }
-  // emit("add-to-cart", props.room.roomId); // RoomInfoDisplay에서 room 객체 전체를 emit하므로 여기서는 주석 처리
-  // AccommodationDetail.vue에서 room 객체 전체를 받도록 수정되었으므로, RoomListItem도 room 객체 전체를 emit하도록 통일합니다.
+  // roomId만 넘기는게 아니라, room 객체 전체를 부모로 전달
   emit("add-to-cart", props.room);
 };
 </script>
 
 <style scoped>
+/* 예약 불가 상태 시 전체 영역 흐림/비활성화 */
 .disabled-item {
   opacity: 0.6;
   cursor: not-allowed;
-  pointer-events: none; /* 하위 요소 클릭도 막음 */
-}
-.disabled-item :deep(button) {
-  /* pointer-events: none; 이미 상위에서 처리 */
-}
-.disabled-item :deep(a) {
-  /* pointer-events: none; 이미 상위에서 처리 */
+  pointer-events: none; /* 하위 모든 요소 클릭 차단 */
 }
 </style>

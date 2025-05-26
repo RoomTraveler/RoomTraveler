@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.ssafy.trip.accommodation.dao.CartDao">
+<mapper namespace="com.ssafy.trip.cart.dao.CartDao">
 
     <!-- 장바구니 조회 -->
     <select id="getCartByUserId" parameterType="long" resultMap="cartResultMap">
@@ -17,12 +17,17 @@
     </insert>
     
     <!-- 장바구니 아이템 추가 -->
-    <insert id="addCartItem" parameterType="com.ssafy.trip.accommodation.model.CartItem" useGeneratedKeys="true" keyProperty="cartItemId">
+    <insert id="addCartItem" parameterType="com.ssafy.trip.cart.model.CartItem" useGeneratedKeys="true" keyProperty="cartItemId">
         INSERT INTO cart_items (cart_id, room_id, check_in_date, check_out_date, guest_count, price)
         VALUES (#{cartId}, #{roomId}, #{checkInDate}, #{checkOutDate}, #{guestCount}, #{price})
+        ON DUPLICATE KEY UPDATE
+        guest_count = VALUES(guest_count),
+        price = VALUES(price),
+        updated_at = NOW(),
+        deleted_at = NULL -- 이미 담겨있던 아이템이 soft delete된 상태였다면, 다시 추가될 때 deleted_at을 NULL로 초기화
     </insert>
     
-    <!-- 장바구니 아이템 조회 -->
+    <!-- 장바구니 아이템 조회 (soft delete된 아이템 제외) -->
     <select id="getCartItems" parameterType="long" resultMap="cartItemResultMap">
         SELECT ci.cart_item_id, ci.cart_id, ci.room_id, ci.check_in_date, ci.check_out_date, 
                ci.guest_count, ci.price, ci.created_at, ci.updated_at,
@@ -31,34 +36,43 @@
         FROM cart_items ci
         JOIN rooms r ON ci.room_id = r.room_id
         JOIN accommodations a ON r.accommodation_id = a.accommodation_id
-        WHERE ci.cart_id = #{cartId}
+        WHERE ci.cart_id = #{cartId} AND ci.deleted_at IS NULL -- soft delete된 아이템 제외 조건 추가
         ORDER BY ci.created_at DESC
     </select>
     
-    <!-- 장바구니 아이템 삭제 -->
-    <delete id="removeCartItem" parameterType="long">
-        DELETE FROM cart_items
-        WHERE cart_item_id = #{cartItemId}
-    </delete>
+    <!-- 장바구니 아이템 soft delete -->
+    <update id="softDeleteCartItem" parameterType="long">
+        UPDATE cart_items
+        SET deleted_at = NOW()
+        WHERE cart_item_id = #{cartItemId} AND deleted_at IS NULL
+    </update>
     
-    <!-- 장바구니 비우기 -->
-    <delete id="clearCart" parameterType="long">
-        DELETE FROM cart_items
-        WHERE cart_id = #{cartId}
-    </delete>
+    <!-- 장바구니 비우기 (모든 아이템 soft delete) -->
+    <update id="softDeleteAllCartItems" parameterType="long">
+        UPDATE cart_items
+        SET deleted_at = NOW()
+        WHERE cart_id = #{cartId} AND deleted_at IS NULL
+    </update>
     
-    <!-- 장바구니 아이템 업데이트 -->
-    <update id="updateCartItem" parameterType="com.ssafy.trip.accommodation.model.CartItem">
+    <!-- 장바구니 아이템 업데이트 (soft delete된 아이템은 업데이트 대상에서 제외될 수 있도록 deleted_at IS NULL 조건 추가 고려) -->
+    <update id="updateCartItem" parameterType="com.ssafy.trip.cart.model.CartItem">
         UPDATE cart_items
         SET guest_count = #{guestCount},
             check_in_date = #{checkInDate},
             check_out_date = #{checkOutDate},
-            price = #{price}
-        WHERE cart_item_id = #{cartItemId}
+            price = #{price},
+            updated_at = NOW()
+        WHERE cart_item_id = #{cartItemId} AND deleted_at IS NULL -- soft delete되지 않은 아이템만 업데이트
     </update>
+
+    <!-- 장바구니에서 특정 아이템 영구 삭제 (필요시 사용) -->
+    <delete id="hardDeleteCartItem" parameterType="long">
+        DELETE FROM cart_items
+        WHERE cart_item_id = #{cartItemId}
+    </delete>
     
     <!-- 장바구니 결과 매핑 -->
-    <resultMap id="cartResultMap" type="com.ssafy.trip.accommodation.model.Cart">
+    <resultMap id="cartResultMap" type="com.ssafy.trip.cart.model.Cart">
         <id property="cartId" column="cart_id" />
         <result property="userId" column="user_id" />
         <result property="createdAt" column="created_at" />
@@ -67,8 +81,8 @@
         <collection property="items" column="cart_id" select="getCartItems" />
     </resultMap>
     
-    <!-- 장바구니 아이템 결과 매핑 -->
-    <resultMap id="cartItemResultMap" type="com.ssafy.trip.accommodation.model.CartItem">
+    <!-- 장바구니 아이템 결과 매핑 (deletedAt 필드 추가) -->
+    <resultMap id="cartItemResultMap" type="com.ssafy.trip.cart.model.CartItem">
         <id property="cartItemId" column="cart_item_id" />
         <result property="cartId" column="cart_id" />
         <result property="roomId" column="room_id" />
@@ -78,6 +92,7 @@
         <result property="price" column="price" />
         <result property="createdAt" column="created_at" />
         <result property="updatedAt" column="updated_at" />
+        <result property="deletedAt" column="deleted_at" />
         <result property="roomName" column="room_name" />
         <result property="accommodationTitle" column="accommodation_title" />
         <result property="accommodationId" column="accommodation_id" />

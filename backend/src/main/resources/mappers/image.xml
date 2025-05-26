@@ -59,11 +59,14 @@
     </select>
 
     <!-- 이미지 정보를 업데이트합니다. -->
-    <update id="updateImage">
+    <update id="updateImage" parameterType="com.ssafy.trip.accommodation.model.Image">
         UPDATE images
-        SET 
-            image_url = #{imageUrl},
-            caption = #{caption}
+        <set>
+            <if test="imageUrl != null">image_url = #{imageUrl},</if>
+            <if test="caption != null">caption = #{caption},</if>
+            <if test="isMain != null">is_main = #{isMain},</if>
+            updated_at = NOW()
+        </set>
         WHERE image_id = #{imageId}
     </update>
 

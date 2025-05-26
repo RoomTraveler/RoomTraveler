@@ -8,14 +8,13 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.Cookie;
-import jakarta.servlet.http.HttpServletResponse;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
 import jakarta.validation.Valid;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -24,6 +23,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 /**
  * 사용자 RESTful API 컨트롤러
@@ -57,19 +57,22 @@ public class UserController {
 		Map<String, Object> response = new HashMap<>();
 
 		try {
-			int result = userService.registUser(user);
-			if (result > 0) {
-				response.put("success", true);
-				response.put("message", "사용자가 성공적으로 등록되었습니다.");
-				return new ResponseEntity<>(response, HttpStatus.CREATED);
-			} else {
-				response.put("success", false);
-				response.put("message", "사용자 등록에 실패했습니다.");
-				return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
-			}
+			userService.registUser(user);
+			response.put("success", true);
+			response.put("message", "사용자가 성공적으로 등록되었습니다.");
+			return new ResponseEntity<>(response, HttpStatus.CREATED);
+		} catch (IllegalArgumentException e) {
+			response.put("success", false);
+			response.put("message", e.getMessage());
+			return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
 		} catch (SQLException e) {
 			response.put("success", false);
-			response.put("message", "사용자 등록 중 오류가 발생했습니다: " + e.getMessage());
+			response.put("message", "사용자 등록 중 SQL 오류가 발생했습니다: " + e.getMessage());
+			return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+		} catch (Exception e) {
+			log.error("User registration error: ", e);
+			response.put("success", false);
+			response.put("message", "예상치 못한 오류가 발생했습니다.");
 			return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
 		}
 	}
@@ -211,26 +214,38 @@ public class UserController {
 		}
 
 		try {
-			String rawPassword = userUpdateRequest.getPassword();
-
 			int result = userService.updateUser(
 					authenticatedEmail,
 					userUpdateRequest.getUsername(),
-					rawPassword
+					userUpdateRequest.getPhone(),
+					userUpdateRequest.getPassword()
 			);
 
 			if (result > 0) {
 				response.put("success", true);
 				response.put("message", "사용자 정보가 성공적으로 수정되었습니다.");
 				return new ResponseEntity<>(response, HttpStatus.OK);
+			} else if (result == 0) {
+				response.put("success", true);
+				response.put("message", "변경된 사용자 정보가 없습니다.");
+				return new ResponseEntity<>(response, HttpStatus.OK);
 			} else {
 				response.put("success", false);
 				response.put("message", "사용자 정보 수정에 실패했습니다.");
 				return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
 			}
+		} catch (IllegalArgumentException e) {
+			response.put("success", false);
+			response.put("message", e.getMessage());
+			return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
 		} catch (SQLException e) {
 			response.put("success", false);
-			response.put("message", "사용자 정보 수정 중 오류가 발생했습니다: " + e.getMessage());
+			response.put("message", "사용자 정보 수정 중 데이터베이스 오류가 발생했습니다: " + e.getMessage());
+			return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+		} catch (Exception e) {
+			log.error("Error updating user profile for email: " + authenticatedEmail, e);
+			response.put("success", false);
+			response.put("message", "사용자 정보 수정 중 예상치 못한 오류가 발생했습니다.");
 			return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
 		}
 	}
@@ -299,6 +314,70 @@ public class UserController {
 //			return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
 //		}
 //	}
+
+	@Operation(summary = "Update user profile image", description = "Updates the profile image of the currently logged-in user")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200", description = "Profile image updated successfully",
+					content = @Content(mediaType = "application/json")),
+			@ApiResponse(responseCode = "400", description = "Invalid input or upload failed",
+					content = @Content(mediaType = "application/json")),
+			@ApiResponse(responseCode = "401", description = "Not logged in",
+					content = @Content(mediaType = "application/json")),
+			@ApiResponse(responseCode = "404", description = "User not found",
+					content = @Content(mediaType = "application/json")),
+			@ApiResponse(responseCode = "500", description = "Internal server error or S3 upload failed",
+					content = @Content(mediaType = "application/json"))
+	})
+	@PutMapping("/profile-image")
+	public ResponseEntity<?> updateUserProfileImage(@RequestParam("profileImageFile") MultipartFile profileImageFile) {
+		Map<String, Object> response = new HashMap<>();
+		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+		if (authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getPrincipal())) {
+			response.put("success", false);
+			response.put("message", "로그인이 필요합니다.");
+			return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
+		}
+
+		String email = ((UserDetails) authentication.getPrincipal()).getUsername();
+
+		try {
+			Optional<User> optionalUser = userService.getUserByEmail(email);
+			if (optionalUser.isEmpty()) {
+				response.put("success", false);
+				response.put("message", "사용자 정보를 찾을 수 없습니다.");
+				return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
+			}
+
+			User user = optionalUser.get();
+			String newImageUrl = userService.updateUserProfileImage(user.getUserId(), profileImageFile);
+
+			if (newImageUrl != null && !newImageUrl.isEmpty()) {
+				response.put("success", true);
+				response.put("message", "프로필 이미지가 성공적으로 업데이트되었습니다.");
+				response.put("imageUrl", newImageUrl); // 새 이미지 URL 반환
+				return new ResponseEntity<>(response, HttpStatus.OK);
+			} else {
+				response.put("success", false);
+				response.put("message", "프로필 이미지 업데이트에 실패했습니다.");
+				return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+			}
+		} catch (IllegalArgumentException e) {
+			response.put("success", false);
+			response.put("message", "잘못된 요청입니다: " + e.getMessage());
+			return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+		} catch (SQLException e) {
+			log.error("Database error while updating profile image for user: {}", email, e);
+			response.put("success", false);
+			response.put("message", "데이터베이스 오류로 프로필 이미지 업데이트에 실패했습니다.");
+			return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+		} catch (Exception e) {
+			log.error("Error updating profile image for user: {}", email, e);
+			response.put("success", false);
+			response.put("message", "프로필 이미지 업데이트 중 오류가 발생했습니다: " + e.getMessage());
+			return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+		}
+	}
 
 	@PostMapping("/refresh")
 	public ResponseEntity<?> refreshAccessToken(@RequestHeader("Refresh-Token") String token) {

@@ -4,6 +4,7 @@ import com.ssafy.trip.accommodation.model.Accommodation;
 import com.ssafy.trip.accommodation.model.Room;
 
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 
 import java.sql.SQLException;
 import java.util.List;
@@ -29,6 +30,9 @@ public interface AccommodationDao {
      */
     Accommodation getAccommodationById(Long accommodationId) throws SQLException;
 
+
+    //타입별 카운트
+    List<Map<String, Object>> selectAccommodationTypeCounts() throws SQLException;
     /**
      * 호스트 ID로 숙소 목록을 조회합니다.
      * @param hostId 호스트 ID
@@ -128,4 +132,33 @@ public interface AccommodationDao {
      * @return 삭제된 행 수
      */
     int deleteAllAccommodations() throws SQLException;
+
+    /**
+     * 숙소의 리뷰 관련 통계(평균 별점, 리뷰 수, 추천 점수)를 업데이트합니다.
+     * @param accommodationId 업데이트할 숙소 ID
+     * @param avgReviewRating 새로운 평균 별점
+     * @param reviewCount 새로운 리뷰 수
+     * @param recommendScore 새로운 추천 점수
+     * @return 업데이트된 행 수
+     */
+    int updateReviewStats(@Param("accommodationId") Long accommodationId,
+                          @Param("avgReviewRating") Double avgReviewRating,
+                          @Param("reviewCount") Integer reviewCount,
+                          @Param("recommendScore") Double recommendScore) throws SQLException;
+
+    /**
+     * 숙소의 객실 최저/최고가를 업데이트합니다.
+     * @param accommodationId 업데이트할 숙소 ID
+     * @param minRoomPrice 새로운 최저가
+     * @param maxRoomPrice 새로운 최고가
+     * @return 업데이트된 행 수
+     */
+    int updateRoomPriceStats(@Param("accommodationId") Long accommodationId,
+                             @Param("minRoomPrice") Double minRoomPrice,
+                             @Param("maxRoomPrice") Double maxRoomPrice) throws SQLException;
+
+    int getFilteredAccommodationsCount(Map<String, Object> filters) throws SQLException;
+
+    // 숙소 등록을 위한 메소드. 생성된 숙소의 ID를 반환하거나 Accommodation 객체에 ID가 설정되도록 함
+    void insertAccommodation(Accommodation accommodation) throws SQLException;
 }

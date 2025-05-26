@@ -3,6 +3,8 @@ package com.ssafy.trip.accommodation.service;
 import com.ssafy.trip.accommodation.model.Reservation;
 import com.ssafy.trip.accommodation.model.Room;
 import com.ssafy.trip.accommodation.model.RoomAvailability;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -225,4 +227,17 @@ public interface ReservationService {
      * @throws SQLException 데이터베이스 오류 발생 시
      */
     int calculateMinAvailableCountForRoom(Room room, LocalDate startDate, LocalDate endDate, Integer guests) throws SQLException;
+
+    /**
+     * 특정 호스트의 예약 목록을 필터링 및 페이징하여 조회합니다.
+     *
+     * @param hostId 호스트 ID
+     * @param status 예약 상태
+     * @param checkInDate 체크인 날짜 (YYYY-MM-DD 형식의 문자열)
+     * @param guestName 게스트 이름
+     * @param sortBy 정렬 기준
+     * @param pageable 페이징 정보
+     * @return 페이징된 예약 목록
+     */
+    Page<Reservation> getReservationsByHostIdWithFiltersAndPaging(Long hostId, String status, String checkInDate, String guestName, String sortBy, Pageable pageable);
 }

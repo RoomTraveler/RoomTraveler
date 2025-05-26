@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.ssafy.trip.event.dao.EventBoardDao">
+
+    <insert id="insertEvent" parameterType="com.ssafy.trip.event.model.EventBoard"
+            useGeneratedKeys="true" keyProperty="eventId">
+        INSERT INTO event_board
+        (title, content, writer, start_date, end_date, status)
+        VALUES
+        (#{title},#{content},#{writer},#{startDate},#{endDate},#{status})
+    </insert>
+
+    <select id="selectAll" resultType="com.ssafy.trip.event.model.EventBoard">
+        SELECT * FROM event_board ORDER BY created_at DESC
+    </select>
+
+    <select id="selectEventBoardByEventId" resultType="com.ssafy.trip.event.model.EventBoard">
+        SELECT * FROM event_board WHERE event_id = #{eventId}
+    </select>
+
+    <update id="updateEvent" parameterType="com.ssafy.trip.event.model.EventBoard">
+        UPDATE event_board
+        SET title = #{title},
+            content = #{content},
+            start_date = #{startDate},
+            end_date = #{endDate},
+            status = #{status},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE event_id = #{eventId}
+    </update>
+
+    <delete id="deleteEvent" parameterType="long">
+        DELETE FROM event_board WHERE event_id = #{eventId}
+    </delete>
+
+    <update id="incrementViewCount" parameterType="long">
+        UPDATE event_board SET view_count = view_count + 1 WHERE event_id = #{eventId}
+    </update>
+
+
+    <insert id="insertEventImages" parameterType="java.util.List">
+        INSERT INTO event_board_img (event_id, img_url, is_thumbnail)
+        VALUES
+        <foreach collection="images" item="image" separator=",">
+            (#{image.eventId}, #{image.imgUrl}, #{image.isThumbnail, jdbcType=BOOLEAN})
+        </foreach>
+    </insert>
+
+
+    <select id="selectEventImages" resultType="com.ssafy.trip.event.model.EventBoardImg">
+        SELECT img_id, event_id, img_url, is_thumbnail, created_at
+        FROM event_board_img
+        WHERE event_id = #{eventId}
+    </select>
+
+    <delete id="deleteEventImages">
+        DELETE FROM event_board_img WHERE event_id = #{eventId}
+    </delete>
+
+    <delete id="deleteEventImageByUrl">
+        DELETE FROM event_board_img WHERE img_url = #{imgUrl}
+    </delete>
+</mapper>

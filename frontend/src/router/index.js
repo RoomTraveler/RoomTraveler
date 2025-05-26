@@ -9,14 +9,15 @@ import { userRoutes } from "./user";
 import { adminRoutes } from "./admin";
 import { reservationRoutes } from "./reservation";
 import { planRoutes } from "./plan";
+import { eventRoutes } from "./event";
+import { hostRoutes } from "./host";
 
 const NotFound = () => import("../views/NotFound.vue");
-const ApiTest = () => import("../components/ApiTest.vue");
 // 에러 페이지 컴포넌트
 const AccessDenied = () => import("../views/error/AccessDenied.vue");
 
 // 라우트 정의
-const routes = [
+export const routes = [
   // 필요한 모든 라우트 배열 합치기
   ...commonRoutes,
   ...accommodationRoutes,
@@ -27,13 +28,9 @@ const routes = [
   ...adminRoutes,
   ...reservationRoutes,
   ...planRoutes,
+  ...eventRoutes,
+  ...hostRoutes,
 
-  {
-    path: "/api-test",
-    name: "ApiTest",
-    component: ApiTest,
-    meta: { title: "API 테스트 - Room Traveler" },
-  },
   // 에러 페이지 라우트
   {
     path: "/error/access-denied",
@@ -55,42 +52,40 @@ const router = createRouter({
   history: createWebHistory(),
   routes,
 });
-
-// 전역 네비게이션 가드 - 페이지 제목 설정 및 인증 확인
+// 전역 네비게이션 가드 - 페이지 제목 설정 및 인증/권한 확인
 router.beforeEach((to, from, next) => {
-  // 페이지 제목 설정
+  // 1. 페이지 제목 설정
   document.title = to.meta.title || "Room Traveler";
 
-  // 인증이 필요한 페이지 처리
+  // 2. 인증이 필요한 페이지 처리
   if (to.meta.requiresAuth) {
-    // 인증 확인 로직
-    // const isAuthenticated = store.getters.isAuthenticated;
-    const isAuthenticated = sessionStorage.getItem("user") !== null;
+    const userStr = sessionStorage.getItem("user");
 
-    if (!isAuthenticated) {
+    // 로그인 정보 없음 -> 로그인 페이지로 리다이렉트
+    if (!userStr) {
       next({ name: "Login", query: { redirect: to.fullPath } });
       return;
     }
 
-    // 관리자 권한이 필요한 페이지 처리
-    if (to.meta.requiresAdmin) {
-      // 관리자 권한 확인 로직
-      // const isAdmin = store.getters.isAdmin;
-      const user = JSON.parse(sessionStorage.getItem("user") || "{}");
-      const isAdmin = user.user.role === 'ADMIN';
+    // 로그인 정보에서 role 추출
+    const user = JSON.parse(userStr);
+    const role = user.user?.role;
 
-      if (!isAdmin) {
-        // 관리자가 아닌 경우 접근 거부 페이지로 리다이렉트
+    // 3. 권한(role) 체크 (roles 배열이 존재하면)
+    if (to.meta.roles && Array.isArray(to.meta.roles)) {
+      if (!to.meta.roles.includes(role)) {
         next({
           path: "/error/access-denied",
-          query: { message: "관리자만 접근할 수 있는 페이지입니다." },
+          query: { message: "접근 권한이 없는 페이지입니다." },
         });
         return;
       }
     }
 
+    // 권한/인증 통과
     next();
   } else {
+    // 인증 필요 없는 페이지
     next();
   }
 });

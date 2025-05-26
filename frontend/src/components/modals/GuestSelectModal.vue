@@ -1,32 +1,35 @@
 <template>
   <el-dialog
-    :model-value="props.show"
-    @update:model-value="handleClose"
-    title="인원 선택"
-    width="90%"
-    :max-width="'320px'"
-    top="20vh"
-    custom-class="guest-selection-dialog"
-    :center="true"
+      :model-value="props.show"
+      @update:model-value="handleClose"
+      title="인원 선택"
+      width="320px"
+      top="15vh"
+      custom-class="guest-selection-dialog"
+      :center="true"
   >
-    <div class="dialog-content px-4 py-6">
-      <div class="flex justify-between items-center">
-        <div class="flex flex-col">
-          <span class="text-lg font-medium text-gray-800">인원</span>
+    <div class="dialog-content px-3 py-3">
+      <div class="d-flex justify-content-between align-items-center">
+        <div class="d-flex flex-column">
+          <span class="fs-6 fw-semibold text-dark">인원</span>
         </div>
-        <div class="flex items-center gap-x-3">
+        <div class="d-flex align-items-center gap-2">
           <button
-            @click="decrementGuests"
-            :disabled="tempGuests <= 1"
-            class="p-2 w-10 h-10 rounded-full border border-gray-300 text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center text-xl"
+              type="button"
+              @click="decrementGuests"
+              :disabled="tempGuests <= 1"
+              class="btn btn-outline-secondary rounded-circle px-0 d-flex align-items-center justify-content-center"
+              style="width:36px; height:36px;"
           >
             <i class="bi bi-dash-lg"></i>
           </button>
-          <span class="text-xl font-semibold w-8 text-center">{{ tempGuests }}</span>
+          <span class="fs-5 fw-bold text-center" style="width:1.7rem;">{{ tempGuests }}</span>
           <button
-            @click="incrementGuests"
-            :disabled="tempGuests >= maxGuests"
-            class="p-2 w-10 h-10 rounded-full border border-gray-300 text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center text-xl"
+              type="button"
+              @click="incrementGuests"
+              :disabled="tempGuests >= maxGuests"
+              class="btn btn-outline-secondary rounded-circle px-0 d-flex align-items-center justify-content-center"
+              style="width:36px; height:36px;"
           >
             <i class="bi bi-plus-lg"></i>
           </button>
@@ -34,11 +37,11 @@
       </div>
     </div>
     <template #footer>
-      <div class="w-full px-4 pb-4">
+      <div class="w-100 px-3 pb-3">
         <el-button
-          type="primary"
-          @click="applyGuestSelection"
-          class="w-full bg-pink-500 hover:bg-pink-600 border-pink-500 py-3 text-base font-semibold rounded-lg shadow-md"
+            type="primary"
+            @click="applyGuestSelection"
+            class="w-100 btn btn-pink fw-semibold py-2 fs-6 shadow-sm"
         >
           확인
         </el-button>
@@ -49,7 +52,6 @@
 
 <script setup lang="ts">
 import { ref, watch } from "vue";
-import { ElButton, ElDialog } from "element-plus";
 
 interface Props {
   show: boolean;
@@ -64,7 +66,6 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 const emit = defineEmits(["close", "apply", "update:show"]);
-
 const tempGuests = ref(props.initialGuests);
 
 function handleClose() {
@@ -73,19 +74,19 @@ function handleClose() {
 }
 
 watch(
-  () => props.show,
-  (newVal) => {
-    if (newVal) {
-      tempGuests.value = props.initialGuests;
+    () => props.show,
+    (newVal) => {
+      if (newVal) {
+        tempGuests.value = props.initialGuests;
+      }
     }
-  }
 );
 
 watch(
-  () => props.initialGuests,
-  (newVal) => {
-    tempGuests.value = newVal;
-  }
+    () => props.initialGuests,
+    (newVal) => {
+      tempGuests.value = newVal;
+    }
 );
 
 function incrementGuests() {
@@ -107,7 +108,6 @@ function applyGuestSelection() {
 </script>
 
 <style scoped>
-/* 필요한 경우 scoped 스타일 추가 */
 .guest-selection-dialog .el-dialog__header {
   display: none;
 }
@@ -115,16 +115,17 @@ function applyGuestSelection() {
   padding: 0 !important;
 }
 .guest-selection-dialog .el-dialog__footer {
-  padding: 0; /* 내부에서 패딩 관리 */
-  border-top: 1px solid #eee; /* 구분선 추가 */
+  padding: 0;
+  border-top: 1px solid #eee;
 }
-</style>
-<style>
-.guest-selection-dialog .el-dialog__headerbtn .el-dialog__close {
-  font-size: 20px; /* Element Plus 기본 닫기 버튼 아이콘 크기 조정 */
-  color: #555;
+.btn-pink {
+  background-color: #ec4899;
+  border-color: #ec4899;
+  color: #fff;
 }
-.guest-selection-dialog .el-dialog__headerbtn:hover .el-dialog__close {
-  color: #e53e3e; /* 호버 시 색상 변경 */
+.btn-pink:hover, .btn-pink:focus {
+  background-color: #db2777;
+  border-color: #db2777;
+  color: #fff;
 }
 </style>

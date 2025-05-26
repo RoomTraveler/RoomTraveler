@@ -6,12 +6,17 @@ CREATE TABLE IF NOT EXISTS `ssafytrip`.`sidos` (
                                                    `no` INT NOT NULL AUTO_INCREMENT COMMENT '시도번호',
                                                    `sido_code` INT NOT NULL COMMENT '시도코드',
                                                    `sido_name` VARCHAR(20) NULL DEFAULT NULL COMMENT '시도이름',
+    `sido_img_url` VARCHAR(500) NULL DEFAULT NULL COMMENT '시도 이미지 URL',
     PRIMARY KEY (`no`),
-    UNIQUE INDEX `sido_code_UNIQUE` (`sido_code` ASC) VISIBLE)
+    UNIQUE INDEX `sido_code_UNIQUE` (`sido_code` ASC) VISIBLE
+    )
     ENGINE = InnoDB
     AUTO_INCREMENT = 35
     DEFAULT CHARACTER SET = utf8mb4
     COMMENT = '시도정보테이블';
+
+ALTER TABLE `ssafytrip`.`sidos`
+    ADD COLUMN `sido_img_url` VARCHAR(500) NULL DEFAULT NULL COMMENT '시도 이미지 URL';
 
 
 -- -----------------------------------------------------

@@ -111,4 +111,8 @@ public interface ReservationDao {
      * @throws SQLException SQL 예외 발생 시
      */
     boolean existsCompletedReservationByUserAndAccommodation(@Param("userId") Long userId, @Param("accommodationId") Long accommodationId) throws SQLException;
+
+    List<Reservation> findReservationsByHostWithFiltersAndPaging(Map<String, Object> params);
+
+    long countReservationsByHostWithFilters(Map<String, Object> params);
 }

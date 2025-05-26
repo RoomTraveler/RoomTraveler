@@ -1,5 +1,11 @@
-import api from './index';
+import apiGroup from './index';
 
+//예시
+// 인증 필요한 요청
+//api.get('/some-protected-api');
+
+// 인증 필요 없는 요청
+//apiNoAuth.get('/some-public-api');
 /**
  * 숙박 및 관광지 관련 API 서비스
  */
@@ -14,7 +20,7 @@ const accommodationApi = {
    * @returns {Promise} 숙박 시설 목록 데이터
    */
   getAccommodations(params = {}) {
-    return api.get('/api/accommodations/filter', { params });
+    return apiGroup.apiNoAuth.get('/api/accommodations/filter', { params });
   },
 
   /**
@@ -23,7 +29,7 @@ const accommodationApi = {
    * @returns {Promise} 숙박 시설 상세 정보 및 객실 정보
    */
   getRoomInfo(contentId) {
-    return api.get(`/accommodation/api/rooms`, { params: { contentId } });
+    return apiGroup.apiNoAuth.get(`/accommodation/api/rooms`, { params: { contentId } });
   },
 
   /**
@@ -37,7 +43,7 @@ const accommodationApi = {
    * @returns {Promise} 관광지 목록 데이터
    */
   getAttractions(params = {}) {
-    return api.get('/accommodation/api/attractions', { params });
+    return apiGroup.apiNoAuth.get('/accommodation/api/attractions', { params });
   },
 
   /**
@@ -51,7 +57,7 @@ const accommodationApi = {
     if (contentTypeId) {
       params.contentTypeId = contentTypeId;
     }
-    return api.get('/accommodation/api/attraction/detail', { params });
+    return apiGroup.apiNoAuth.get('/accommodation/api/attraction/detail', { params });
   },
 
   /**
@@ -66,7 +72,7 @@ const accommodationApi = {
    * @returns {Promise} 검색 결과 데이터
    */
   searchByKeyword(keyword, params = {}) {
-    return api.get('/accommodation/api/search', { 
+    return apiGroup.apiNoAuth.get('/accommodation/api/search', {
       params: { 
         keyword,
         ...params 
