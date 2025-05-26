@@ -15,7 +15,7 @@ public interface MapService {
     void                    savePlan(MapDTO.PlanStoreDTO planStoreDTO);
     void deletePlan(Long planId);
     List<MapDTO.PlanDTO> getPlansByUserId(Long userId, int page, int size);
-
+    List<MapDTO.PlanDTO> getUserPlans(Long userId, int page, int size);
     MapDTO.PlanDTO getPlanByPlanId(Long planId);
 //    List<RegionTripResDto>  findShortestPlan(RegionTripResDto startLocation, List<RegionTripResDto> locations);
     List<MapDTO.RegionTripRes>  getRegionTripWithinMapRange(MapDTO.MapBound mapBound, int contentType, String keyword, Pageable pageable, Long userId);

@@ -1,16 +1,15 @@
 <template>
   <Header />
   <section class="plans-section">
-    <h2 class="section-title">&nbsp;&nbsp; ❤️내가 좋아요 누른 여행 플랜</h2>
+    <h2 class="section-title">&nbsp;&nbsp; 나의 여행 플랜</h2>
 
     <div class="plans-grid">
       <div v-for="plan in plans" :key="plan.planId" class="plan-card">
         <div class="plan-header">
           <h3>플랜 #{{ plan.planId }}</h3>
-          <div class="likes-container">
-            <span class="heart-button" @click="unlikePlan(plan.planId)">❤️</span>
-            <span class="likes-count">{{ plan.likes }}</span>
-          </div>
+          <button class="delete-icon" @click.stop="deletePlan(plan.planId)" title="삭제">
+            🗑️
+          </button>
         </div>
 
         <ul class="attractions-list">
@@ -68,7 +67,7 @@ const fetchPlans = async () => {
   loading.value = true;
   try {
     const response = await api.api({
-      url: "/api/map/users/plans",
+      url: "/api/map/plans/me",
       method: "get",
       params: {
         page: page.value,
@@ -99,17 +98,21 @@ const goToPlan = (planId) => {
   router.push(`/plans/${planId}`);
 };
 
-// 플랜 좋아요 해제
-const unlikePlan = async (planId) => {
-  try {
-    await api.api({
-      url: `/api/map/likes/plans/${planId}`,
-      method: "POST",
-    });
-    // 좋아요 해제 후 해당 플랜을 목록에서 제거
-    plans.value = plans.value.filter((plan) => plan.planId !== planId);
-  } catch (error) {
-    console.error("Failed to unlike plan:", error);
+// 플랜 삭제
+const deletePlan = async (planId) => {
+  if (confirm(`플랜 #${planId}을 삭제하시겠습니까?`)) {
+    try {
+      await api.api({
+        url: `/api/map/plans/${planId}`,
+        method: "DELETE",
+      });
+      // 삭제 성공 시 목록에서 제거
+      plans.value = plans.value.filter((plan) => plan.planId !== planId);
+      alert("삭제되었습니다.");
+    } catch (error) {
+      console.error("삭제 실패:", error);
+      alert("삭제 중 오류가 발생했습니다.");
+    }
   }
 };
 

@@ -26,7 +26,7 @@
               <div class="col-md-4">
                 <label for="keywordInput" class="form-label">키워드 검색</label>
                 <div class="input-group">
-                  <input type="text" id="keywordInput" class="form-control" placeholder="검색어 입력(2자 이상)" />
+                  <input type="text" v-model="keywordText" id="keywordInput" class="form-control" placeholder="검색어 입력(2자 이상)" />
                 </div>
               </div>
               <div class="col-md-4 align-self-end text-end">
@@ -132,6 +132,42 @@
             </template>
           </div>
         </div>
+
+        <div>
+          <button
+            v-if="selectedPlaces.length > 2"
+            @click="evaluatePlan"
+            class="btn btn-success btn-lg w-100 mb-3 d-flex align-items-center justify-content-center"
+            :disabled="isLoading"
+          >
+            <i v-if="isLoading" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></i>
+            <i v-else class="bi bi-check-circle-fill me-2"></i>
+            {{ isLoading ? '평가 중...' : '여행 계획 평가받기' }}
+          </button>
+
+          <div
+            v-if="evaluationResult.advantages || evaluationResult.disadvantages || evaluationResult.recommendations"
+            class="mt-3 evaluation-container"
+          >
+            <div class="evaluation-header"><i class="bi bi-robot"></i> 계획 평가 및 개선 추천</div>
+
+            <div v-if="evaluationResult.advantages" class="evaluation-section advantages-section">
+              <div class="section-header"><i class="bi bi-plus-circle-fill"></i> 장점</div>
+              <div class="section-content">{{ evaluationResult.advantages }}</div>
+            </div>
+
+            <div v-if="evaluationResult.disadvantages" class="evaluation-section disadvantages-section">
+              <div class="section-header"><i class="bi bi-dash-circle-fill"></i> 단점</div>
+              <div class="section-content">{{ evaluationResult.disadvantages }}</div>
+            </div>
+
+            <div v-if="evaluationResult.recommendations" class="evaluation-section recommendations-section">
+              <div class="section-header"><i class="bi bi-lightbulb-fill"></i> 추천</div>
+              <div class="section-content">{{ evaluationResult.recommendations }}</div>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
 
@@ -370,7 +406,7 @@ const loadContentList = async () => {
       url: "/api/map/content-types",
       method: "GET",
     });
-    contentTypes.value = response;
+    contentTypes.value = response.data;
   } catch (err) {
     console.error("컨텐츠 목록 로딩 실패", err);
   }
@@ -493,10 +529,10 @@ const containsNonKorean = (text) => {
 };
 
 const searchAttractions = () => {
-  fetchTourSpots(0);
+  fetchTourSpots(0, true);
 };
 
-const fetchTourSpots = async (pageIndex) => {
+const fetchTourSpots = async (pageIndex, mapBoundUpdate) => {
   let contentTypeValue = parseInt(selectedContentType.value) || -1;
 
   if (![12, 14, 15, 25, 28, 32, 38, 39].includes(contentTypeValue)) {
@@ -509,7 +545,7 @@ const fetchTourSpots = async (pageIndex) => {
   }
 
   // 지도의 현재 bounds 업데이트
-  if (map) {
+  if (mapBoundUpdate && map) {
     const bounds = map.getBounds();
     mapBound.value = {
       southWest: {
@@ -559,7 +595,7 @@ const fetchTourSpots = async (pageIndex) => {
 
 const goToPage = (page) => {
   if (page < 1 || page > totalPages.value) return;
-  fetchTourSpots(page - 1);
+  fetchTourSpots(page - 1, false);
 };
 
 const removeMarkers = () => {
@@ -785,6 +821,81 @@ const toggleLike = async (attractionId) => {
     alert("좋아요 처리 중 오류 발생");
   }
 };
+
+const evaluationResult = ref({
+  advantages: "",
+  disadvantages: "",
+  recommendations: "",
+});
+
+const isLoading = ref(false)
+
+const contentTypeMap = {
+  12: "관광지",
+  14: "문화시설",
+  15: "축제공연행사",
+  25: "여행코스",
+  28: "레포츠",
+  32: "숙박",
+  38: "쇼핑",
+  39: "음식점",
+};
+
+const evaluatePlan = async () => {
+  isLoading.value = true;
+  try {
+    const response = await apiGroup.api({
+      url: "/api/ai/evaluation",
+      method: "POST",
+      data: {
+        selectedPlaces: selectedPlaces.value.map((item) => ({
+          address: `${item.addr1}${item.addr2 ?? ""}`.trim(),
+          name: item.title,
+          contentType: contentTypeMap[item.contentTypeId] ?? "기타",
+          latitude: item.latitude,
+          longitude: item.longitude,
+        })),
+      },
+    });
+    isLoading.value = false;
+    // Parse the response to separate advantages, disadvantages, and recommendations
+    const fullText = response.data;
+
+    // Initialize with empty strings
+    const parsedResult = {
+      advantages: "",
+      disadvantages: "",
+      recommendations: "",
+    };
+
+    // Find the sections in the text
+    const advantagesMatch = fullText.match(/장점[:\s]+([\s\S]+?)(?=단점[:\s]+|$)/i);
+    const disadvantagesMatch = fullText.match(/단점[:\s]+([\s\S]+?)(?=추천[:\s]+|$)/i);
+    const recommendationsMatch = fullText.match(/추천[:\s]+([\s\S]+?)(?=$)/i);
+
+    // Extract the content if matches are found
+    if (advantagesMatch && advantagesMatch[1]) {
+      parsedResult.advantages = advantagesMatch[1].trim();
+    }
+
+    if (disadvantagesMatch && disadvantagesMatch[1]) {
+      parsedResult.disadvantages = disadvantagesMatch[1].trim();
+    }
+
+    if (recommendationsMatch && recommendationsMatch[1]) {
+      parsedResult.recommendations = recommendationsMatch[1].trim();
+    }
+
+    // If no structured content was found, use the full text as recommendations
+    if (!parsedResult.advantages && !parsedResult.disadvantages && !parsedResult.recommendations) {
+      parsedResult.recommendations = fullText.trim();
+    }
+
+    evaluationResult.value = parsedResult;
+  } catch (err) {
+    console.error("평가 요청 실패", err);
+  }
+};
 </script>
 
 <style scoped>
@@ -816,6 +927,74 @@ const toggleLike = async (attractionId) => {
   z-index: 1000;
   font-size: 16px;
   animation: fadeInOut 3s ease-in-out;
+}
+
+.evaluation-container {
+  background-color: #1a1a1a;
+  border-radius: 8px;
+  overflow: hidden;
+  font-family: "Courier New", monospace;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  margin-bottom: 20px;
+}
+
+.evaluation-header {
+  background-color: #333;
+  color: #0f0;
+  padding: 12px 15px;
+  font-size: 1.2rem;
+  font-weight: bold;
+  letter-spacing: 1px;
+  border-bottom: 1px solid #444;
+  display: flex;
+  align-items: center;
+}
+
+.evaluation-header i {
+  margin-right: 10px;
+}
+
+.evaluation-section {
+  margin: 0;
+  border-bottom: 1px solid #333;
+}
+
+.section-header {
+  padding: 10px 15px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  color: #fff;
+  background-color: #222;
+}
+
+.section-header i {
+  margin-right: 10px;
+}
+
+.advantages-section .section-header i {
+  color: #4caf50;
+}
+
+.disadvantages-section .section-header i {
+  color: #f44336;
+}
+
+.recommendations-section .section-header i {
+  color: #2196f3;
+}
+
+.section-content {
+  white-space: pre-line;
+  line-height: 1.6;
+  font-size: 0.95rem;
+  padding: 15px;
+  color: #ddd;
+  background-color: #2a2a2a;
+}
+
+.section-content p {
+  margin-bottom: 10px;
 }
 
 @keyframes fadeInOut {

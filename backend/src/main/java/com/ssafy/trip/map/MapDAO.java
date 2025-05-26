@@ -41,6 +41,7 @@ public interface MapDAO{
 
     PlanDTO getPlanByPlanId(Long planId);
     List<PlanDTO> getPlans();
+    List<PlanDTO> getUserPlans(Long userId, int offset, int size);
 
     List<MapDTO.RegionTripRes> getRegionTripWithinMapRange(MapBound mapBound, int contentType, String keyword, Pageable pageable, Long userId);
 

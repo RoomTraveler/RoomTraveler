@@ -15,5 +15,6 @@ public class Squad {
     private Long squadId;
     private String squadName;
     private LocalDateTime createdAt;
-    private Long createdBy;
+    private String usernameCreated;
+    private int memberCount;
 }

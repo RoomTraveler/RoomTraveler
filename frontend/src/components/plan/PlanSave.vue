@@ -106,9 +106,10 @@
               @end="dragging = false"
               item-key="title"
             >
-              <template #item="{ element }">
-                <div class="list-group-item">
-                  {{ element.title }}
+              <template #item="{ element, index }">
+                <div class="list-group-item d-flex justify-between items-center">
+                  <span>{{ element.title }}</span>
+                  <button @click="removePlace(index)" class="btn btn-danger btn-sm">삭제</button>
                 </div>
               </template>
             </draggable>
@@ -128,8 +129,11 @@
             v-if="selectedPlaces.length > 2"
             @click="evaluatePlan"
             class="btn btn-success btn-lg w-100 mb-3 d-flex align-items-center justify-content-center"
+            :disabled="isLoading"
           >
-            <i class="bi bi-check-circle-fill me-2"></i> 여행 계획 평가받기
+            <i v-if="isLoading" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></i>
+            <i v-else class="bi bi-check-circle-fill me-2"></i>
+            {{ isLoading ? '평가 중...' : '여행 계획 평가받기' }}
           </button>
 
           <div
@@ -214,9 +218,12 @@ const evaluationResult = ref({
   recommendations: "",
 });
 
+const isLoading = ref(false)
+
 const evaluatePlan = async () => {
+  isLoading.value = true;
   try {
-    const response = await apiGroup.apiNoAuth({
+    const response = await apiGroup.api({
       url: "/api/ai/evaluation",
       method: "POST",
       data: {
@@ -229,7 +236,7 @@ const evaluatePlan = async () => {
         })),
       },
     });
-
+    isLoading.value = false;
     // Parse the response to separate advantages, disadvantages, and recommendations
     const fullText = response.data;
 
@@ -366,10 +373,10 @@ const containsNonKorean = (text) => {
 };
 
 const searchAttractions = () => {
-  fetchTourSpots(0);
+  fetchTourSpots(0, true);
 };
 
-const fetchTourSpots = async (pageIndex) => {
+const fetchTourSpots = async (pageIndex, mapBoundUpdate) => {
   let contentTypeValue = parseInt(selectedContentType.value) || -1;
 
   if (![12, 14, 15, 25, 28, 32, 38, 39].includes(contentTypeValue)) {
@@ -382,7 +389,7 @@ const fetchTourSpots = async (pageIndex) => {
   }
 
   // 지도의 현재 bounds 업데이트
-  if (map) {
+  if (mapBoundUpdate && map) {
     const bounds = map.getBounds();
     mapBound.value = {
       southWest: {
@@ -436,7 +443,7 @@ const fetchTourSpots = async (pageIndex) => {
 
 const goToPage = (page) => {
   if (page < 1 || page > totalPages.value) return;
-  fetchTourSpots(page - 1);
+  fetchTourSpots(page - 1, false);
 };
 
 const removeMarkers = () => {
@@ -524,9 +531,27 @@ const contentTypeMap = {
   39: "음식점",
 };
 
+function removePlace(index) {
+  selectedPlaces.value.splice(index, 1);
+}
+
 watch(selectedPlaces, (newVal, oldVal) => {
+  const unique = []
+  const seenTitles = new Set()
+  for (const place of newVal) {
+    if (!seenTitles.has(place.title)) {
+      seenTitles.add(place.title)
+      unique.push(place)
+    }
+  }
+  if (unique.length !== newVal.length) {
+    selectedPlaces.value = unique
+  }
+
   drawLines();
 });
+
+const saveMarkers = ref([])
 
 const drawLines = () => {
   if (!window.kakao || !window.kakao.maps || !map) return;
@@ -534,6 +559,11 @@ const drawLines = () => {
   if (savePolyline.value) {
     savePolyline.value.setMap(null);
   }
+
+  saveMarkers.value.forEach(marker => {
+    marker.setMap(null)
+  })
+  saveMarkers.value = []
 
   if (selectedPlaces.value.length >= 2) {
     const linePath = selectedPlaces.value.map((place) => new window.kakao.maps.LatLng(place.latitude, place.longitude));
@@ -548,6 +578,32 @@ const drawLines = () => {
 
     polyline.setMap(map);
     savePolyline.value = polyline;
+
+    selectedPlaces.value.forEach((place, idx) => {
+      const position = new window.kakao.maps.LatLng(place.latitude, place.longitude)
+
+      // HTML 컨텐츠: 번호를 표시할 DIV
+      const content = `<div style="
+  background: #3f51b5;
+  color: white;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  line-height: 30px;
+  text-align: center;
+  font-weight: bold;
+  box-shadow: 0 0 5px rgba(0,0,0,0.3);
+">
+  ${idx + 1}
+</div>`
+      const overlay = new window.kakao.maps.CustomOverlay({
+        position,
+        content,
+        yAnchor: 1,  // 숫자가 마커 꼭대기에 붙도록 조정
+      })
+      overlay.setMap(map)
+      saveMarkers.value.push(overlay)
+    })
   }
 };
 
@@ -586,8 +642,6 @@ const savePlan = async () => {
       savePolyline.value.setMap(null);
       savePolyline.value = null;
     }
-
-    fetchTourSpots(0);
   } catch (error) {
     console.error("여행 계획 저장 중 오류 발생:", error);
     alert("여행 계획 저장에 실패했습니다.");

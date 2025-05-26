@@ -63,6 +63,7 @@ public class CustomSecurityConfig {
 
         http.authorizeHttpRequests(authorize ->
                 authorize.requestMatchers(
+                        "/api/user/reset-password",
                         "/api/user/auth/**",
                                 "/api/user/refresh",
                                 "/api/map/**",

@@ -100,4 +100,5 @@ public interface UserService {
     String getRefreshToken(Long userId);
 
     List<User> getAdminUsers();
+    String resetPassword(PasswordResetRequestDto request);
 }

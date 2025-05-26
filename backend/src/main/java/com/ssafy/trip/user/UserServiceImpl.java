@@ -1,6 +1,9 @@
 package com.ssafy.trip.user;
 
+import com.ssafy.trip.map.EmailService;
+import jakarta.validation.Valid;
 import java.io.IOException;
+import java.security.SecureRandom;
 import java.sql.SQLException;
 import java.util.*;
 
@@ -8,9 +11,12 @@ import com.ssafy.trip.s3.AWSS3Service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Primary;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.multipart.MultipartFile;
 
 /**
@@ -29,9 +35,13 @@ public class UserServiceImpl implements UserService {
     private static final String ACCOUNT_STATUS_INACTIVE = "INACTIVE";
     private static final String ACCOUNT_STATUS_SUSPENDED = "SUSPENDED";
 
+    private static final String CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";
+    private static final int PASSWORD_LENGTH = 12;
+
     private final UserDao userDao;
     private final PasswordEncoder passwordEncoder;
     private final AWSS3Service s3Service;
+    private final EmailService emailService;
 
     /**
      * 새 사용자를 등록합니다.
@@ -475,5 +485,51 @@ public class UserServiceImpl implements UserService {
     @Override
     public List<User> getUsersByKeyword(String keyword) {
         return userDao.getUsersByKeyword(keyword);
+    }
+
+    @Transactional
+    public String resetPassword(PasswordResetRequestDto request) {
+        try {
+            // 닉네임과 이메일로 사용자 찾기
+            Optional<User> userOptional = userDao.findByUsernameAndEmail(
+                    request.getUsername().trim(),
+                    request.getEmail().trim()
+            );
+
+            if (userOptional.isEmpty()) {
+                return null;
+            }
+
+            User user = userOptional.get();
+
+            // 임시 비밀번호 생성
+            String temporaryPassword = generateTemporaryPassword();
+
+            // 비밀번호 암호화 후 저장
+            String encodedPassword = passwordEncoder.encode(temporaryPassword);
+            user.setPassword(encodedPassword);
+            userDao.updateUserPassword(user);
+
+            // 이메일 전송
+            emailService.sendPasswordResetEmail(user.getEmail(), user.getUsername(), temporaryPassword);
+
+            return "새로운 임시 비밀번호가 이메일로 전송되었습니다.";
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    private String generateTemporaryPassword() {
+        SecureRandom random = new SecureRandom();
+        StringBuilder password = new StringBuilder();
+
+        for (int i = 0; i < PASSWORD_LENGTH; i++) {
+            int index = random.nextInt(CHARACTERS.length());
+            password.append(CHARACTERS.charAt(index));
+        }
+
+        return password.toString();
     }
 }

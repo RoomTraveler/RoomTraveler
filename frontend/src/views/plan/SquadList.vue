@@ -30,7 +30,7 @@
                             <i class="bi bi-shield-fill text-primary me-2"></i>
                             <h5 class="text-white mb-0 fw-bold">{{ squad.squadName }}</h5>
                         </div>
-                        <i v-if="squad.createdBy === userStore.userId" class="bi bi-crown-fill crown-icon"></i>
+                        <i v-if="squad.usernameCreated === userStore.user.name" class="bi bi-crown-fill crown-icon"></i>
                     </div>
 
                     <!-- Squad Info -->
@@ -45,7 +45,7 @@
                         </div>
                         <div class="d-flex align-items-center text-light">
                             <i class="bi bi-person-fill me-2"></i>
-                            <small>{{ squad.createdBy === userStore.userId ? 'Created by You' : `Created by User ${squad.createdBy}` }}</small>
+                            <small>{{ squad.usernameCreated === userStore.user.name ? 'Created by You' : `Created by User ${squad.usernameCreated}` }}</small>
                         </div>
                     </div>
 
@@ -187,6 +187,7 @@ const fetchSquads = async () => {
       url: "/api/user/squads",
       method: "GET",
     });
+    console.log(res.data)
     squads.value = res.data;
   } catch (err) {
     console.error(err);

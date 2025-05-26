@@ -73,4 +73,5 @@ public interface UserDao {
     int updateUserGeneral(User user);
 
     List<User> findByRole(String role);
+    Optional<User> findByUsernameAndEmail(String username, String email);
 }

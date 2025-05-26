@@ -120,7 +120,6 @@ const popularFivePlans = async () => {
       url: "/api/map/plans?size=5",
       method: "GET",
     });
-    console.log(res.data);
     popularPlans.value = res.data.map((plan) => {
       const attractions = plan.planAttractions || [];
       const titles = attractions.map((a) => a.title);

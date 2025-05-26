@@ -21,9 +21,9 @@ public class AiChatService {
             prompt.append(String.format("%d. %s (위도: %.5f, 경도: %.5f, 콘텐츠 타입: %s, 주소: %s)\n",
                     i+1, p.getName(), p.getLatitude(), p.getLongitude(), p.getContentType(), p.getAddress()));
         }
-        prompt.append("\n1) 이 계획의 장단점을 평가하는데 이건 관광지 자체에 대한거만 해줘\n");
-        prompt.append("2) 최적화하거나 추가하면 좋을 장소나 이동 순서를 추천해줘.");
-        prompt.append("7초 내로 대답해줘.");
+        prompt.append("\n답변은 장점, 단점, 추천으로 나누어 답변해주고 장단점은 관광지 자체에 대한거만 평가해줘\n");
+        prompt.append("추천은 동선을 최적화하거나 추가하면 좋을 장소나 이동 순서를 추천해줘.");
+        prompt.append("가능한 7초 내로 빠르게 대답해줘.");
 
         log.info(prompt.toString());
 

@@ -7,7 +7,7 @@ const BASE_URL = "http://localhost:8080";
 
 const api = axios.create({
   baseURL: BASE_URL,
-  timeout: 5000,
+  timeout: 20000,
 });
 
 // 모든 요청에 토큰 자동 주입 인터셉터
@@ -85,7 +85,7 @@ api.interceptors.response.use(
 const apiNoAuth = axios.create({
   // apiNoAuth 인스턴스 생성 복원
   baseURL: BASE_URL,
-  timeout: 1000,
+  timeout: 5000,
 });
 
 export default { api, apiNoAuth }; // 모듈 export 복원

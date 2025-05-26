@@ -65,17 +65,30 @@
             </div>
 
             <!-- 장바구니 버튼 (로그인 시에만 보이도록) -->
-            <router-link
-              v-if="isLoggedIn"
-              to="/accommodation/cart"
-              class="user-menu-item icon-btn position-relative"
-              title="장바구니"
-            >
-              <i class="bi bi-cart"></i>
-              <span v-if="cartItemCount > 0" class="notification-badge cart-badge">
-                {{ cartItemCount }}
-              </span>
-            </router-link>
+            <template v-if="selected === '숙박'">
+              <router-link
+                v-if="isLoggedIn"
+                to="/accommodation/cart"
+                class="user-menu-item icon-btn position-relative"
+                title="장바구니"
+              >
+                <i class="bi bi-cart"></i>
+                <span v-if="cartItemCount > 0" class="notification-badge cart-badge">
+                  {{ cartItemCount }}
+                </span>
+              </router-link>
+            </template>
+            <template v-else>
+              <router-link
+                v-if="isLoggedIn"
+                to="/plans/me"
+                class="user-menu-item icon-btn position-relative"
+                title="나의 여행 계획"
+              >
+                <i class="bi bi-map"></i>
+              </router-link>
+            </template>
+            
 
             <template v-if="!isLoggedIn">
               <router-link :to="{ path: '/login', query: { from: selected } }" class="user-menu-item"

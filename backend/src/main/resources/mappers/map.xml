@@ -25,8 +25,8 @@
     <resultMap id="RegionTripResMap" type="com.ssafy.trip.map.MapDTO$RegionTripRes">
         <id     property="no"        column="no"/>
         <result property="title"     column="title"/>
-        <result property="image"     column="image"/>
-        <result property="image2"     column="image2"/>
+        <result property="image"     column="first_image1"/>
+        <result property="image2"     column="first_image2"/>
         <result property="addr1"     column="addr1"/>
         <result property="addr2"     column="addr2"/>
         <result property="tel"       column="tel"/>
@@ -100,6 +100,27 @@
                      LIMIT #{size} OFFSET #{offset}
              ) liked_plans
                  JOIN plan p ON p.plan_id = liked_plans.plan_id
+                 JOIN plan_attraction pa ON p.plan_id = pa.plan_id
+                 JOIN attractions a ON pa.attraction_id = a.no
+        ORDER BY p.plan_id DESC, pa.order_num
+    </select>
+
+    <select id="getUserPlans" resultMap="PlanWithAttractions">
+        SELECT
+            p.plan_id,
+            p.likes,
+            pa.attraction_id,
+            pa.order_num,
+            a.title,
+            a.content_type_id,
+            a.first_image2
+        FROM (
+                 SELECT p.plan_id
+                 FROM plan p
+                 WHERE p.user_id = #{userId}
+                 LIMIT #{size} OFFSET #{offset}
+             ) mp
+                 JOIN plan p ON p.plan_id = mp.plan_id
                  JOIN plan_attraction pa ON p.plan_id = pa.plan_id
                  JOIN attractions a ON pa.attraction_id = a.no
         ORDER BY p.plan_id DESC, pa.order_num

@@ -2,6 +2,7 @@
 package com.ssafy.trip.map;
 
 import com.ssafy.trip.map.MapDTO.ContentType;
+import com.ssafy.trip.map.MapDTO.PlanDTO;
 import com.ssafy.trip.map.MapDTO.RegionTripResDto;
 
 import java.util.ArrayList;
@@ -44,6 +45,12 @@ public class MapServiceImpl implements MapService {
     public List<MapDTO.PlanDTO> getPlansByUserId(Long userId, int page, int size) {
         int offset = page * size;
         return mapDAO.getPlansByUserId(userId, offset, size);
+    }
+
+    @Override
+    public List<PlanDTO> getUserPlans(Long userId, int page, int size) {
+        int offset = page * size;
+        return mapDAO.getUserPlans(userId, offset, size);
     }
 
     @Override

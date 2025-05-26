@@ -169,14 +169,26 @@
         <id property="squadId" column="squad_id"/>
         <result property="squadName" column="squad_name"/>
         <result property="createdAt" column="created_at"/>
-        <result property="createdBy" column="created_by"/>
+        <result property="usernameCreated" column="username"/>
+        <result property="memberCount" column="member_count"/>
     </resultMap>
 
     <select id="getSquadsByUserId" resultMap="SquadResultMap">
-        SELECT s.*
-        FROM squads s
-        JOIN squad_members sm ON s.squad_id = sm.squad_id
-        WHERE sm.user_id = #{userId};
+        SELECT
+        s.*,
+        u.*,
+        sm_aug.member_count
+        FROM squads AS s
+        JOIN (
+        SELECT
+        squad_id,
+        user_id,
+        COUNT(*) OVER (PARTITION BY squad_id) AS member_count
+        FROM squad_members
+        ) AS sm_aug
+        ON s.squad_id = sm_aug.squad_id
+        JOIN users u ON u.user_id = sm_aug.user_id
+        WHERE sm_aug.user_id = 6;
     </select>
 
     <select id="findUsersBySquadId" resultType="com.ssafy.trip.user.SquadUser">
@@ -208,6 +220,13 @@
         SELECT *
         FROM users
         WHERE username LIKE CONCAT('%', #{keyword}, '%')
+    </select>
+
+    <select id="findByUsernameAndEmail" resultType="com.ssafy.trip.user.User">
+        SELECT user_id, username, email
+        FROM users
+        WHERE username = #{username}
+        AND email = #{email}
     </select>
 
 </mapper>

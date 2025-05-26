@@ -443,4 +443,17 @@ public class UserController {
 	public ResponseEntity<?> getFriends(@PathVariable("keyword") String keyword) {
 		return ResponseEntity.ok(userService.getUsersByKeyword(keyword));
 	}
+
+	@PostMapping("/reset-password")
+	public ResponseEntity<?> resetPassword(
+			@Valid @RequestBody PasswordResetRequestDto request) {
+
+		String response = userService.resetPassword(request);
+
+		if (response != null) {
+			return ResponseEntity.ok(response);
+		} else {
+			return ResponseEntity.badRequest().body("실패");
+		}
+	}
 }

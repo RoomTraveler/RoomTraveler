@@ -94,6 +94,13 @@ public class MapController {
         return ResponseEntity.ok(mapService.getSharedPlans(page, size));
     }
 
+    @GetMapping("/plans/me")
+    public ResponseEntity<?> getMyPlans(@CurrentUserId Long userId,
+                                      @RequestParam(defaultValue = "0") int page,
+                                      @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(mapService.getUserPlans(userId, page, size));
+    }
+
     @PostMapping("/plans")
     @Operation(summary = "여행 계획 저장", description = "사용자의 여행 계획 저장")
     @ApiResponse(responseCode = "200", description = "여행 계획 저장 성공")
