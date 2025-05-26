@@ -682,7 +682,7 @@ public class AdminController {
             return ResponseEntity.ok(BaseResponse.onSuccess(host));
         }
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(BaseResponse.onFail("호스트 정보를 찾을 수 없습니다."));
-    }
+            }
 
     @Operation(summary = "호스트 신청 거절", description = "관리자가 호스트 신청을 거절하고 사유를 입력합니다.")
     @PutMapping("/reject/{hostId}")

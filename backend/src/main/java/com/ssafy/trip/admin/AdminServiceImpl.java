@@ -267,11 +267,11 @@ public class AdminServiceImpl implements AdminService {
     @Transactional
     public boolean updateUserRoleByAdmin(Long userId, String newRole) {
         try {
-            int updatedRows = adminDao.updateUserRole(userId, newRole);
-            if (updatedRows > 0) {
+        int updatedRows = adminDao.updateUserRole(userId, newRole);
+        if (updatedRows > 0) {
                 logger.info("사용자 ID {}의 역할이 {}로 성공적으로 변경되었습니다.", userId, newRole);
-                return true;
-            } else {
+            return true;
+        } else {
                 logger.warn("사용자 ID {}의 역할 변경 실패. 사용자를 찾을 수 없거나 변경 사항이 없습니다.", userId);
                 return false;
             }

@@ -3,18 +3,9 @@
     <AccommodationHeader title="객실 상세 정보" />
 
     <div class="container mt-4">
-      <div
-          v-if="message"
-          class="alert alert-success alert-dismissible fade show"
-          role="alert"
-      >
+      <div v-if="message" class="alert alert-success alert-dismissible fade show" role="alert">
         {{ message }}
-        <button
-            type="button"
-            class="btn-close"
-            @click="message = ''"
-            aria-label="Close"
-        ></button>
+        <button type="button" class="btn-close" @click="message = ''" aria-label="Close"></button>
       </div>
 
       <!-- 로딩 표시 -->
@@ -26,47 +17,43 @@
       </div>
 
       <template v-else>
-        <!-- Image Carousel -->
+        <!-- Swiper Image Carousel -->
         <div
-            id="roomCarousel"
-            class="carousel slide mb-4 position-relative"
-            data-bs-touch="true"
+          class="mb-4 position-relative room-swiper-container"
+          v-if="imagesForCarousel.length > 0 && imagesForCarousel[0]?.imageUrl !== noImagePlaceholder"
         >
-          <div class="carousel-inner">
-            <div
-                v-for="(imgSrc, index) in imagesForCarousel"
-                :key="index"
-                class="carousel-item"
-                :class="{ active: index === activeImageIndex }"
-            >
-              <img
-                  :src="imgSrc"
-                  class="d-block w-100"
-                  :alt="`객실 이미지 ${index + 1}`"
-              />
-            </div>
-            <template v-if="showCustomCarouselControls">
-              <button
-                  class="custom-carousel-control prev"
-                  @click="prevImage"
-                  type="button"
-              >
-                <i class="bi bi-chevron-left"></i>
-              </button>
-              <button
-                  class="custom-carousel-control next"
-                  @click="nextImage"
-                  type="button"
-              >
-                <i class="bi bi-chevron-right"></i>
-              </button>
-            </template>
-          </div>
+          <swiper
+            :modules="swiperModules"
+            :slides-per-view="1"
+            :space-between="10"
+            navigation
+            :pagination="{ clickable: true }"
+            :autoplay="{ delay: 4500, disableOnInteraction: false }"
+            loop
+            class="room-swiper"
+          >
+            <swiper-slide v-for="(img, index) in imagesForCarousel" :key="img.imageUrl + '-' + index">
+              <img :src="img.imageUrl" class="d-block w-100 room-swiper-image" :alt="`객실 이미지 ${index + 1}`" />
+            </swiper-slide>
+          </swiper>
+        </div>
+        <div
+          class="mb-4"
+          v-else-if="
+            !loading || (imagesForCarousel.length > 0 && imagesForCarousel[0]?.imageUrl === noImagePlaceholder)
+          "
+        >
+          <img
+            :src="noImagePlaceholder"
+            alt="이미지 없음"
+            class="d-block w-100 rounded shadow-sm"
+            style="max-height: 400px; object-fit: contain"
+          />
         </div>
 
         <!-- Room Info -->
         <div class="room-info">
-          <div class="room-type">{{ room.roomType || '스탠다드 룸' }}</div>
+          <div class="room-type">{{ room.roomType || "스탠다드 룸" }}</div>
           <h1 class="room-title">{{ room.name }}</h1>
           <p class="text-muted">{{ accommodation.title }}</p>
           <hr />
@@ -108,21 +95,14 @@
           </div>
           <div class="info-item">
             <div class="info-icon"><i class="bi bi-currency-dollar"></i></div>
-            <div class="info-text">
-              가격: {{ formatPrice(room.price) }}/박
-            </div>
+            <div class="info-text">가격: {{ formatPrice(room.price) }}/박</div>
           </div>
 
           <div v-if="isHost && userId === accommodation.hostId" class="mt-4">
-            <router-link
-                :to="`/accommodation/update-room/${props.roomId}`"
-                class="btn btn-outline-primary me-2"
-            >
+            <router-link :to="`/accommodation/update-room/${props.roomId}`" class="btn btn-outline-primary me-2">
               수정
             </router-link>
-            <button @click="confirmDeleteRoom" class="btn btn-outline-danger">
-              삭제
-            </button>
+            <button @click="confirmDeleteRoom" class="btn btn-outline-danger">삭제</button>
           </div>
         </div>
 
@@ -132,18 +112,14 @@
         <div class="reviews-wrapper mt-4">
           <h3 class="section-title">후기</h3>
           <div class="reviews-container">
-            <div
-                v-for="review in visibleReviews"
-                :key="review.id"
-                class="review-card"
-            >
+            <div v-for="review in visibleReviews" :key="review.id" class="review-card">
               <div class="review-header">
                 <div class="review-rating">
                   <i
-                      v-for="star in 5"
-                      :key="star"
-                      class="bi"
-                      :class="star <= review.rating ? 'bi-star-fill' : 'bi-star'"
+                    v-for="star in 5"
+                    :key="star"
+                    class="bi"
+                    :class="star <= review.rating ? 'bi-star-fill' : 'bi-star'"
                   ></i>
                 </div>
                 <div class="review-nickname-date">
@@ -156,23 +132,12 @@
             </div>
           </div>
           <div v-if="totalReviewCount > displayReviewCount" class="text-center mt-3">
-            <button
-                @click="displayReviewCount = totalReviewCount"
-                class="btn btn-outline-secondary w-100"
-            >
+            <button @click="displayReviewCount = totalReviewCount" class="btn btn-outline-secondary w-100">
               {{ totalReviewCount }}개 객실후기 보기
             </button>
           </div>
-          <div
-              v-else-if="totalReviewCount > 2 && displayReviewCount === totalReviewCount"
-              class="text-center mt-3"
-          >
-            <button
-                @click="displayReviewCount = 2"
-                class="btn btn-outline-secondary w-100"
-            >
-              후기 접기
-            </button>
+          <div v-else-if="totalReviewCount > 2 && displayReviewCount === totalReviewCount" class="text-center mt-3">
+            <button @click="displayReviewCount = 2" class="btn btn-outline-secondary w-100">후기 접기</button>
           </div>
           <div v-if="totalReviewCount === 0" class="text-center text-muted mt-3">
             <p>아직 작성된 후기가 없습니다.</p>
@@ -193,8 +158,7 @@
           <div class="info-item">
             <div class="info-icon"><i class="bi bi-clock"></i></div>
             <div class="info-text">
-              체크인: {{ accommodation.checkInTime }} /
-              체크아웃: {{ accommodation.checkOutTime }}
+              체크인: {{ accommodation.checkInTime }} / 체크아웃: {{ accommodation.checkOutTime }}
             </div>
           </div>
           <hr />
@@ -216,11 +180,7 @@
           <h3 class="section-title">객실 내 시설</h3>
           <div class="amenities-list">
             <template v-if="amenitiesList.length">
-              <div
-                  v-for="(amenity, idx) in amenitiesList"
-                  :key="idx"
-                  class="amenity-item"
-              >
+              <div v-for="(amenity, idx) in amenitiesList" :key="idx" class="amenity-item">
                 <div class="amenity-icon"><i class="bi bi-check-circle"></i></div>
                 <div>{{ amenity }}</div>
               </div>
@@ -243,28 +203,31 @@
         <span class="booking-price-unit">/ 1박</span>
       </div>
       <div class="booking-actions">
-        <button @click="addToCart" class="btn btn-outline-primary me-2">
-          장바구니
-        </button>
-        <button @click="submitReservation" class="btn btn-yanolja">
-          바로 예약
-        </button>
+        <button @click="addToCart" class="btn btn-outline-primary me-2">장바구니</button>
+        <button @click="submitReservation" class="btn btn-yanolja">바로 예약</button>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue';
-import { useRouter, useRoute } from 'vue-router';
-import axios from 'axios';
-import AccommodationHeader from '@/components/accommodation/AccommodationHeader.vue';
-import noImagePlaceholder from '@/assets/no-image.jpg';
-import { useCartStore } from '@/store/cartStore';
-import { useUserStore } from '@/store/userStore';
+import { ref, reactive, computed, onMounted } from "vue";
+import { useRouter, useRoute } from "vue-router";
+import axios from "axios";
+import AccommodationHeader from "@/components/accommodation/AccommodationHeader.vue";
+import noImagePlaceholder from "@/assets/no-image.jpg";
+import { useCartStore } from "@/store/cartStore";
+import { useUserStore } from "@/store/userStore";
+
+// Swiper imports
+import { Swiper, SwiperSlide } from "swiper/vue";
+import { Navigation, Pagination, Autoplay } from "swiper/modules";
+import "swiper/css";
+import "swiper/css/navigation";
+import "swiper/css/pagination";
 
 const props = defineProps({
-  roomId: { type: [String, Number], required: true }
+  roomId: { type: [String, Number], required: true },
 });
 
 const router = useRouter();
@@ -272,18 +235,20 @@ const route = useRoute();
 const cartStore = useCartStore();
 const userStore = useUserStore();
 
+// Swiper modules
+const swiperModules = [Navigation, Pagination, Autoplay];
+
 const loading = ref(true);
-const message = ref('');
-const room = ref({});
+const message = ref("");
+const room = ref({ images: [] }); // room.value.images가 초기에 undefined가 아니도록 초기화
 const accommodation = ref({});
-const roomImages = ref([]);
-const activeImageIndex = ref(0);
+
 const reviews = ref([]);
 const displayReviewCount = ref(2);
 const totalReviewCount = ref(0);
 
-const selectedCheckInDateQuery = ref(String(route.query.checkIn || ''));
-const selectedCheckOutDateQuery = ref(String(route.query.checkOut || ''));
+const selectedCheckInDateQuery = ref(String(route.query.checkIn || ""));
+const selectedCheckOutDateQuery = ref(String(route.query.checkOut || ""));
 const guestsFromQuery = Number(route.query.guests) > 0 ? Number(route.query.guests) : 1;
 const selectedGuestsQuery = ref(guestsFromQuery);
 
@@ -293,18 +258,11 @@ const reservation = reactive({
   checkOutDate: selectedCheckOutDateQuery.value,
   guestCount: selectedGuestsQuery.value,
   totalPrice: 0,
-  paymentMethod: 'credit_card',
-  status: 'PENDING'
+  paymentMethod: "credit_card",
+  status: "PENDING",
 });
 
-const defaultAmenities = [
-  '무료 Wi-Fi',
-  '에어컨',
-  'TV',
-  '미니바',
-  '욕실용품',
-  '헤어드라이어'
-];
+const defaultAmenities = ["무료 Wi-Fi", "에어컨", "TV", "미니바", "욕실용품", "헤어드라이어"];
 
 onMounted(async () => {
   await loadRoomDetail();
@@ -314,34 +272,39 @@ onMounted(async () => {
 async function loadRoomDetail() {
   loading.value = true;
   try {
-    const { data } = await axios.get(`/api/accommodations/room/${props.roomId}`);
-    room.value = data.room;
-    accommodation.value = data.accommodation;
+    // API 응답에서 room 객체가 RoomResponseDto 구조를 따르고, 그 안에 images: ImageResponseDto[]가 있다고 가정
+    const response = await axios.get(`/api/accommodations/room/${props.roomId}`);
+    const roomData = response.data.room; // room 객체를 직접 할당
+    accommodation.value = response.data.accommodation;
 
-    // images
-    if (Array.isArray(data.room.images)) {
-      roomImages.value = data.room.images;
-    } else if (typeof data.room.images === 'string') {
-      try {
-        roomImages.value = JSON.parse(data.room.images);
-      } catch {
-        roomImages.value = [];
-      }
+    if (roomData) {
+      // RoomResponseDto.images (List<ImageResponseDto>)를 room.value.images에 할당
+      // ImageResponseDto는 imageUrl, isMain을 가짐
+      const roomImagesFromApi = (roomData.images || [])
+        .filter((img) => img && img.imageUrl) // null이나 undefined 이미지, imageUrl 없는 이미지 필터링
+        .sort((a, b) => {
+          // isMain: true 인 것을 앞으로
+          if (a.isMain && !b.isMain) return -1;
+          if (!a.isMain && b.isMain) return 1;
+          return 0;
+        });
+      room.value = { ...roomData, images: roomImagesFromApi };
     } else {
-      roomImages.value = [];
+      room.value = { images: [] }; // roomData가 없는 경우 기본값
     }
 
-    reservation.totalPrice = data.room.price;
-  } catch {
-    message.value = '객실 정보를 불러오는 데 실패했습니다.';
+    reservation.totalPrice = roomData?.price || 0;
+  } catch (err) {
+    console.error("Error loading room details:", err);
+    message.value = "객실 정보를 불러오는 데 실패했습니다.";
+    room.value = { ...room.value, images: [] }; // 에러 시 images를 빈 배열로 설정
   } finally {
     loading.value = false;
   }
 }
 
 async function loadReviews() {
-  // 여기에 실제 API 호출 로직 추가
-  reviews.value = []; // 예시로 빈 배열
+  reviews.value = [];
   totalReviewCount.value = reviews.value.length;
 }
 
@@ -349,23 +312,15 @@ const isHost = computed(() => userStore.isHost);
 const userId = computed(() => userStore.user?.id);
 
 const imagesForCarousel = computed(() => {
-  if (roomImages.value.length) {
-    return roomImages.value.map(img => img.imageUrl || noImagePlaceholder);
+  // room.value.images가 ImageResponseDto[] 형태라고 가정
+  if (room.value && room.value.images && room.value.images.length > 0) {
+    return room.value.images;
   }
-  if (room.value.mainImageUrl) {
-    return [room.value.mainImageUrl, noImagePlaceholder];
-  }
-  return [noImagePlaceholder, noImagePlaceholder];
+  return loading.value ? [] : [{ imageUrl: noImagePlaceholder, isMain: true }];
 });
 
-const showCustomCarouselControls = computed(() => imagesForCarousel.value.length > 1);
-
-const displaySelectedCheckInDate = computed(() =>
-    formatDisplayDate(selectedCheckInDateQuery.value)
-);
-const displaySelectedCheckOutDate = computed(() =>
-    formatDisplayDate(selectedCheckOutDateQuery.value)
-);
+const displaySelectedCheckInDate = computed(() => formatDisplayDate(selectedCheckInDateQuery.value));
+const displaySelectedCheckOutDate = computed(() => formatDisplayDate(selectedCheckOutDateQuery.value));
 const displaySelectedGuests = computed(() => `${selectedGuestsQuery.value}명`);
 const displayNights = computed(() => {
   if (selectedCheckInDateQuery.value && selectedCheckOutDateQuery.value) {
@@ -378,60 +333,43 @@ const displayNights = computed(() => {
 });
 
 const amenitiesList = computed(() => {
-  if (room.value.amenities && typeof room.value.amenities === 'string') {
+  if (room.value.amenities && typeof room.value.amenities === "string") {
     return room.value.amenities
-        .split(',')
-        .map(s => s.trim())
-        .filter(Boolean);
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
   }
   return [];
 });
 
-const visibleReviews = computed(() =>
-    reviews.value.slice(0, displayReviewCount.value)
-);
-
-function prevImage() {
-  activeImageIndex.value =
-      (activeImageIndex.value - 1 + imagesForCarousel.value.length) %
-      imagesForCarousel.value.length;
-}
-
-function nextImage() {
-  activeImageIndex.value =
-      (activeImageIndex.value + 1) % imagesForCarousel.value.length;
-}
+const visibleReviews = computed(() => reviews.value.slice(0, displayReviewCount.value));
 
 function formatPrice(p) {
-  if (p == null) return 'N/A';
-  return new Intl.NumberFormat('ko-KR', {
-    style: 'currency',
-    currency: 'KRW'
+  if (p == null) return "N/A";
+  return new Intl.NumberFormat("ko-KR", {
+    style: "currency",
+    currency: "KRW",
   }).format(p);
 }
 
 function formatDisplayDate(str) {
-  if (!str) return '미선택';
+  if (!str) return "미선택";
   const d = new Date(str);
-  return d.toLocaleDateString('ko-KR', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    weekday: 'short'
+  return d.toLocaleDateString("ko-KR", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    weekday: "short",
   });
 }
 
 async function submitReservation() {
   if (!userStore.isAuthenticated) {
-    router.push({ name: 'Login', query: { redirect: route.fullPath } });
+    router.push({ name: "Login", query: { redirect: route.fullPath } });
     return;
   }
-  if (
-      !selectedCheckInDateQuery.value ||
-      !selectedCheckOutDateQuery.value ||
-      selectedGuestsQuery.value <= 0
-  ) {
-    message.value = '체크인, 체크아웃 날짜 및 인원을 모두 선택해주세요.';
+  if (!selectedCheckInDateQuery.value || !selectedCheckOutDateQuery.value || selectedGuestsQuery.value <= 0) {
+    message.value = "체크인, 체크아웃 날짜 및 인원을 모두 선택해주세요.";
     return;
   }
   const dto = {
@@ -440,28 +378,23 @@ async function submitReservation() {
     checkOutDate: selectedCheckOutDateQuery.value,
     guestCount: selectedGuestsQuery.value,
     totalPrice: room.value.price * displayNights.value,
-    userId: userStore.user?.id
+    userId: userStore.user?.id,
   };
   try {
-    const res = await axios.post('/api/reservations', dto);
-    message.value = res.data.message || '예약이 완료되었습니다.';
+    const res = await axios.post("/api/reservations", dto);
+    message.value = res.data.message || "예약이 완료되었습니다.";
   } catch (err) {
-    message.value =
-        err.response?.data?.message || '예약 처리 중 오류가 발생했습니다.';
+    message.value = err.response?.data?.message || "예약 처리 중 오류가 발생했습니다.";
   }
 }
 
 async function addToCart() {
   if (!userStore.isAuthenticated) {
-    router.push({ name: 'Login', query: { redirect: route.fullPath } });
+    router.push({ name: "Login", query: { redirect: route.fullPath } });
     return;
   }
-  if (
-      !selectedCheckInDateQuery.value ||
-      !selectedCheckOutDateQuery.value ||
-      selectedGuestsQuery.value <= 0
-  ) {
-    message.value = '날짜와 인원을 선택해야 장바구니에 담을 수 있습니다.';
+  if (!selectedCheckInDateQuery.value || !selectedCheckOutDateQuery.value || selectedGuestsQuery.value <= 0) {
+    message.value = "날짜와 인원을 선택해야 장바구니에 담을 수 있습니다.";
     return;
   }
   const item = {
@@ -469,19 +402,18 @@ async function addToCart() {
     checkInDate: selectedCheckInDateQuery.value,
     checkOutDate: selectedCheckOutDateQuery.value,
     guestCount: selectedGuestsQuery.value,
-    price: room.value.price
+    price: room.value.price,
   };
   try {
     await cartStore.addToCart(item);
-    message.value = '객실이 장바구니에 추가되었습니다.';
+    message.value = "객실이 장바구니에 추가되었습니다.";
   } catch (err) {
-    message.value =
-        err.response?.data?.message || '장바구니 추가 중 오류가 발생했습니다.';
+    message.value = err.response?.data?.message || "장바구니 추가 중 오류가 발생했습니다.";
   }
 }
 
 function confirmDeleteRoom() {
-  if (confirm('정말로 이 객실을 삭제하시겠습니까?')) {
+  if (confirm("정말로 이 객실을 삭제하시겠습니까?")) {
     deleteRoom();
   }
 }
@@ -489,13 +421,14 @@ function confirmDeleteRoom() {
 async function deleteRoom() {
   try {
     await axios.delete(`/api/accommodations/room/${props.roomId}`);
-    message.value = '객실이 삭제되었습니다.';
+    message.value = "객실이 삭제되었습니다.";
     router.push({
-      name: 'AccommodationDetail',
-      params: { id: accommodation.value.accommodationId }
+      name: "AccommodationDetail",
+      params: { id: accommodation.value.accommodationId },
     });
-  } catch {
-    message.value = '삭제 중 오류가 발생했습니다.';
+  } catch (err) {
+    console.error("Error deleting room:", err);
+    message.value = "삭제 중 오류가 발생했습니다.";
   }
 }
 </script>
@@ -734,5 +667,40 @@ async function deleteRoom() {
 
 .custom-carousel-control.next {
   right: 30px;
+}
+
+.room-swiper-container {
+  max-width: 768px;
+  margin: 0 auto 20px;
+}
+
+.room-swiper {
+  height: 400px;
+  border-radius: 0.25rem;
+  overflow: hidden;
+}
+
+.room-swiper-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.room-swiper .swiper-pagination-bullet-active {
+  background-color: var(--yanolja-pink, #ff3478) !important;
+}
+
+.room-swiper .swiper-button-next,
+.room-swiper .swiper-button-prev {
+  color: var(--yanolja-pink, #ff3478) !important;
+  background-color: rgba(255, 255, 255, 0.7);
+  border-radius: 50%;
+  width: 35px;
+  height: 35px;
+}
+
+.room-swiper .swiper-button-next::after,
+.room-swiper .swiper-button-prev::after {
+  font-size: 18px !important;
 }
 </style>

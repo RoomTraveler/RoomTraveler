@@ -32,7 +32,7 @@
       <!-- 숙소 통계 -->
       <div class="row g-3 mb-4">
         <div class="col-md-3 col-6">
-          <SummaryCard title="총 숙소" :value="allAccommodations.length" icon="bi-houses" color="primary" />
+          <SummaryCard title="총 숙소" :value="computedHostTotalAccommodations" icon="bi-houses" color="primary" />
         </div>
         <div class="col-md-3 col-6">
           <SummaryCard title="운영중 숙소" :value="activeAccommodationsCount" icon="bi-house-check" color="success" />
@@ -148,6 +148,11 @@ const userStore = useUserStore();
 
 const host = ref(null);
 const allAccommodations = ref([]);
+const statsAccommodations = ref([]);
+
+const activeAccommodationsDirect = ref(0);
+const totalRoomsDirect = ref(0);
+
 const loading = ref(true);
 const error = ref("");
 const routeMessage = ref(route.query.message || "");
@@ -167,13 +172,14 @@ const clearRouteMessage = () => {
   router.replace({ query: queryWithoutMessage });
 };
 
-// 실제 API만 사용하는 함수로 변경
-async function fetchHostAndAccommodations() {
+async function fetchHostAndAccommodationsOnce() {
   if (!userStore.isAuthenticated || !userStore.user?.id) {
     loading.value = false;
     host.value = null;
     allAccommodations.value = [];
-    totalDbItems.value = 0;
+    statsAccommodations.value = [];
+    activeAccommodationsDirect.value = 0;
+    totalRoomsDirect.value = 0;
     return;
   }
 
@@ -187,25 +193,34 @@ async function fetchHostAndAccommodations() {
 
     if (!host.value) {
       allAccommodations.value = [];
-      totalDbItems.value = 0;
+      statsAccommodations.value = [];
+      activeAccommodationsDirect.value = 0;
+      totalRoomsDirect.value = 0;
       loading.value = false;
       return;
     }
 
     if (host.value && host.value.status === "ACTIVE") {
-      // 실제 API만 호출
-      const response = await getHostAccommodations(
-        host.value.hostId,
-        filters.value.status || null,
-        filters.value.title || null,
-        currentPage.value,
-        itemsPerPage
-      );
-      allAccommodations.value = response.content || [];
-      totalDbItems.value = response.totalElements || 0;
+      // getHostAccommodations가 백엔드의 /api/host/{hostId}/accommodations (전체 데이터)를 호출한다고 가정
+      // 실제 API 호출은 hostApi.js에 정의된 getHostAccommodations(hostId) 또는 유사한 함수를 사용합니다.
+      const response = await getHostAccommodations(host.value.hostId);
+
+      allAccommodations.value = response.accommodations || [];
+      statsAccommodations.value = response.accommodations || [];
+
+      activeAccommodationsDirect.value = response.activeAccommodations || 0;
+      totalRoomsDirect.value = response.totalRooms || 0;
+
+      // URL 쿼리를 기반으로 필터 및 페이지 상태 초기화
+      filters.value.title = route.query.title || "";
+      filters.value.status = route.query.status || "";
+      filters.value.sortBy = route.query.sortBy || "createdAtDesc";
+      currentPage.value = parseInt(route.query.page) || 1;
     } else {
       allAccommodations.value = [];
-      totalDbItems.value = 0;
+      statsAccommodations.value = [];
+      activeAccommodationsDirect.value = 0;
+      totalRoomsDirect.value = 0;
     }
   } catch (e) {
     if (e.response && e.response.status === 404 && e.config.url.includes("/api/host/user/")) {
@@ -213,29 +228,39 @@ async function fetchHostAndAccommodations() {
       error.value = "호스트 정보를 찾을 수 없습니다. 호스트로 등록해주세요.";
     } else {
       error.value = e.message || "데이터 로드 중 오류 발생";
-      console.error("Error fetching host details or accommodations:", e);
+      console.error("Error fetching host accommodations data:", e);
     }
     allAccommodations.value = [];
-    totalDbItems.value = 0;
+    statsAccommodations.value = [];
+    activeAccommodationsDirect.value = 0;
+    totalRoomsDirect.value = 0;
   } finally {
     loading.value = false;
   }
 }
 
 const triggerLoadAccommodations = () => {
-  fetchHostAndAccommodations();
+  fetchHostAndAccommodationsOnce();
 };
 
-const activeAccommodationsCount = computed(
-  () => allAccommodations.value.filter((acc) => acc.status === "ACTIVE").length
-);
+const computedHostTotalAccommodations = computed(() => statsAccommodations.value.length);
+const activeAccommodationsCount = computed(() => activeAccommodationsDirect.value);
 const pendingAccommodationsCount = computed(
-  () => allAccommodations.value.filter((acc) => acc.status === "PENDING_REVIEW").length
+  () => statsAccommodations.value.filter((acc) => acc.status === "PENDING_REVIEW").length
 );
-const totalRoomsCount = computed(() => allAccommodations.value.reduce((sum, acc) => sum + (acc.rooms?.length || 0), 0));
+const totalRoomsCount = computed(() => totalRoomsDirect.value);
 
 const filteredAndSortedAccommodations = computed(() => {
   let accommodationsToDisplay = [...allAccommodations.value];
+
+  if (filters.value.title) {
+    accommodationsToDisplay = accommodationsToDisplay.filter(
+      (acc) => acc.title && acc.title.toLowerCase().includes(filters.value.title.toLowerCase())
+    );
+  }
+  if (filters.value.status) {
+    accommodationsToDisplay = accommodationsToDisplay.filter((acc) => acc.status === filters.value.status);
+  }
 
   accommodationsToDisplay.sort((a, b) => {
     if (filters.value.sortBy === "titleAsc") {
@@ -244,12 +269,16 @@ const filteredAndSortedAccommodations = computed(() => {
     if (filters.value.sortBy === "reviewCountDesc") {
       return (b.reviewCount || 0) - (a.reviewCount || 0);
     }
-    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    const dateA = new Date(a.createdAt).getTime();
+    const dateB = new Date(b.createdAt).getTime();
+    return dateB - dateA;
   });
   return accommodationsToDisplay;
 });
 
-const totalPages = computed(() => Math.ceil(totalDbItems.value / itemsPerPage));
+const totalPages = computed(() => {
+  return Math.ceil(filteredAndSortedAccommodations.value.length / itemsPerPage);
+});
 
 const paginatedAccommodations = computed(() => {
   const start = (currentPage.value - 1) * itemsPerPage;
@@ -286,19 +315,18 @@ function updateRouterQuery() {
   router.push({ query: Object.keys(query).length > 0 ? query : {} });
 }
 
-// userStore 또는 쿼리 변경에 따라 호출
 watch(
   () => [userStore.isAuthenticated, userStore.user?.id],
   async ([isAuth, userId]) => {
     if (isAuth && userId) {
-      if (!route.query.page && !route.query.title && !route.query.status && !route.query.sortBy) {
-        await fetchHostAndAccommodations();
-      }
+      await fetchHostAndAccommodationsOnce();
     } else {
       loading.value = false;
       host.value = null;
       allAccommodations.value = [];
-      totalDbItems.value = 0;
+      statsAccommodations.value = [];
+      activeAccommodationsDirect.value = 0;
+      totalRoomsDirect.value = 0;
       error.value = isAuth ? "사용자 ID를 찾을 수 없습니다." : "";
     }
   },
@@ -307,36 +335,27 @@ watch(
 
 watch(
   () => route.query,
-  async (newQuery, oldQuery) => {
+  (newQuery) => {
     const newPage = parseInt(newQuery.page) || 1;
     const newTitle = newQuery.title || "";
     const newStatus = newQuery.status || "";
     const newSortBy = newQuery.sortBy || "createdAtDesc";
 
-    let needsDataFetch = false;
-
+    // URL 쿼리 변경에 따라 내부 상태만 업데이트
     if (currentPage.value !== newPage) {
       currentPage.value = newPage;
-      needsDataFetch = true;
     }
     if (filters.value.title !== newTitle) {
       filters.value.title = newTitle;
-      needsDataFetch = true;
     }
     if (filters.value.status !== newStatus) {
       filters.value.status = newStatus;
-      needsDataFetch = true;
     }
     if (filters.value.sortBy !== newSortBy) {
       filters.value.sortBy = newSortBy;
     }
 
-    if (needsDataFetch && userStore.isAuthenticated && userStore.user?.id) {
-      await fetchHostAndAccommodations();
-    } else if (needsDataFetch && (!userStore.isAuthenticated || !userStore.user?.id)) {
-      allAccommodations.value = [];
-      totalDbItems.value = 0;
-    }
+    // API를 다시 호출하지 않음. computed 속성들이 변경된 filters와 currentPage에 따라 재계산됨.
   },
   { deep: true, immediate: true }
 );

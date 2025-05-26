@@ -247,16 +247,41 @@ public class ApiAccommodationController {
         if (userDetails == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("success", false, "message", "로그인이 필요합니다."));
         }
-        // CustomUserDetails에서 실제 사용자(호스트)의 ID를 가져오는 로직 필요
-        // 예: Long hostId = userDetails.getId(); 또는 userDetails.getUser().getHostId(); 등
-        // 여기서는 userDetails.getUser().getUserId()를 호스트 식별자로 사용한다고 가정 (User가 Host 역할을 겸하거나, User와 Host가 1:1 매핑)
-        Long hostUserId = userDetails.getUser().getUserId(); 
-        // TODO: hostUserId를 기반으로 Host 엔티티의 ID (실제 accommodations 테이블의 host_id 외래키에 해당하는 값)를 조회해야 할 수 있음.
-        //       만약 users.user_id가 곧바로 accommodations.host_id로 사용된다면 이대로 사용 가능.
-        //       여기서는 hostUserId가 accommodations.host_id에 직접 사용된다고 가정.
+
+        Long actualHostIdToUse;
+        // 프론트엔드에서 명시적으로 hostId를 제공했는지 확인
+        if (requestDto.getHostId() != null && requestDto.getHostId() > 0) { // hostId가 유효한 값으로 넘어왔는지 확인
+            actualHostIdToUse = requestDto.getHostId();
+            log.info("요청 DTO로부터 전달받은 hostId ({})를 사용합니다.", actualHostIdToUse);
+
+            // (선택적 강화) 전달된 hostId가 현재 로그인한 사용자의 실제 hostId와 일치하는지,
+            // 또는 관리자 권한인지 확인하는 로직을 추가할 수 있습니다.
+            // 예를 들어, userDetails.getUser().getRole()이 "ADMIN"이 아니고,
+            // hostService.getHostByUserId(userDetails.getUser().getUserId()).getHostId() != actualHostIdToUse 라면,
+            // 권한 문제를 제기할 수 있습니다. 현재는 요청받은 hostId를 우선적으로 사용합니다.
+
+        } else {
+            // requestDto에 hostId가 없거나 유효하지 않은 경우, 인증된 사용자 정보를 기반으로 hostId를 조회합니다.
+            log.info("요청 DTO에 hostId가 없거나 유효하지 않아, 인증된 사용자 정보로부터 hostId를 조회합니다. userId: {}", userDetails.getUser().getUserId());
+            try {
+                Host host = hostService.getHostByUserId(userDetails.getUser().getUserId());
+                if (host == null || host.getHostId() == null) {
+                    log.error("숙소 등록 시 호스트 정보를 찾을 수 없거나 DB에 hostId가 없습니다. userId: {}", userDetails.getUser().getUserId());
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                            .body(Map.of("success", false, "message", "숙소 등록을 위한 호스트 정보를 찾을 수 없습니다. 호스트 프로필을 확인하거나 관리자에게 문의하세요."));
+                }
+                actualHostIdToUse = host.getHostId();
+                log.info("인증된 사용자 정보로부터 hostId ({})를 조회하여 사용합니다.", actualHostIdToUse);
+            } catch (SQLException e) {
+                log.error("숙소 등록 시 호스트 정보 조회 중 DB 오류 발생: {}", e.getMessage(), e);
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body(Map.of("success", false, "message", "호스트 정보 조회 중 서버 오류가 발생했습니다."));
+            }
+        }
 
         try {
-            AccommodationResponseDto responseDto = accommodationService.createAccommodationAndImages(requestDto, hostUserId);
+            // 이제 requestDto와 조회/전달받은 actualHostIdToUse를 서비스 계층으로 전달합니다.
+            AccommodationResponseDto responseDto = accommodationService.createAccommodationAndImages(requestDto, actualHostIdToUse);
             return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("success", true, "message", "숙소가 성공적으로 등록 요청되었습니다.", "data", responseDto));
         } catch (IllegalArgumentException e) {
             log.error("숙소 등록 요청 데이터 유효성 오류: {}", e.getMessage(), e);

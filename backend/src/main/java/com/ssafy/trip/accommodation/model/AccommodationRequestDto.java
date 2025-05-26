@@ -4,15 +4,11 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.Data;
 import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 
-@Getter
-@Setter // FormData 바인딩 및 서비스 로직에서 값 설정 위해 Setter도 추가
-@NoArgsConstructor
+@Data
 public class AccommodationRequestDto {
 
     @NotBlank(message = "숙소명은 필수입니다.")
@@ -61,5 +57,5 @@ public class AccommodationRequestDto {
     private Long mainImageId; // 기존 대표 이미지 ID (새 대표 이미지 파일 없고, 기존 대표 이미지를 계속 사용할 경우)
     private String deletedImageIds; // JSON 배열 형태의 삭제될 기존 이미지 ID 목록 "[1,2,3]"
 
-    // 생성자, Getter, Setter 등은 Lombok이 처리
+    private Long hostId; // 호스트 ID 추가
 } 

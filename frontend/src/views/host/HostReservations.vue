@@ -39,7 +39,6 @@
               <option value="">모든 상태</option>
               <option value="PENDING">승인대기</option>
               <option value="CONFIRMED">예약확정</option>
-              <option value="CANCELLED_REQUEST">취소요청</option>
               <option value="CANCELLED">예약취소</option>
               <option value="COMPLETED">이용완료</option>
               <option value="NO_SHOW">노쇼</option>
@@ -206,11 +205,7 @@
               <select id="newStatus" class="form-select" v-model="newStatus">
                 <option v-if="selectedReservation.status === 'PENDING'" value="CONFIRMED">예약확정</option>
                 <option
-                  v-if="
-                    selectedReservation.status === 'PENDING' ||
-                    selectedReservation.status === 'CONFIRMED' ||
-                    selectedReservation.status === 'CANCELLED_REQUEST'
-                  "
+                  v-if="selectedReservation.status === 'PENDING' || selectedReservation.status === 'CONFIRMED'"
                   value="CANCELLED"
                 >
                   예약취소
@@ -223,9 +218,7 @@
             <div
               v-if="
                 newStatus === 'CANCELLED' &&
-                (selectedReservation.status === 'PENDING' ||
-                  selectedReservation.status === 'CONFIRMED' ||
-                  selectedReservation.status === 'CANCELLED_REQUEST')
+                (selectedReservation.status === 'PENDING' || selectedReservation.status === 'CONFIRMED')
               "
               class="mb-3"
             >
@@ -509,7 +502,6 @@ const getReservationStatusText = (status) => {
   const map = {
     PENDING: "승인대기",
     CONFIRMED: "예약확정",
-    CANCELLED_REQUEST: "취소요청",
     CANCELLED: "예약취소",
     COMPLETED: "이용완료",
     NO_SHOW: "노쇼(No-Show)",
@@ -521,7 +513,6 @@ const getReservationStatusBadge = (status) => {
   const map = {
     PENDING: "bg-warning text-dark",
     CONFIRMED: "bg-success",
-    CANCELLED_REQUEST: "bg-info text-dark",
     CANCELLED: "bg-danger",
     COMPLETED: "bg-primary",
     NO_SHOW: "bg-secondary",

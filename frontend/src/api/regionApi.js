@@ -1,4 +1,4 @@
-import apiGroup from './index';
+import apiGroup from "./index";
 
 //apiGroup.api.get(...);
 //apiGroup.apiNoAuth.get(...);
@@ -12,7 +12,7 @@ const regionApi = {
    * @returns {Promise} 시도 목록 데이터
    */
   getSidos() {
-    return apiGroup.apiNoAuth.get('/api/region/sidos');
+    return apiGroup.apiNoAuth.get("/api/region/sidos");
   },
 
   /**
@@ -21,8 +21,8 @@ const regionApi = {
    * @returns {Promise} 구군 목록 데이터
    */
   getGuguns(sidoCode) {
-    return apiGroup.apiNoAuth.get(`/api/region/guguns?sido=${sidoCode}`);
-  }
+    return apiGroup.apiNoAuth.get(`/api/region/guguns?sidoCode=${sidoCode}`);
+  },
 };
 
 export default regionApi;

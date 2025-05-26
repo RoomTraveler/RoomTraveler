@@ -62,9 +62,9 @@
           </div>
           <div v-else-if="accommodations.length === 0" class="text-center text-muted py-3">
             등록된 숙소가 없습니다.
-            <!-- 호스트 상태가 APPROVED일 때만 새 숙소 등록 버튼 표시 (stats.host.status 확인) -->
+            <!-- 호스트 상태가 ACTIVE일 때만 새 숙소 등록 버튼 표시 (stats.host.status 확인) -->
             <RouterLink
-              v-if="stats.host && stats.host.status === 'APPROVED'"
+              v-if="stats.host && stats.host.status === 'ACTIVE'"
               to="/host/accommodations/new"
               class="btn btn-sm btn-primary mt-2"
               >새 숙소 등록하기</RouterLink
