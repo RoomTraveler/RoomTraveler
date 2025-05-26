@@ -1,13 +1,17 @@
 package com.ssafy.trip.user;
 
+import java.io.IOException;
 import java.sql.SQLException;
 import java.util.*;
 
+import com.ssafy.trip.s3.AWSS3Service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Primary;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 /**
  * 사용자 서비스 구현 클래스
@@ -295,7 +299,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    public String updateUserProfileImage(Long userId, MultipartFile profileImageFile) throws SQLException, IOException {
+    public String updateUserProfileImage(Long userId, MultipartFile profileImageFile) throws SQLException , IOException {
         User user = userDao.selectUserById(userId);
         if (user == null) {
             throw new RuntimeException("사용자를 찾을 수 없습니다. ID: " + userId);
