@@ -30,7 +30,7 @@
             <input type="checkbox" id="remember" v-model="rememberMe" />
             <label for="remember">로그인 상태 유지</label>
           </div>
-          <a href="#" class="forgot-password">비밀번호 찾기</a>
+          <a href="/find-password" class="forgot-password">비밀번호 찾기</a>
         </div>
 
         <button type="submit" class="login-button" :disabled="loading">
@@ -38,7 +38,7 @@
         </button>
       </form>
 
-      <!-- 소셜 로그인 보여줌 -->
+      <!-- 소셜 로그인 보여줌
       <div class="social-login">
         <p>또는 소셜 계정으로 로그인</p>
         <div class="social-buttons">
@@ -46,7 +46,7 @@
           <button class="social-button kakao">카카오로 로그인</button>
           <button class="social-button naver">네이버로 로그인</button>
         </div>
-      </div>
+      </div> -->
 
       <!-- 회원가입 링크 -->
       <div class="register-link">

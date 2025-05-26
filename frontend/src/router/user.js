@@ -1,6 +1,7 @@
 const User = () => import("../views/user/UserProfile.vue");
 const Login = () => import("../views/user/Login.vue");
 const Register = () => import("../views/user/Register.vue");
+const FindPassword = () => import("../views/user/findPassword.vue");
 
 export const userRoutes = [
   {
@@ -21,4 +22,9 @@ export const userRoutes = [
     component: Register,
     meta: { title: "회원가입 - Room Traveler" },
   },
+  {
+    path: "/find-password",
+    name: "findPassword",
+    component: FindPassword,
+  }
 ];
