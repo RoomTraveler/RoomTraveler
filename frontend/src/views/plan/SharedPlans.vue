@@ -106,7 +106,7 @@ const initKakaoMap = async () => {
       }
 
       const script = document.createElement("script");
-      script.src = "https://dapi.kakao.com/v2/maps/sdk.js?appkey=a1b7d43f74e8d7c4fa60d02ce2c13f58&autoload=false";
+      script.src = "//dapi.kakao.com/v2/maps/sdk.js?appkey=a1b7d43f74e8d7c4fa60d02ce2c13f58&autoload=false";
       script.onload = () => {
         window.kakao.maps.load(() => {
           resolve();
@@ -225,8 +225,6 @@ const fetchPlans = async () => {
       likeCount.value[plan.planId] = plan.likes;
       liked.value[plan.planId] = plan.likedByUser;
     });
-    console.log(likeCount.value);
-    console.log(liked.value);
     plans.value.push(...data);
     page.value++;
   } catch (err) {

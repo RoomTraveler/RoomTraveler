@@ -104,7 +104,8 @@ public class MapController {
     @PostMapping("/plans")
     @Operation(summary = "여행 계획 저장", description = "사용자의 여행 계획 저장")
     @ApiResponse(responseCode = "200", description = "여행 계획 저장 성공")
-    public ResponseEntity<?> savePlan(@RequestBody MapDTO.PlanStoreDTO planStoreDTO) {
+    public ResponseEntity<?> savePlan(@CurrentUserId Long userId, @RequestBody MapDTO.PlanStoreDTO planStoreDTO) {
+        planStoreDTO.setUserId(userId);
         mapService.savePlan(planStoreDTO);
         return ResponseEntity.ok("Plan Saved");
     }

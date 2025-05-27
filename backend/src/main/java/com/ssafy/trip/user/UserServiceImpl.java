@@ -431,6 +431,7 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public void updateUserPassword(Long userId, String currentPassword, String newPassword) {
         User user = userDao.selectUserById(userId);
+        log.info("{}", user);
         if (user == null) {
             throw new RuntimeException("사용자를 찾을 수 없습니다. ID: " + userId);
         }

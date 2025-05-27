@@ -74,7 +74,7 @@
     <!-- 사용자 ID로 사용자 정보 조회 -->
     <select id="selectUserById" resultMap="userMap">
         SELECT 
-            u.user_id, u.username, u.email, u.phone, u.profile_image, u.role, u.status, u.created_at, u.updated_at, u.refresh,
+            u.user_id, u.username, u.password, u.email, u.phone, u.profile_image, u.role, u.status, u.created_at, u.updated_at, u.refresh,
             h.host_id, h.business_name, h.business_number, h.status AS host_registration_status
         FROM users u
         LEFT JOIN hosts h ON u.user_id = h.user_id

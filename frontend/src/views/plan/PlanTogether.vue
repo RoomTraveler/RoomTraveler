@@ -1,4 +1,5 @@
 <template>
+  <Header />
   <div class="container-fluid mt-4">
     <h2>Squad(ID: {{ squadId }})</h2>
     <div class="d-flex flex-row flex-nowrap align-items-center">
@@ -26,7 +27,13 @@
               <div class="col-md-4">
                 <label for="keywordInput" class="form-label">키워드 검색</label>
                 <div class="input-group">
-                  <input type="text" v-model="keywordText" id="keywordInput" class="form-control" placeholder="검색어 입력(2자 이상)" />
+                  <input
+                    type="text"
+                    v-model="keywordText"
+                    id="keywordInput"
+                    class="form-control"
+                    placeholder="검색어 입력(2자 이상)"
+                  />
                 </div>
               </div>
               <div class="col-md-4 align-self-end text-end">
@@ -61,8 +68,8 @@
 
                 <br />
                 <img
-                  v-if="spot.image.trim().length !== 0"
-                  :src="spot.image"
+                  v-if="spot.image2 && spot.image2.trim().length !== 0"
+                  :src="spot.image2"
                   class="img-thumbnail"
                   style="max-width: 100px; height: 100px"
                 /><br />
@@ -142,7 +149,7 @@
           >
             <i v-if="isLoading" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></i>
             <i v-else class="bi bi-check-circle-fill me-2"></i>
-            {{ isLoading ? '평가 중...' : '여행 계획 평가받기' }}
+            {{ isLoading ? "평가 중..." : "여행 계획 평가받기" }}
           </button>
 
           <div
@@ -167,7 +174,6 @@
             </div>
           </div>
         </div>
-
       </div>
     </div>
 
@@ -192,6 +198,7 @@ import SockJS from "sockjs-client/dist/sockjs.min.js";
 import { Client } from "@stomp/stompjs";
 import { useUserStore } from "@/store/userStore";
 import apiGroup from "@/api/index";
+import Header from "@/components/layout/Header.vue";
 
 const userStore = useUserStore();
 const userId = userStore.user.id;
@@ -449,10 +456,7 @@ const joinMessage = ref(null);
 let joinTimeout = null;
 
 function showJoinPopup(message) {
-  joinMessage.value = null;
-  setTimeout(() => {
-    joinMessage.value = message;
-  }, 0);
+  joinMessage.value = message;
   if (joinTimeout) clearTimeout(joinTimeout);
   joinTimeout = setTimeout(() => {
     joinMessage.value = null;
@@ -779,7 +783,7 @@ const savePlan = async () => {
       data: planData,
     });
 
-    const result = await response.text();
+    const result = response.data;
     alert(result);
 
     stompClient.publish({
@@ -828,7 +832,7 @@ const evaluationResult = ref({
   recommendations: "",
 });
 
-const isLoading = ref(false)
+const isLoading = ref(false);
 
 const contentTypeMap = {
   12: "관광지",

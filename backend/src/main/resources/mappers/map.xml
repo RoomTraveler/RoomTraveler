@@ -186,7 +186,7 @@
         <bind name="likeKeyword" value="'%' + keyword + '%'" />
         SELECT no,
             title,
-            first_image1 AS image,
+            first_image2,
             addr1,
             addr2,
             tel,

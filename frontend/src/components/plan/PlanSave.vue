@@ -1,4 +1,5 @@
 <template>
+  <Header />
   <div class="container-fluid mt-4">
     <div class="row">
       <!-- LEFT: Filters, Search Results & Map -->
@@ -54,8 +55,8 @@
 
                 <br />
                 <img
-                  v-if="spot.image.trim().length !== 0"
-                  :src="spot.image"
+                  v-if="spot.image2 && spot.image2.trim().length !== 0"
+                  :src="spot.image2"
                   class="img-thumbnail"
                   style="max-width: 100px; height: 100px"
                 /><br />
@@ -133,7 +134,7 @@
           >
             <i v-if="isLoading" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></i>
             <i v-else class="bi bi-check-circle-fill me-2"></i>
-            {{ isLoading ? '평가 중...' : '여행 계획 평가받기' }}
+            {{ isLoading ? "평가 중..." : "여행 계획 평가받기" }}
           </button>
 
           <div
@@ -174,6 +175,7 @@ import draggable from "vuedraggable";
 import apiGroup from "@/api/index";
 import ModalWrapper from "@/components/attraction/ModelWrapper.vue";
 import AttractionDetail from "@/components/attraction/AttractionDetail.vue";
+import Header from "@/components/layout/Header.vue";
 
 // 상태 관리
 const mapContainer = ref(null);
@@ -218,7 +220,7 @@ const evaluationResult = ref({
   recommendations: "",
 });
 
-const isLoading = ref(false)
+const isLoading = ref(false);
 
 const evaluatePlan = async () => {
   isLoading.value = true;
@@ -358,8 +360,11 @@ const loadKakaoMapScript = async () => {
 
 const loadContentList = async () => {
   try {
-    const response = await fetch("/api/map/content-types");
-    const data = await response.json();
+    const response = await apiGroup.apiNoAuth({
+      url: "/api/map/content-types",
+      method: "GET",
+    });
+    const data = await response.data;
     contentTypes.value = data;
   } catch (err) {
     console.error("컨텐츠 목록 로딩 실패", err);
@@ -412,15 +417,12 @@ const fetchTourSpots = async (pageIndex, mapBoundUpdate) => {
   });
 
   try {
-    const response = await fetch(`/api/map/region-contents?${params.toString()}`, {
+    const response = await apiGroup.api({
+      url: `/api/map/region-contents?${params.toString()}`,
       method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
     });
 
-    const data = await response.json();
-    console.log(data);
+    const data = response.data;
     spots.value = data || [];
     likedAttractions.value = data.reduce((acc, item) => {
       acc[item.no] = item.attractionLikeId !== 0;
@@ -536,22 +538,22 @@ function removePlace(index) {
 }
 
 watch(selectedPlaces, (newVal, oldVal) => {
-  const unique = []
-  const seenTitles = new Set()
+  const unique = [];
+  const seenTitles = new Set();
   for (const place of newVal) {
     if (!seenTitles.has(place.title)) {
-      seenTitles.add(place.title)
-      unique.push(place)
+      seenTitles.add(place.title);
+      unique.push(place);
     }
   }
   if (unique.length !== newVal.length) {
-    selectedPlaces.value = unique
+    selectedPlaces.value = unique;
   }
 
   drawLines();
 });
 
-const saveMarkers = ref([])
+const saveMarkers = ref([]);
 
 const drawLines = () => {
   if (!window.kakao || !window.kakao.maps || !map) return;
@@ -560,10 +562,10 @@ const drawLines = () => {
     savePolyline.value.setMap(null);
   }
 
-  saveMarkers.value.forEach(marker => {
-    marker.setMap(null)
-  })
-  saveMarkers.value = []
+  saveMarkers.value.forEach((marker) => {
+    marker.setMap(null);
+  });
+  saveMarkers.value = [];
 
   if (selectedPlaces.value.length >= 2) {
     const linePath = selectedPlaces.value.map((place) => new window.kakao.maps.LatLng(place.latitude, place.longitude));
@@ -580,7 +582,7 @@ const drawLines = () => {
     savePolyline.value = polyline;
 
     selectedPlaces.value.forEach((place, idx) => {
-      const position = new window.kakao.maps.LatLng(place.latitude, place.longitude)
+      const position = new window.kakao.maps.LatLng(place.latitude, place.longitude);
 
       // HTML 컨텐츠: 번호를 표시할 DIV
       const content = `<div style="
@@ -595,15 +597,15 @@ const drawLines = () => {
   box-shadow: 0 0 5px rgba(0,0,0,0.3);
 ">
   ${idx + 1}
-</div>`
+</div>`;
       const overlay = new window.kakao.maps.CustomOverlay({
         position,
         content,
-        yAnchor: 1,  // 숫자가 마커 꼭대기에 붙도록 조정
-      })
-      overlay.setMap(map)
-      saveMarkers.value.push(overlay)
-    })
+        yAnchor: 1, // 숫자가 마커 꼭대기에 붙도록 조정
+      });
+      overlay.setMap(map);
+      saveMarkers.value.push(overlay);
+    });
   }
 };
 
@@ -621,17 +623,13 @@ const savePlan = async () => {
       attractionIds: selectedPlaces.value.map((place) => place.no),
     };
 
-    const response = await fetch("/api/map/plans", {
+    const response = await apiGroup.api({
+      url: "/api/map/plans",
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(planData),
+      data: planData,
     });
 
-    if (!response.ok) throw new Error("여행 계획 저장 실패");
-
-    const result = await response.text();
+    const result = response.data;
     alert(result);
 
     // 저장 후 선택 목록 초기화

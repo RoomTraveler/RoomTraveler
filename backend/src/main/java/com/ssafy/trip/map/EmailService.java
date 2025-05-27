@@ -15,7 +15,7 @@ public class EmailService {
     private final JavaMailSender mailSender;
 
     public void sendTravelReminder(String toEmail, String planUuid) throws MessagingException {
-        String url = "http://localhost:8080/map/plans/public/" + planUuid;
+        String url = "http://localhost:5173/plans/public/" + planUuid;
 
         MimeMessage message = mailSender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
@@ -27,6 +27,7 @@ public class EmailService {
         helper.setTo(toEmail);
         helper.setSubject(subject);
         helper.setText(htmlBody, true);
+        message.setFrom("noreply@ssafy.com");
 
         mailSender.send(message);
     }

@@ -6,6 +6,45 @@
       </div>
     </div>
 
+    <!-- 이벤트 섹션 -->
+    <section class="section">
+      <div class="section-title">
+        진행중인 이벤트
+        <router-link to="/event" class="view-all"> 전체보기 <i class="bi bi-chevron-right"></i> </router-link>
+      </div>
+      <div v-if="isLoadingEvents" class="p-3 text-center text-muted">이벤트 로딩 중...</div>
+      <div v-if="!isLoadingEvents && fetchEventsError" class="p-3 text-center text-danger">{{ fetchEventsError }}</div>
+      <div v-if="!isLoadingEvents && !fetchEventsError && homeEvents.length === 0" class="p-3 text-center text-muted">
+        진행중인 이벤트가 없습니다.
+      </div>
+      <swiper
+        v-if="!isLoadingEvents && !fetchEventsError && homeEvents.length > 0"
+        :modules="swiperEventModules"
+        :slides-per-view="2"
+        :space-between="15"
+        navigation
+        :pagination="{ clickable: true }"
+        :breakpoints="{
+          320: { slidesPerView: 1, spaceBetween: 10 },
+          768: { slidesPerView: 2, spaceBetween: 15 },
+          1024: { slidesPerView: 2, spaceBetween: 15 },
+        }"
+        class="event-carousel"
+      >
+        <swiper-slide v-for="event in homeEvents" :key="event.id">
+          <router-link :to="{ name: 'EventDetail', params: { eventId: event.id } }" class="event-card-link">
+            <div class="event-card">
+              <img :src="event.image" :alt="event.title" class="event-image" />
+              <div class="event-info">
+                <div class="event-title">{{ event.title }}</div>
+                <div class="event-period">{{ event.date }}</div>
+              </div>
+            </div>
+          </router-link>
+        </swiper-slide>
+      </swiper>
+    </section>
+
     <section class="popular-section">
       <h2 class="section-title">인기 있는 관광지</h2>
       <div class="card-list">
@@ -82,6 +121,8 @@ import api from "@/api/index";
 import Layout from "@/components/layout/Layout.vue";
 import { ref, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
+import { Swiper, SwiperSlide } from "swiper/vue";
+import { Navigation, Pagination } from "swiper/modules";
 
 const router = useRouter();
 
@@ -94,10 +135,63 @@ const popularPlans = ref([]);
 const currentIndex = ref(0);
 let intervalId;
 
+const homeEvents = ref([]);
+const isLoadingEvents = ref(true);
+const fetchEventsError = ref(null);
+const swiperEventModules = [Navigation, Pagination]; // 이벤트 캐러셀용 Swiper 모듈
+
+const fetchHomeEvents = async () => {
+  isLoadingEvents.value = true;
+  fetchEventsError.value = null;
+  try {
+    const response = await api.apiNoAuth({
+      url: "/api/events",
+      method: "GET",
+    });
+    console.log(response.data);
+    const allFetchedEvents = (response.data.result || response.data.data || response.data || []).map((event) => {
+      const eventStatus =
+        event.status === "ONGOING"
+          ? "진행중"
+          : event.status === "ENDED"
+            ? "종료"
+            : event.status === "HIDDEN"
+              ? "숨김"
+              : event.status;
+      const eventDate = event.startDate && event.endDate ? `${event.startDate}~${event.endDate}` : "상시 진행";
+
+      return {
+        id: event.eventId,
+        title: event.title,
+        image: event.mainImageUrl || "https://via.placeholder.com/280x200?text=Event",
+        date: eventDate,
+        status: eventStatus,
+        createdAt: event.createdAt,
+      };
+    });
+
+    // 최신순 정렬 후 상위 6개만
+    const sortedEvents = allFetchedEvents.sort((a, b) => {
+      const dateA = new Date(a.createdAt || 0);
+      const dateB = new Date(b.createdAt || 0);
+      return dateB - dateA;
+    });
+    const topEvents = sortedEvents.slice(0, 6);
+
+    // "진행중" 이벤트만 표시
+    homeEvents.value = topEvents.filter((event) => event.status === "진행중");
+  } catch (error) {
+    fetchEventsError.value = "이벤트 정보를 가져오는데 실패했습니다.";
+    homeEvents.value = [];
+  }
+  isLoadingEvents.value = false;
+};
+
 onMounted(() => {
   intervalId = setInterval(() => {
     currentIndex.value = (currentIndex.value + 1) % images.value.length;
   }, 5000);
+  fetchHomeEvents();
   popularFiveAttractions();
   popularFivePlans();
 });
@@ -323,5 +417,94 @@ onUnmounted(() => {
 
 .view-all-button:hover {
   background-color: #0056b3;
+}
+
+.event-carousel .swiper-slide {
+  display: flex;
+  justify-content: center;
+}
+
+.event-carousel .event-card-link {
+  display: block;
+  width: 100%;
+  max-width: 460px;
+  text-decoration: none;
+  color: inherit;
+}
+
+.event-carousel .event-card {
+  border: 1px solid #eee;
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: #fff;
+  transition: box-shadow 0.2s ease-in-out;
+  height: 100%;
+}
+
+.event-carousel .event-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.event-carousel .event-image {
+  width: 100%;
+  height: 216px;
+  object-fit: contain;
+  background-color: #f8f9fa;
+}
+
+.event-carousel .event-info {
+  padding: 12px;
+  background-color: #ffffff;
+}
+
+.event-carousel .event-title {
+  font-weight: bold;
+  font-size: 1rem;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.event-carousel .event-period {
+  color: #666;
+  font-size: 0.85rem;
+}
+
+:deep(.event-carousel .swiper-button-next),
+:deep(.event-carousel .swiper-button-prev) {
+  color: var(--yanolja-red);
+}
+:deep(.event-carousel .swiper-pagination-bullet-active) {
+  background-color: var(--yanolja-red);
+}
+
+.section {
+  padding: 30px 0; /* 섹션 상하 패딩 추가 */
+  background-color: #ffffff !important;
+}
+
+.section-title {
+  font-size: 22px; /* 섹션 타이틀 크기 조정 */
+  font-weight: bold;
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.section-title .view-all {
+  /* 전체보기 링크 스타일 */
+  font-size: 14px;
+  color: var(--yanolja-dark-gray);
+  text-decoration: none;
+  font-weight: normal;
+}
+.section-title .view-all:hover {
+  text-decoration: underline;
+}
+.section-title .view-all i {
+  font-size: 12px;
+  vertical-align: middle;
 }
 </style>
