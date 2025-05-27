@@ -315,8 +315,9 @@
   </div>
 </template>
 
-<script lang="ts">
+<script>
 import { useUserStore } from "@/store/userStore";
+import { useAccommodationStore } from "@/store/accommodationStore";
 import AccommodationHeader from "../../components/accommodation/AccommodationHeader.vue";
 import RoomListItem from "../../components/accommodation/RoomListItem.vue";
 import GuestSelectModal from "../../components/modals/GuestSelectModal.vue";
@@ -324,79 +325,12 @@ import DateSelectModal from "../../components/modals/DateSelectModal.vue";
 import noImage from "@/assets/no-image.jpg";
 import axios from "axios";
 import { useCartStore } from "@/store/cartStore";
-import type { PropType } from "vue";
 import { Swiper, SwiperSlide } from "swiper/vue";
 import { Navigation, Pagination, Autoplay } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/pagination";
-
-// Type Definitions
-interface ImageResponse {
-  imageId?: number;
-  imageUrl: string;
-  isMain?: boolean;
-}
-
-interface Accommodation {
-  accommodationId: number;
-  id?: number;
-  title: string;
-  description?: string;
-  address?: string;
-  sidoName?: string;
-  gugunName?: string;
-  images?: ImageResponse[];
-  amenities?: string | string[];
-  rooms?: Room[];
-}
-
-interface Room {
-  roomId: number;
-  name: string;
-  price: number;
-  capacity: number;
-  minAvailableCount?: number;
-}
-
-interface Review {
-  reviewId: number;
-  userId: number;
-  userNickname?: string;
-  rating: number;
-  content: string;
-  createdAt: string | Date;
-}
-
-interface CarouselReviewItem {
-  type: "review";
-  review: Review;
-}
-interface CarouselSeeAllItem {
-  type: "see-all";
-}
-type CarouselItem = CarouselReviewItem | CarouselSeeAllItem;
-
-interface Toast {
-  id: number;
-  message: string;
-  type?: "success" | "error" | "info";
-}
-
-interface EditableReview {
-  reviewId: number | null;
-  rating: number | string;
-  content: string;
-}
-
-interface GuestSelectionPayload {
-  guests: number;
-}
-
-interface DateSelectionPayload extends Array<Date | undefined> {
-  0: Date | undefined;
-  1: Date | undefined;
-}
+import apiUtils from "@/api";
 
 const KOREAN_DAYS = ["일", "월", "화", "수", "목", "금", "토"];
 const MAX_REVIEWS_IN_CAROUSEL = 10;
@@ -411,16 +345,18 @@ export default {
     Swiper,
     SwiperSlide,
   },
-  props: { id: { type: [String, Number] as PropType<string | number>, required: true } },
+  props: { id: { type: [String, Number], required: true } },
   setup() {
     const userStore = useUserStore();
     const cartStore = useCartStore();
+    const accommodationStore = useAccommodationStore();
     if (!userStore.isAuthenticated) {
       userStore.loadUserFromStorage();
     }
     return {
       userStore,
       cartStore,
+      accommodationStore,
       swiperModules: [Navigation, Pagination, Autoplay],
     };
   },
@@ -450,13 +386,13 @@ export default {
     }
 
     return {
-      accommodation: null as Accommodation | null,
-      rooms: [] as Room[],
-      reviews: [] as Review[],
+      accommodation: null,
+      rooms: [],
+      reviews: [],
       loading: true,
       loadingReviews: false,
-      fetchError: null as string | null,
-      fetchReviewsError: null as string | null,
+      fetchError: null,
+      fetchReviewsError: null,
       isFavorite: false,
       wishlistApiLoading: false,
       noImage,
@@ -467,13 +403,13 @@ export default {
       canUserReview: false,
       fetchReviewEligibilityAttempted: false,
       showEditReviewModal: false,
-      editableReview: { reviewId: null, rating: 5, content: "" } as EditableReview,
+      editableReview: { reviewId: null, rating: 5, content: "" },
       isSubmittingEditReview: false,
       editReviewError: "",
-      isDeletingReview: null as number | null,
+      isDeletingReview: null,
       averageRating: 0,
       reviewCount: 0,
-      toasts: [] as Toast[],
+      toasts: [],
       selectedCheckInDate: urlCheckInDate,
       selectedCheckOutDate: urlCheckOutDate,
       selectedGuests: urlGuests,
@@ -483,56 +419,56 @@ export default {
     };
   },
   computed: {
-    headerTitle(): string {
+    headerTitle() {
       return this.accommodation?.title || "숙소 상세정보";
     },
-    isLoggedIn(): boolean {
+    isLoggedIn() {
       return this.userStore.isAuthenticated;
     },
-    userId(): number | undefined {
+    userId() {
       return this.userStore.user?.id;
     },
-    amenitiesArray(): string[] {
+    amenitiesArray() {
       if (this.accommodation && this.accommodation.amenities) {
         if (Array.isArray(this.accommodation.amenities)) {
           return this.accommodation.amenities.filter(Boolean);
         }
         return this.accommodation.amenities
           .split(",")
-          .map((amenity: string) => amenity.trim())
+          .map((amenity) => amenity.trim())
           .filter(Boolean);
       }
       return [];
     },
-    selectedDateRangeDisplay(): string {
+    selectedDateRangeDisplay() {
       if (!this.selectedCheckInDate || !this.selectedCheckOutDate) return "날짜를 선택하세요";
       const checkInStr = this.formatDateWithDay(this.selectedCheckInDate);
       const checkOutStr = this.formatDateWithDay(this.selectedCheckOutDate);
       const nights = this.calculateNights(this.selectedCheckInDate, this.selectedCheckOutDate);
       return `${checkInStr} ~ ${checkOutStr} • ${nights}박`;
     },
-    selectedGuestCountDisplay(): string {
+    selectedGuestCountDisplay() {
       return `인원 ${this.selectedGuests}명`;
     },
-    reviewCarouselItems(): CarouselItem[] {
+    reviewCarouselItems() {
       if (this.loadingReviews || this.fetchReviewsError || this.reviewCount === 0) {
         return [];
       }
-      const carouselReviews: CarouselItem[] = this.reviews
+      const carouselReviews = this.reviews
         .slice(0, MAX_REVIEWS_IN_CAROUSEL)
-        .map((review: Review) => ({ type: "review", review }));
+        .map((review) => ({ type: "review", review }));
       if (this.reviewCount > 0) {
         carouselReviews.push({ type: "see-all" });
       }
       return carouselReviews;
     },
-    canPrevReviewSlide(): boolean {
+    canPrevReviewSlide() {
       return this.currentReviewSlideIndex > 0;
     },
-    canNextReviewSlide(): boolean {
+    canNextReviewSlide() {
       return this.currentReviewSlideIndex < this.reviewCarouselItems.length - 1;
     },
-    areAllRoomsUnbookable(): boolean {
+    areAllRoomsUnbookable() {
       if (!this.rooms || this.rooms.length === 0) {
         return false;
       }
@@ -541,7 +477,7 @@ export default {
       }
       return this.rooms.every((room) => !this.isRoomBookable(room));
     },
-    maxCapacityOfAllRooms(): number {
+    maxCapacityOfAllRooms() {
       if (!this.rooms || this.rooms.length === 0) {
         return 10;
       }
@@ -552,24 +488,34 @@ export default {
         }, 0) || 10
       );
     },
-    allAccommodationImages(): ImageResponse[] {
-      if (this.accommodation && this.accommodation.images && this.accommodation.images.length > 0) {
-        const sortedImages = [...this.accommodation.images].sort((a, b) => {
-          if (a.isMain && !b.isMain) return -1;
-          if (!a.isMain && b.isMain) return 1;
-          return 0;
-        });
-        return sortedImages.filter((img) => img.imageUrl && img.imageUrl !== this.noImage);
+    allAccommodationImages() {
+      if (this.accommodation) {
+        const images = [];
+        if (this.accommodation.mainImageUrl) {
+          images.push({ imageUrl: this.accommodation.mainImageUrl, isMain: true });
+        } else if (this.accommodation.thumbnailImageUrl) {
+          images.push({ imageUrl: this.accommodation.thumbnailImageUrl, isMain: true });
+        }
+
+        if (images.length > 0) {
+          return images.filter((img) => img.imageUrl && img.imageUrl !== this.noImage);
+        }
       }
       return this.loading ? [] : [{ imageUrl: this.noImage, isMain: true }];
     },
   },
   watch: {
-    reviews() {
-      this.currentReviewSlideIndex = 0;
-      if (this.isLoggedIn) {
-        this.checkUserReviewStatus();
-        this.checkReviewEligibility();
+    reviews(newReviews, oldReviews) {
+      if (Array.isArray(newReviews)) {
+        this.currentReviewSlideIndex = 0;
+        if (this.isLoggedIn) {
+          this.checkUserReviewStatus();
+          this.checkReviewEligibility();
+        }
+      } else if (newReviews === null && oldReviews === undefined) {
+      } else {
+        this.userHasReviewed = false;
+        this.canUserReview = false;
       }
     },
     isLoggedIn(newVal) {
@@ -588,6 +534,8 @@ export default {
       handler(newId, oldId) {
         if (newId && newId !== oldId) {
           this.fetchData();
+        } else if (newId && !this.accommodation) {
+          this.fetchData();
         }
       },
     },
@@ -602,26 +550,53 @@ export default {
       }
       this.loading = true;
       this.fetchError = null;
+      this.fetchReviewsError = null;
       this.currentReviewSlideIndex = 0;
+
       try {
         const accommodationId = Number(this.id);
-        await this.fetchAccommodationAndRooms(accommodationId);
-        await this.fetchReviewsAndSummary(accommodationId);
-        if (this.isLoggedIn && this.accommodation) {
-          await this.fetchFavoriteStatus(this.accommodation.accommodationId);
-          await this.checkUserReviewStatus();
-          await this.checkReviewEligibility();
+
+        // 1. 숙소 및 객실 정보 로드
+        try {
+          await this.fetchAccommodationAndRooms(accommodationId);
+        } catch (accError) {
+          console.error("숙소/객실 정보 로드 실패:", accError);
+          this.fetchError = accError.message || "숙소 및 객실 정보를 불러오는 중 오류가 발생했습니다.";
         }
-      } catch (e: any) {
-        console.error("데이터를 불러오는데 실패했습니다:", e);
-        this.fetchError = e.message || "정보를 불러오는 중 오류가 발생했습니다.";
+
+        // 2. 리뷰 정보 로드 (숙소/객실 로드 성공 여부와 관계없이 시도)
+        try {
+          await this.fetchReviewsAndSummary(accommodationId);
+        } catch (revError) {
+          console.error("리뷰 정보 로드 실패:", revError);
+          // fetchReviewsAndSummary 내부에서 이미 fetchReviewsError를 설정하므로 여기서는 추가 처리 불필요
+        }
+
+        // 3. 사용자 관련 정보 로드 (숙소 정보가 있어야 의미 있음)
+        if (this.isLoggedIn && this.accommodation) {
+          try {
+            await this.fetchFavoriteStatus(this.accommodation.accommodationId);
+            this.checkUserReviewStatus(); // API 호출이 아님, await 제거
+            this.checkReviewEligibility(); // API 호출이 아님, await 제거
+          } catch (userSpecificError) {
+            console.error("사용자 특정 정보(찜, 리뷰 상태) 로드 실패:", userSpecificError);
+            this.showToast("사용자 관련 정보를 가져오는데 일부 실패했습니다.", 3000, "warning");
+          }
+        }
+      } catch (e) {
+        // 이 최상위 catch는 예상치 못한 전반적인 오류 처리용
+        console.error("fetchData에서 예상치 못한 오류:", e);
+        if (!this.fetchError && !this.fetchReviewsError) {
+          // 개별 에러가 이미 설정되지 않은 경우
+          this.fetchError = e.message || "정보를 불러오는 중 전반적인 오류가 발생했습니다.";
+        }
       } finally {
         this.loading = false;
       }
     },
-    async fetchAccommodationAndRooms(accommodationId: number) {
+    async fetchAccommodationAndRooms(accommodationId) {
       try {
-        const params: { guests?: number; checkInDate?: string; checkOutDate?: string } = {};
+        const params = {};
         if (this.selectedGuests > 0) params.guests = this.selectedGuests;
         if (this.selectedCheckInDate && this.selectedCheckOutDate) {
           params.checkInDate = this.formatDateForApi(this.selectedCheckInDate);
@@ -630,10 +605,7 @@ export default {
 
         console.log("[AccommodationDetail] API Request Params for Rooms:", JSON.parse(JSON.stringify(params)));
 
-        const res = await axios.get<{ accommodation: Accommodation; rooms: Room[] }>(
-          `/api/accommodations/${accommodationId}`,
-          { params }
-        );
+        const res = await apiUtils.api.get(`/api/accommodations/${accommodationId}`, { params });
         if (res.data && res.data.accommodation) {
           if (res.data.accommodation.id && !res.data.accommodation.accommodationId) {
             res.data.accommodation.accommodationId = res.data.accommodation.id;
@@ -643,7 +615,7 @@ export default {
         } else {
           throw new Error("숙소 정보를 찾을 수 없습니다.");
         }
-      } catch (err: any) {
+      } catch (err) {
         console.error("Error fetching accommodation details:", err);
         this.fetchError = err.response?.data?.message || err.message || "숙소 정보를 가져오는데 실패했습니다.";
         if (!this.accommodation) {
@@ -652,17 +624,15 @@ export default {
         }
       }
     },
-    async fetchReviewsAndSummary(accommodationId: number) {
+    async fetchReviewsAndSummary(accommodationId) {
       this.loadingReviews = true;
       this.fetchReviewsError = null;
       try {
         const [reviewsRes, summaryRes] = await Promise.all([
-          axios.get<Review[]>(`/api/reviews/accommodation/${accommodationId}`),
-          axios.get<{ averageRating: number; totalReviews: number }>(
-            `/api/reviews/summary/accommodation/${accommodationId}`
-          ),
+          apiUtils.api.get(`/api/reviews/accommodation/${accommodationId}`),
+          apiUtils.api.get(`/api/reviews/summary/accommodation/${accommodationId}`),
         ]);
-        this.reviews = reviewsRes.data || [];
+        this.reviews = Array.isArray(reviewsRes.data) ? reviewsRes.data : [];
         if (summaryRes.data) {
           this.averageRating = summaryRes.data.averageRating || 0;
           this.reviewCount = summaryRes.data.totalReviews || 0;
@@ -670,7 +640,7 @@ export default {
           this.averageRating = 0;
           this.reviewCount = 0;
         }
-      } catch (error: any) {
+      } catch (error) {
         console.error("Error fetching reviews or summary:", error);
         this.fetchReviewsError = error.message || "리뷰 정보를 가져오는데 실패했습니다.";
         this.reviews = [];
@@ -680,16 +650,21 @@ export default {
         this.loadingReviews = false;
       }
     },
-    async fetchFavoriteStatus(accommodationId: number) {
-      if (!this.isLoggedIn || !accommodationId) return;
+    async fetchFavoriteStatus(accommodationId) {
+      if (!this.isLoggedIn || !accommodationId) {
+        this.isFavorite = false;
+        return;
+      }
       this.wishlistApiLoading = true;
       try {
-        const response = await axios.get<{ isFavorite: boolean }>(
-          `/api/favorites/status/accommodation/${accommodationId}`
-        );
+        const response = await apiUtils.api.get(`/api/favorites/status?accommodationId=${accommodationId}`);
         this.isFavorite = response.data.isFavorite;
       } catch (error) {
         console.error("Error fetching favorite status:", error);
+        this.isFavorite = false;
+        if (error.response && error.response.status !== 404) {
+          this.showToast("찜 상태를 불러오는데 실패했습니다.", 2000, "error");
+        }
       } finally {
         this.wishlistApiLoading = false;
       }
@@ -699,7 +674,8 @@ export default {
         this.userHasReviewed = false;
         return;
       }
-      this.userHasReviewed = this.reviews.some((review: Review) => review.userId === this.userId);
+      this.userHasReviewed =
+        Array.isArray(this.reviews) && this.reviews.some((review) => review.userId === this.userId);
     },
     checkReviewEligibility() {
       this.fetchReviewEligibilityAttempted = true;
@@ -722,19 +698,19 @@ export default {
           rating: parseInt(String(this.newReview.rating), 10),
           content: this.newReview.content,
         };
-        await axios.post(`/api/reviews`, payload);
+        await apiUtils.api.post(`/api/reviews`, payload);
         this.showToast("리뷰가 성공적으로 등록되었습니다.");
         this.newReview.rating = 5;
         this.newReview.content = "";
         await this.fetchReviewsAndSummary(this.accommodation.accommodationId);
-      } catch (error: any) {
+      } catch (error) {
         console.error("Error submitting review:", error);
         this.reviewError = error.response?.data?.message || "리뷰 등록 중 오류가 발생했습니다.";
       } finally {
         this.isSubmittingReview = false;
       }
     },
-    openEditReviewModal(review: Review) {
+    openEditReviewModal(review) {
       this.editableReview = { ...review, rating: review.rating.toString() };
       this.editReviewError = "";
       this.showEditReviewModal = true;
@@ -751,29 +727,29 @@ export default {
           rating: parseInt(String(this.editableReview.rating), 10),
           content: this.editableReview.content,
         };
-        await axios.put(`/api/reviews/${this.editableReview.reviewId}`, payload);
+        await apiUtils.api.put(`/api/reviews/${this.editableReview.reviewId}`, payload);
         this.showToast("리뷰가 성공적으로 수정되었습니다.");
         this.showEditReviewModal = false;
         if (this.accommodation) {
           await this.fetchReviewsAndSummary(this.accommodation.accommodationId);
         }
-      } catch (error: any) {
+      } catch (error) {
         console.error("Error editing review:", error);
         this.editReviewError = error.response?.data?.message || "리뷰 수정 중 오류가 발생했습니다.";
       } finally {
         this.isSubmittingEditReview = false;
       }
     },
-    async deleteReview(reviewId: number) {
+    async deleteReview(reviewId) {
       if (!confirm("정말로 이 리뷰를 삭제하시겠습니까?")) return;
       this.isDeletingReview = reviewId;
       try {
-        await axios.delete(`/api/reviews/${reviewId}`);
+        await apiUtils.api.delete(`/api/reviews/${reviewId}`);
         this.showToast("리뷰가 성공적으로 삭제되었습니다.");
         if (this.accommodation) {
           await this.fetchReviewsAndSummary(this.accommodation.accommodationId);
         }
-      } catch (error: any) {
+      } catch (error) {
         console.error("Error deleting review:", error);
         this.showToast(error.response?.data?.message || "리뷰 삭제 중 오류가 발생했습니다.");
       } finally {
@@ -795,18 +771,20 @@ export default {
 
       try {
         if (this.isFavorite) {
-          await axios.delete(`/api/favorites/accommodation/${accommodationId}`);
+          await apiUtils.api.delete(`/api/favorites?accommodationId=${accommodationId}`);
           this.isFavorite = false;
           this.showToast("찜 목록에서 삭제되었습니다.");
         } else {
-          await axios.post(`/api/favorites`, { accommodationId });
+          await apiUtils.api.post(`/api/favorites`, { accommodationId });
           this.isFavorite = true;
           this.showToast("찜 목록에 추가되었습니다.");
         }
-      } catch (error: any) {
-        console.error("Error toggling wishlist:", error);
-        const errorMsg = error.response?.data?.message || "찜 처리 중 오류가 발생했습니다.";
-        this.showToast(errorMsg, 3000, "error");
+        if (this.accommodationStore) {
+          this.accommodationStore.toggleFavoriteLocal(accommodationId);
+        }
+      } catch (error) {
+        console.error("Error toggling wishlist in component:", error);
+        this.showToast(error.response?.data?.message || "찜 처리 중 오류가 발생했습니다.", 3000, "error");
       } finally {
         this.wishlistApiLoading = false;
       }
@@ -831,19 +809,19 @@ export default {
           .catch(() => this.showToast("링크 복사에 실패했습니다.", 3000, "error"));
       }
     },
-    formatDate(dateInput: string | Date | undefined): string {
+    formatDate(dateInput) {
       if (!dateInput) return "";
       const date = typeof dateInput === "string" ? new Date(dateInput) : dateInput;
       if (!(date instanceof Date) || isNaN(date.getTime())) return "날짜 오류";
 
-      const options: Intl.DateTimeFormatOptions = { year: "numeric", month: "short", day: "numeric" };
+      const options = { year: "numeric", month: "short", day: "numeric" };
       return date.toLocaleDateString("ko-KR", options);
     },
-    formatPrice(price: number | string | undefined | null): string {
+    formatPrice(price) {
       if (price === undefined || price === null || isNaN(Number(price))) return "가격 문의";
       return new Intl.NumberFormat("ko-KR").format(Number(price));
     },
-    goToRoomDetail(room: Room) {
+    goToRoomDetail(room) {
       if (!this.isRoomBookable(room)) {
         this.showToast("선택하신 조건으로 현재 예약이 불가능한 객실입니다.", 3000);
         return;
@@ -884,28 +862,28 @@ export default {
         reviewsSection.scrollIntoView({ behavior: "smooth", block: "start" });
       }
     },
-    showToast(msg: string, duration: number = 3000, type: Toast["type"] = "info") {
+    showToast(msg, duration = 3000, type = "info") {
       const toastId = Date.now();
       this.toasts.push({ id: toastId, message: msg, type });
       setTimeout(() => {
-        this.toasts = this.toasts.filter((t: Toast) => t.id !== toastId);
+        this.toasts = this.toasts.filter((t) => t.id !== toastId);
       }, duration);
     },
-    formatDateForApi(date: Date | null): string | undefined {
+    formatDateForApi(date) {
       if (!date) return undefined;
       const year = date.getFullYear();
       const month = (date.getMonth() + 1).toString().padStart(2, "0");
       const day = date.getDate().toString().padStart(2, "0");
       return `${year}-${month}-${day}`;
     },
-    formatDateWithDay(date: Date | null): string {
+    formatDateWithDay(date) {
       if (!date) return "";
       const month = (date.getMonth() + 1).toString().padStart(2, "0");
       const day = date.getDate().toString().padStart(2, "0");
       const dayOfWeek = KOREAN_DAYS[date.getDay()];
       return `${month}.${day}(${dayOfWeek})`;
     },
-    calculateNights(startDate: Date | null, endDate: Date | null): number {
+    calculateNights(startDate, endDate) {
       if (!startDate || !endDate) return 0;
       const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -914,7 +892,7 @@ export default {
     openDateSelectionModal() {
       this.showDateModal = true;
     },
-    async confirmDateSelectionAndCloseModal(dates: DateSelectionPayload | undefined) {
+    async confirmDateSelectionAndCloseModal(dates) {
       if (dates && dates[0] && dates[1]) {
         this.selectedCheckInDate = new Date(dates[0]);
         this.selectedCheckOutDate = new Date(dates[1]);
@@ -927,7 +905,7 @@ export default {
           } else if (this.id) {
             await this.fetchAccommodationAndRooms(Number(this.id));
           }
-        } catch (error: any) {
+        } catch (error) {
           console.error("날짜 변경 후 데이터 다시 로드 실패:", error);
           this.showToast("객실 정보 업데이트 중 오류가 발생했습니다.", 3000, "error");
         } finally {
@@ -939,7 +917,7 @@ export default {
     openGuestSelectionModal() {
       this.showGuestModal = true;
     },
-    async confirmGuestSelectionAndCloseModal(payload: GuestSelectionPayload | undefined) {
+    async confirmGuestSelectionAndCloseModal(payload) {
       if (payload && typeof payload.guests === "number") {
         this.selectedGuests = payload.guests;
         this.showToast("인원이 선택되어 객실 정보를 업데이트합니다.");
@@ -952,7 +930,7 @@ export default {
             } else if (this.id) {
               await this.fetchAccommodationAndRooms(Number(this.id));
             }
-          } catch (error: any) {
+          } catch (error) {
             console.error("인원 변경 후 데이터 다시 로드 실패:", error);
             this.showToast("객실 정보 업데이트 중 오류가 발생했습니다.", 3000, "error");
           } finally {
@@ -972,10 +950,46 @@ export default {
         this.currentReviewSlideIndex--;
       }
     },
-    handleBookRoom(room: Room) {
-      console.log(`Book room: ${room.roomId}`);
+    async handleBookRoom(room) {
+      if (!this.isRoomBookable(room)) {
+        this.showToast("선택하신 조건으로 현재 예약이 불가능하여 바로 예약할 수 없습니다.", 3000);
+        return;
+      }
+      if (!this.isLoggedIn) {
+        this.showToast("로그인이 필요한 서비스입니다.", 3000, "info");
+        this.$router.push({ name: "Login", query: { redirect: this.$route.fullPath } });
+        return;
+      }
+      if (!this.selectedCheckInDate || !this.selectedCheckOutDate || this.selectedGuests <= 0) {
+        this.showToast("날짜와 인원을 모두 선택해야 바로 예약할 수 있습니다.", 3000, "info");
+        const bookingOptionsSection = document.getElementById("booking-options-section");
+        if (bookingOptionsSection) {
+          bookingOptionsSection.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+        return;
+      }
+
+      const itemDetails = {
+        roomId: room.roomId,
+        checkInDate: this.formatDateForApi(this.selectedCheckInDate),
+        checkOutDate: this.formatDateForApi(this.selectedCheckOutDate),
+        guestCount: this.selectedGuests,
+        price: room.price,
+      };
+
+      try {
+        await this.cartStore.addToCart(itemDetails);
+        this.$router.push({ name: "Cart" });
+      } catch (error) {
+        console.error("AccommodationDetail - Error during booking (add to cart step):", error);
+        this.showToast(
+          error.response?.data?.message || error.message || "예약 처리 중(장바구니 추가) 오류가 발생했습니다.",
+          3000,
+          "error"
+        );
+      }
     },
-    async handleAddToCart(room: Room) {
+    async handleAddToCart(room) {
       if (!this.isRoomBookable(room)) {
         this.showToast("선택하신 조건으로 현재 예약이 불가능하여 장바구니에 담을 수 없습니다.", 3000);
         return;
@@ -1005,7 +1019,7 @@ export default {
       try {
         const response = await this.cartStore.addToCart(itemDetails);
         this.showToast(response.message || "객실이 장바구니에 추가되었습니다.");
-      } catch (error: any) {
+      } catch (error) {
         console.error("AccommodationDetail - Error adding to cart:", error);
         this.showToast(
           error.response?.data?.message || error.message || "장바구니 추가 중 오류가 발생했습니다.",
@@ -1014,7 +1028,7 @@ export default {
         );
       }
     },
-    isRoomBookable(room: Room | undefined): boolean {
+    isRoomBookable(room) {
       if (!room) return false;
 
       if (!this.selectedCheckInDate || !this.selectedCheckOutDate || this.selectedGuests === 0) {

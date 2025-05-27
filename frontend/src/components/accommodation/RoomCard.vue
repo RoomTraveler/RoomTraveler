@@ -1,55 +1,46 @@
 <template>
-  <div class="bg-white d-flex flex-column flex-shrink-0 rounded-start" style="width:320px; min-height:198px; overflow:hidden;">
+  <div
+    class="bg-white d-flex flex-column flex-shrink-0 rounded-start"
+    style="width: 320px; min-height: 198px; overflow: hidden"
+  >
     <!-- 이미지 캐러셀 + 객실 기본정보 -->
     <div class="d-flex flex-column w-100 flex-shrink-0">
       <!-- 이미지 캐러셀 -->
-      <div class="position-relative w-100 bg-light mb-3" style="height:160px;">
-        <div v-if="roomImages.length > 0" class="h-100 w-100">
-          <img
-              :src="roomImages[currentImageIndex]"
-              :alt="`${room.name || '객실'} 이미지 ${currentImageIndex + 1}`"
+      <div class="position-relative w-100 bg-light mb-3" style="height: 160px">
+        <swiper
+          v-if="roomImages.length > 0 && roomImages[0] !== defaultNoImage"
+          :modules="swiperModules"
+          :slides-per-view="1"
+          :space-between="0"
+          navigation
+          :pagination="{ clickable: true, el: '.swiper-pagination-custom' }"
+          loop
+          class="h-100 w-100"
+          @swiper="onSwiper"
+        >
+          <swiper-slide v-for="(imgUrl, index) in roomImages" :key="index">
+            <img
+              :src="imgUrl"
+              :alt="`${room.name || '객실'} 이미지 ${index + 1}`"
               class="w-100 h-100 object-fit-cover rounded-top"
-              style="min-height:160px;max-height:160px;"
-          />
-          <!-- 좌/우 화살표 -->
-          <button
-              v-if="roomImages.length > 1"
-              @click.stop="prevImage"
-              class="btn btn-dark btn-sm position-absolute top-50 start-0 translate-middle-y ms-2 opacity-75"
-              style="border-radius:50%;padding:2px 7px;z-index:2;"
-              aria-label="이전 이미지"
-          >
-            <i class="bi bi-chevron-left"></i>
-          </button>
-          <button
-              v-if="roomImages.length > 1"
-              @click.stop="nextImage"
-              class="btn btn-dark btn-sm position-absolute top-50 end-0 translate-middle-y me-2 opacity-75"
-              style="border-radius:50%;padding:2px 7px;z-index:2;"
-              aria-label="다음 이미지"
-          >
-            <i class="bi bi-chevron-right"></i>
-          </button>
-          <!-- 인디케이터(점) -->
-          <div
-              v-if="roomImages.length > 1"
-              class="position-absolute bottom-0 start-50 translate-middle-x d-flex gap-1 pb-2"
-              style="z-index:2;"
-          >
-            <span
-                v-for="(_, idx) in roomImages"
-                :key="idx"
-                @click.stop="currentImageIndex = idx"
-                class="rounded-circle"
-                :style="{
-                width:'8px',height:'8px',background: currentImageIndex===idx?'#fff':'rgba(128,128,128,.4)', border:currentImageIndex===idx?'1.5px solid #dc3545':'none', cursor:'pointer', display:'inline-block'
-              }"
-            ></span>
-          </div>
-        </div>
+              style="min-height: 160px; max-height: 160px"
+            />
+          </swiper-slide>
+          <!-- Navigation buttons and pagination will be handled by Swiper if configured -->
+        </swiper>
         <div v-else class="w-100 h-100 d-flex align-items-center justify-content-center bg-secondary bg-opacity-10">
-          <i class="bi bi-image-alt fs-1 text-secondary opacity-50"></i>
+          <img
+            :src="defaultNoImage"
+            alt="이미지 없음"
+            class="w-100 h-100 object-fit-cover rounded-top"
+            style="min-height: 160px; max-height: 160px"
+          />
         </div>
+        <!-- Custom Pagination (optional, if default Swiper pagination is not enough) -->
+        <div
+          class="swiper-pagination-custom position-absolute bottom-0 start-50 translate-middle-x d-flex gap-1 pb-2"
+          style="z-index: 2"
+        ></div>
       </div>
       <!-- 객실 정보 -->
       <div class="px-3 py-3">
@@ -63,7 +54,10 @@
           <i class="bi bi-people me-1 text-body-tertiary"></i>
           기준 {{ room.defaultCapacity || 2 }}인 / 최대 {{ room.capacity || 2 }}인
         </p>
-        <p class="small text-secondary d-flex align-items-center truncate mb-0" :title="room.roomFeature || '객실 특징 없음'">
+        <p
+          class="small text-secondary d-flex align-items-center truncate mb-0"
+          :title="room.roomFeature || '객실 특징 없음'"
+        >
           <i class="bi bi-door-closed me-1 text-body-tertiary"></i>
           {{ room.roomFeature || "객실 특징 없음" }}
         </p>
@@ -75,6 +69,12 @@
 <script setup lang="ts">
 import { ref, computed, PropType } from "vue";
 import defaultNoImage from "@/assets/no-image.jpg";
+import { Swiper, SwiperSlide } from "swiper/vue";
+import type { Swiper as SwiperClass } from "swiper/types";
+import { Navigation, Pagination, Autoplay } from "swiper/modules";
+import "swiper/css";
+import "swiper/css/navigation";
+import "swiper/css/pagination";
 
 interface Room {
   roomId: number;
@@ -109,7 +109,12 @@ const props = defineProps({
 
 const emit = defineEmits(["view-detail", "book-room", "add-to-cart"]);
 
-const currentImageIndex = ref(0);
+const swiperInstance = ref<SwiperClass | null>(null);
+const swiperModules = [Navigation, Pagination, Autoplay];
+
+const onSwiper = (swiper: SwiperClass) => {
+  swiperInstance.value = swiper;
+};
 
 const roomImages = computed(() => {
   const images: string[] = [];
@@ -121,16 +126,6 @@ const roomImages = computed(() => {
   }
   return images.length > 0 ? images : [defaultNoImage];
 });
-
-const prevImage = () => {
-  if (roomImages.value.length <= 1) return;
-  currentImageIndex.value = (currentImageIndex.value - 1 + roomImages.value.length) % roomImages.value.length;
-};
-
-const nextImage = () => {
-  if (roomImages.value.length <= 1) return;
-  currentImageIndex.value = (currentImageIndex.value + 1) % roomImages.value.length;
-};
 
 const handleViewDetail = (roomId: number) => emit("view-detail", roomId);
 const handleBookRoom = (roomId: number) => {
@@ -148,5 +143,19 @@ const handleAddToCart = (room: Room) => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+/* Add Swiper specific styles if needed, for example, to customize navigation arrows or pagination dots */
+.swiper-pagination-custom .swiper-pagination-bullet {
+  width: 8px;
+  height: 8px;
+  background-color: rgba(128, 128, 128, 0.4);
+  border-radius: 50%;
+  display: inline-block;
+  cursor: pointer;
+  margin: 0 3px; /* 점 사이 간격 */
+}
+.swiper-pagination-custom .swiper-pagination-bullet-active {
+  background-color: #fff;
+  border: 1.5px solid #dc3545;
 }
 </style>

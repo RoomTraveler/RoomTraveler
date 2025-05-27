@@ -44,6 +44,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import com.ssafy.trip.common.BaseResponse;
 import com.ssafy.trip.host.model.Host;
 import java.sql.SQLException;
+import com.ssafy.trip.accommodation.model.AccommodationResponseDto;
+import com.ssafy.trip.accommodation.model.PageDto;
 
 /**
  * 관리자 기능을 위한 API 컨트롤러 (모든 엔드포인트 /api/admin/~~~)
@@ -772,36 +774,24 @@ public class AdminController {
 
     // [숙소 신청 관리 - 승인 대기 목록 조회]
     @GetMapping("/accommodations/pending")
-    public ResponseEntity<?> getPendingReviewAccommodations(
+    public String getPendingAccommodations(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "createdAt") String sortBy,
-            @RequestParam(defaultValue = "DESC") String sortDirection) {
+            Model model) {
         try {
-            Sort.Direction direction = Sort.Direction.fromString(sortDirection.toUpperCase());
-            Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
+            Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+            PageDto<AccommodationResponseDto> pendingAccommodations = accommodationService.getPendingReviewAccommodations(pageable);
             
-            Page<Accommodation> pendingAccommodations = accommodationService.getPendingReviewAccommodations(pageable);
-            
-            Map<String, Object> response = new HashMap<>();
-            response.put("content", pendingAccommodations.getContent());
-            response.put("totalPages", pendingAccommodations.getTotalPages());
-            response.put("totalElements", pendingAccommodations.getTotalElements());
-            response.put("number", pendingAccommodations.getNumber());
-            response.put("size", pendingAccommodations.getSize());
-            response.put("sort", pendingAccommodations.getSort().toString());
-            response.put("first", pendingAccommodations.isFirst());
-            response.put("last", pendingAccommodations.isLast());
-            response.put("empty", pendingAccommodations.isEmpty());
-            
-            return ResponseEntity.ok(response);
-
-        } catch (IllegalArgumentException e) {
-            logger.error("잘못된 정렬 파라미터입니다: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "잘못된 정렬 파라미터입니다."));
+            model.addAttribute("page", pendingAccommodations);
+            return "admin/approveAccommodation"; 
+        } catch (SQLException e) {
+            logger.error("승인 대기 중인 숙소 목록 조회 중 SQL 오류 발생: {}", e.getMessage(), e);
+            model.addAttribute("errorMessage", "승인 대기 숙소 목록을 가져오는 중 오류가 발생했습니다.");
+            return "admin/error";
         } catch (Exception e) {
-            logger.error("승인 대기 숙소 목록 조회 중 오류 발생", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("message", "승인 대기 숙소 목록 조회 중 오류 발생"));
+            logger.error("승인 대기 중인 숙소 목록 조회 중 예기치 않은 오류 발생: {}", e.getMessage(), e);
+            model.addAttribute("errorMessage", "승인 대기 숙소 목록을 처리하는 중 알 수 없는 오류가 발생했습니다.");
+            return "admin/error";
         }
     }
 

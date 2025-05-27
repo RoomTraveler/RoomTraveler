@@ -25,12 +25,12 @@ public class JwtUtil {
 
     private final SecretKey key;
 
-    // @Value("${jwt.secret}") // 주석 처리
-    // private String secretString; // 주석 처리
+    // @Value("${jwt.secret}") // 주석 처리 -> 주석 처리 유지 또는 제거
+    // private String secretString; // 주석 처리 -> 주석 처리 유지 또는 제거
 
-    public JwtUtil(/*@Value("${jwt.secret}") String secretString*/) { // 생성자 파라미터 제거
-        // this.key = Keys.hmacShaKeyFor(secretString.getBytes(StandardCharsets.UTF_8)); // 이전 로직으로 변경
-        this.key = Jwts.SIG.HS256.key().build(); // 원래 동적 생성 로직으로 복원
+    public JwtUtil(/*@Value("${jwt.secret}") String secretString*/) { // 생성자 파라미터 제거 또는 주석 처리
+        // this.key = Keys.hmacShaKeyFor(secretString.getBytes(StandardCharsets.UTF_8)); // 고정 시크릿 키 사용 로직 제거 또는 주석 처리
+        this.key = Jwts.SIG.HS256.key().build(); // 동적 생성 로직으로 복원
     }
 
     @Value("${ssafy.jwt.access-expmin}")

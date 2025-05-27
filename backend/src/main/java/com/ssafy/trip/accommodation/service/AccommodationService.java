@@ -3,6 +3,7 @@ package com.ssafy.trip.accommodation.service;
 import com.ssafy.trip.accommodation.model.*;
 import com.ssafy.trip.accommodation.model.AccommodationResponseDto;
 import com.ssafy.trip.accommodation.model.RoomResponseDto;
+import com.ssafy.trip.accommodation.model.PageDto;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -179,7 +180,7 @@ public interface AccommodationService {
      * @param pageable 페이징 정보
      * @return 페이징된 승인 대기 숙소 목록
      */
-    Page<Accommodation> getPendingReviewAccommodations(Pageable pageable) throws SQLException;
+    PageDto<AccommodationResponseDto> getPendingReviewAccommodations(Pageable pageable) throws SQLException;
 
     /**
      * 숙소 등록 신청을 승인합니다.

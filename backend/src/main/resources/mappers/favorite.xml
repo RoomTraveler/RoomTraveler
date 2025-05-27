@@ -7,8 +7,8 @@
 
     <!-- 새 즐겨찾기 추가 -->
     <insert id="insert" useGeneratedKeys="true" keyProperty="favoriteId" parameterType="com.ssafy.trip.favorite.model.Favorite">
-        INSERT INTO favorites (user_id, accommodation_id)
-        VALUES (#{userId}, #{accommodationId})
+        INSERT INTO favorites (user_id, accommodation_id, created_at)
+        VALUES (#{userId}, #{accommodationId}, NOW())
     </insert>
 
     <!-- 즐겨찾기 삭제 -->
@@ -85,7 +85,7 @@
         VALUES (#{userId}, #{accommodationId}, NOW())
     </insert>
 
-    <update id="removeFavorite" parameterType="map">
+    <update id="removeFavoriteByUserIdAndAccommodationId">
         UPDATE favorites
         SET deleted_at = NOW()
         WHERE user_id = #{userId}
@@ -124,8 +124,12 @@
         AND deleted_at IS NULL
     </select>
 
-    <select id="findFavoriteEvenIfDeleted" resultMap="favoriteResultMap">
-        SELECT favorite_id, user_id, accommodation_id, created_at, deleted_at
+    <select id="findFavoriteEvenIfDeleted" resultType="com.ssafy.trip.favorite.model.Favorite">
+        SELECT favorite_id as favoriteId, 
+               user_id as userId, 
+               accommodation_id as accommodationId, 
+               created_at as createdAt, 
+               deleted_at as deletedAt
         FROM favorites
         WHERE user_id = #{userId}
         AND accommodation_id = #{accommodationId}

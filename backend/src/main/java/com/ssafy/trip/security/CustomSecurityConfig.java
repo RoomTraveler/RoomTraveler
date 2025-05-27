@@ -69,9 +69,13 @@ public class CustomSecurityConfig {
                                 "/api/attractions/**",
                                 "/api/plans/**",
                                 "/swagger-ui/**",
-                                "/v3/api-docs/**",
-                        "/api/accommodations/**",
-                                "/api/reviews/**").permitAll()
+                                "/v3/api-docs/**"
+                        ).permitAll() // 여기까지 permitAll 적용하고 체인 분리
+                        .requestMatchers(HttpMethod.GET, "/api/accommodations/**").permitAll() // 숙소 정보 조회는 모두 허용
+                        .requestMatchers(HttpMethod.GET, "/api/reviews/**").permitAll() // 리뷰 조회는 모두 허용
+                        .requestMatchers(HttpMethod.POST, "/api/reviews").hasAnyRole("USER", "HOST", "ADMIN") // 리뷰 작성
+                        .requestMatchers(HttpMethod.PUT, "/api/reviews/**").hasAnyRole("USER", "HOST", "ADMIN") // 리뷰 수정
+                        .requestMatchers(HttpMethod.DELETE, "/api/reviews/**").hasAnyRole("USER", "HOST", "ADMIN") // 리뷰 삭제
                         .requestMatchers(HttpMethod.GET,
                                 "/api/events/**",
                                 "/api/stats/**",
@@ -79,8 +83,9 @@ public class CustomSecurityConfig {
                         .requestMatchers("/api/host/register").hasRole("USER")
                         .requestMatchers("/api/admin/**", "/api/events/**","/api/stats/**","/api/region/**").hasRole("ADMIN")
                         .requestMatchers("/api/host/**").hasAnyRole("HOST", "ADMIN")
-                        .requestMatchers("/api/notifications/**", "/api/cart","/api/cart/**").hasAnyRole("USER", "HOST", "ADMIN")
-                        .requestMatchers("/api/**").authenticated()
+                        .requestMatchers("/api/notifications/**", "/api/cart","/api/cart/**", "/api/v1/payments/**").hasAnyRole("USER", "HOST", "ADMIN")
+                        .requestMatchers("/api/favorites/**").hasAnyRole("USER", "HOST", "ADMIN")
+                        .requestMatchers("/api/**").authenticated() // 나머지 /api/** 경로는 인증 필요
                         .anyRequest().permitAll());
 
         http.addFilterBefore(jwtVerificationFilter, UsernamePasswordAuthenticationFilter.class)

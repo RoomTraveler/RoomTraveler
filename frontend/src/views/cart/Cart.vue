@@ -4,33 +4,15 @@
       <h2 class="mb-4">장바구니</h2>
 
       <!-- 알림 메시지 -->
-      <div
-          v-if="message"
-          class="alert alert-success alert-dismissible fade show"
-          role="alert"
-      >
+      <div v-if="message" class="alert alert-success alert-dismissible fade show" role="alert">
         {{ message }}
-        <button
-            type="button"
-            class="btn-close"
-            @click="message = ''"
-            aria-label="Close"
-        ></button>
+        <button type="button" class="btn-close" @click="message = ''" aria-label="Close"></button>
       </div>
 
       <!-- 에러 메시지 -->
-      <div
-          v-if="componentError"
-          class="alert alert-danger alert-dismissible fade show"
-          role="alert"
-      >
+      <div v-if="componentError" class="alert alert-danger alert-dismissible fade show" role="alert">
         {{ componentError }}
-        <button
-            type="button"
-            class="btn-close"
-            @click="componentError = ''"
-            aria-label="Close"
-        ></button>
+        <button type="button" class="btn-close" @click="componentError = ''" aria-label="Close"></button>
       </div>
 
       <!-- 장바구니가 비었을 때 -->
@@ -44,18 +26,14 @@
       <!-- 장바구니에 항목이 있을 때 -->
       <div v-else class="row g-4">
         <div class="col-lg-8">
-          <div
-              v-for="item in cart.items"
-              :key="item.cartItemId"
-              class="card mb-4 shadow-sm"
-          >
+          <div v-for="item in cart.items" :key="item.cartItemId" class="card mb-4 shadow-sm">
             <div class="row g-0">
               <div class="col-md-4">
                 <img
-                    :src="item.imageUrl || require('@/assets/no-image.jpg')"
-                    :alt="item.roomName"
-                    class="img-fluid rounded-start w-100 h-100 object-fit-cover"
-                    style="max-height:200px"
+                  :src="item.imageUrl || noImagePlaceholder"
+                  :alt="item.roomName"
+                  class="img-fluid rounded-start w-100 h-100 object-fit-cover"
+                  style="max-height: 200px"
                 />
               </div>
               <div class="col-md-8">
@@ -70,10 +48,7 @@
                     <li><strong>가격:</strong> {{ formatPrice(item.price) }}</li>
                   </ul>
                   <div class="mt-auto text-end">
-                    <button
-                        @click="removeItemHandler(item.cartItemId)"
-                        class="btn btn-outline-danger btn-sm"
-                    >
+                    <button @click="removeItemHandler(item.cartItemId)" class="btn btn-outline-danger btn-sm">
                       삭제
                     </button>
                   </div>
@@ -83,7 +58,7 @@
           </div>
         </div>
         <div class="col-lg-4">
-          <div class="card p-4 sticky-top" style="top: 80px;">
+          <div class="card p-4 sticky-top" style="top: 80px">
             <h4 class="card-title mb-3">주문 요약</h4>
             <div class="mb-2">
               <span><strong>총 객실 수:</strong> {{ cart.totalItems }}개</span>
@@ -91,17 +66,13 @@
             <div class="mb-3">
               <span><strong>총 가격:</strong> {{ formatPrice(cart.totalPrice) }}</span>
             </div>
-            <button
-                @click="checkoutHandler"
-                class="btn btn-primary w-100 mb-2"
-                :disabled="cart.items.length === 0"
-            >
+            <button @click="checkoutHandler" class="btn btn-primary w-100 mb-2" :disabled="cart.items.length === 0">
               예약하기
             </button>
             <button
-                @click="clearCartHandler"
-                class="btn btn-outline-secondary w-100"
-                :disabled="cart.items.length === 0"
+              @click="clearCartHandler"
+              class="btn btn-outline-secondary w-100"
+              :disabled="cart.items.length === 0"
             >
               장바구니 비우기
             </button>
@@ -123,6 +94,7 @@ import { useCartStore } from "@/store/cartStore";
 import { computed, ref, onMounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { storeToRefs } from "pinia";
+import noImagePlaceholder from "@/assets/no-image.jpg";
 
 export default {
   name: "Cart",
@@ -217,6 +189,7 @@ export default {
       clearCartHandler,
       checkoutHandler,
       formatPrice,
+      noImagePlaceholder,
     };
   },
 };

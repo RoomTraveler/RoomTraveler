@@ -3,7 +3,7 @@
     <h2 class="mb-4">예약 확인</h2>
 
     <!-- 로딩 스피너 -->
-    <div v-if="cartLoading" class="text-center py-5">
+    <div v-if="cartLoadingState" class="text-center py-5">
       <div class="spinner-border text-primary" role="status">
         <span class="visually-hidden">로딩 중...</span>
       </div>
@@ -12,15 +12,15 @@
 
     <!-- 에러 메시지 -->
     <div
-        vif="componentError"
-        class="alert alert-danger alert-dismissible fade show"
-        role="alert"
+      vif="componentError && componentError.trim().length > 0"
+      class="alert alert-danger alert-dismissible fade show"
+      role="alert"
     >
       {{ componentError }}
       <button type="button" class="btn-close" @click="componentError = ''" aria-label="Close"></button>
     </div>
 
-    <div v-if="!cartLoading && !componentError" class="row">
+    <div v-if="!cartLoadingState && !componentError" class="row">
       <!-- 예약 정보 및 폼 영역 -->
       <div class="col-lg-8">
         <!-- 예약 정보 카드 -->
@@ -34,18 +34,18 @@
               <router-link to="/accommodation/list" class="btn btn-sm btn-outline-primary">객실 둘러보기</router-link>
             </div>
             <div
-                v-for="(item, index) in cartItems"
-                :key="item.cartItemId || index"
-                class="mb-4 pb-3 border-bottom"
-                :class="{ 'border-bottom-0': index === cartItems.length - 1 }"
+              v-for="(item, index) in cartItems"
+              :key="item.cartItemId || index"
+              class="mb-4 pb-3 border-bottom"
+              :class="{ 'border-bottom-0': index === cartItems.length - 1 }"
             >
               <div class="row">
                 <div class="col-md-4">
                   <img
-                      :src="item.imageUrl || noImage"
-                      :alt="item.roomName"
-                      class="img-fluid rounded w-100"
-                      style="height: 150px; object-fit: cover;"
+                    :src="item.imageUrl || noImage"
+                    :alt="item.roomName"
+                    class="img-fluid rounded w-100"
+                    style="height: 150px; object-fit: cover"
                   />
                 </div>
                 <div class="col-md-8">
@@ -72,11 +72,11 @@
             </div>
             <div class="card-body">
               <textarea
-                  v-model="specialRequests"
-                  class="form-control"
-                  rows="4"
-                  placeholder="호스트에게 전달할 특별 요청 사항이 있으면 입력해주세요."
-                  :disabled="!cartItems || cartItems.length === 0"
+                v-model="specialRequests"
+                class="form-control"
+                rows="4"
+                placeholder="호스트에게 전달할 특별 요청 사항이 있으면 입력해주세요."
+                :disabled="!cartItems || cartItems.length === 0"
               ></textarea>
             </div>
           </div>
@@ -89,16 +89,14 @@
             <div class="card-body">
               <div class="form-check">
                 <input
-                    class="form-check-input"
-                    type="checkbox"
-                    id="termsCheck"
-                    v-model="termsAgreed"
-                    required
-                    :disabled="!cartItems || cartItems.length === 0"
+                  class="form-check-input"
+                  type="checkbox"
+                  id="termsCheck"
+                  v-model="termsAgreed"
+                  required
+                  :disabled="!cartItems || cartItems.length === 0"
                 />
-                <label class="form-check-label" for="termsCheck">
-                  만 14세 이상이며 이용약관에 동의합니다.
-                </label>
+                <label class="form-check-label" for="termsCheck"> 만 14세 이상이며 이용약관에 동의합니다. </label>
               </div>
             </div>
           </div>
@@ -106,12 +104,17 @@
           <!-- 버튼 영역 -->
           <div class="d-flex justify-content-end gap-2">
             <router-link to="/cart" class="btn btn-outline-secondary">장바구니로 돌아가기</router-link>
-            <button 
-              type="submit" 
-              class="btn btn-primary" 
+            <button
+              type="submit"
+              class="btn btn-primary"
               :disabled="!termsAgreed || !cartItems || cartItems.length === 0 || isLoadingPayment"
             >
-              <span v-if="isLoadingPayment" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+              <span
+                v-if="isLoadingPayment"
+                class="spinner-border spinner-border-sm me-1"
+                role="status"
+                aria-hidden="true"
+              ></span>
               결제하기
             </button>
           </div>
@@ -120,11 +123,11 @@
 
       <!-- 결제 요약 영역 -->
       <div class="col-lg-4">
-        <div class="card p-4 position-sticky" style="top: 80px;">
+        <div class="card p-4 position-sticky" style="top: 80px">
           <h4 class="mb-3">결제 요약</h4>
           <div v-if="cartItems && cartItems.length > 0">
-          <p><strong>총 객실 수:</strong> {{ cartItems.length }}개</p>
-          <p><strong>총 가격:</strong> {{ formatCurrency(totalPrice) }}</p>
+            <p><strong>총 객실 수:</strong> {{ cartItems.length }}개</p>
+            <p><strong>총 가격:</strong> {{ formatCurrency(totalPrice) }}</p>
           </div>
           <div v-else class="text-muted">
             <p>결제할 항목이 없습니다.</p>
@@ -156,13 +159,14 @@ const router = useRouter();
 const cartStore = useCartStore();
 const userStore = useUserStore();
 
-const { cart, loading: cartLoading, selectedCartItemIds } = storeToRefs(cartStore);
+const { cart, loading: cartStoreLoading, selectedCartItemIds } = storeToRefs(cartStore);
 const { user: currentUser, isAuthenticated } = storeToRefs(userStore);
 
 const specialRequests = ref("");
 const termsAgreed = ref(false);
 const componentError = ref("");
 const isLoadingPayment = ref(false);
+const cartLoadingState = ref(true);
 
 const cartItems = computed(() => cart.value.items || []);
 const totalPrice = computed(() => cart.value.totalPrice || 0);
@@ -171,20 +175,25 @@ const VITE_PORTONE_IMP_CODE = import.meta.env.VITE_PORTONE_IMP_CODE;
 
 const loadCartAndUser = async () => {
   componentError.value = "";
-  isLoadingPayment.value = true;
+  cartLoadingState.value = true;
   try {
     if (!isAuthenticated.value) {
-      router.push({ name: "Login", query: { redirect: router.currentRoute.value.fullPath } });
-      return;
+      await userStore.loadUserFromStorage();
+      if (!isAuthenticated.value) {
+        router.push({ name: "Login", query: { redirect: router.currentRoute.value.fullPath } });
+        cartLoadingState.value = false;
+        return;
+      }
     }
     await cartStore.fetchCart();
     if (cartStore.error) {
       componentError.value = cartStore.error;
     }
   } catch (err) {
-    componentError.value = "데이터 로딩 중 오류가 발생했습니다: " + (err.message || "");
+    console.error("Error in loadCartAndUser:", err);
+    componentError.value = "장바구니 정보 로딩 중 오류가 발생했습니다: " + (err.message || "알 수 없는 오류");
   } finally {
-    isLoadingPayment.value = false;
+    cartLoadingState.value = false;
   }
 };
 
@@ -215,12 +224,12 @@ const processPayment = async () => {
 
     const { merchantUid, amount, paymentName } = paymentPrepareResponse;
 
-    const buyerEmail = currentUser.value?.email || 'guest@example.com';
-    const buyerName = currentUser.value?.username || currentUser.value?.name || '비회원';
-    const buyerTel = currentUser.value?.phone || '010-0000-0000';
+    const buyerEmail = currentUser.value?.email || "guest@example.com";
+    const buyerName = currentUser.value?.username || currentUser.value?.name || "비회원";
+    const buyerTel = currentUser.value?.phone || "010-0000-0000";
 
     const { IMP } = window;
-    IMP.init(VITE_PORTONE_IMP_CODE); 
+    IMP.init(VITE_PORTONE_IMP_CODE);
 
     IMP.request_pay(
       {
@@ -241,7 +250,7 @@ const processPayment = async () => {
               merchantUid: rsp.merchant_uid,
             };
             const paymentCompleteResponse = await cartStore.completePaymentAfterIamport(completeData);
-            
+
             await cartStore.fetchCart();
             router.push({
               name: "PaymentResult",
@@ -249,7 +258,7 @@ const processPayment = async () => {
                 imp_uid: rsp.imp_uid,
                 merchant_uid: rsp.merchant_uid,
                 message: paymentCompleteResponse.message || "결제가 성공적으로 완료되었습니다.",
-                paymentId: paymentCompleteResponse.paymentId
+                paymentId: paymentCompleteResponse.paymentId,
               },
             });
           } catch (completeError) {
@@ -275,7 +284,7 @@ const processPayment = async () => {
 };
 
 const formatCurrency = (value) => {
-  if (typeof value !== 'number') return '가격 정보 없음';
+  if (typeof value !== "number") return "가격 정보 없음";
   return new Intl.NumberFormat("ko-KR", {
     style: "currency",
     currency: "KRW",

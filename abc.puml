@@ -1,0 +1,53 @@
+@startuml
+' 폰트 등 한글 안깨지게
+skinparam defaultFontName "Pretendard,Noto Sans,sans-serif"
+
+title 방구석 여행자 - 시스템 아키텍처
+
+actor User
+actor Host
+actor Admin
+
+rectangle "FrontEnd (Vue.js)" as FE #e0e7ff {
+}
+
+rectangle "BackEnd (Spring Boot API)" as BE #f1f5f9 {
+    [Auth Module]
+    [Accommodation Module]
+    [Reservation Module]
+    [Review Module]
+    [Event Module]
+    [Notification Module]
+    [Plan Module]
+    [Admin Module]
+}
+
+database "MySQL\n(RDBMS)" as DB #e0f2fe
+database "Redis\n(Cache/Session)" as REDIS #fef9c3
+
+cloud "AWS S3" as S3
+rectangle "외부 API" as API #fff1f2 {
+    [VisitKorea API]
+    [Payment Gateway]
+}
+
+' 유저가 프론트엔드 접근
+User -- FE
+Host -- FE
+Admin -- FE
+
+' 프론트와 백엔드 연결
+FE --> BE : REST API (JWT)
+
+' 백엔드 모듈들이 DB 접근
+BE --> DB : JPA/MyBatis
+BE --> REDIS : Cache/Token
+
+' 이미지 업로드/다운로드
+FE --> S3 : 이미지 업로드/다운로드
+BE --> S3 : 이미지 업로드/다운로드
+
+' 외부 API 연동
+BE --> API : 숙박/관광 데이터, 결제 등
+
+@enduml

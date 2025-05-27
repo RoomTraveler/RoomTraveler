@@ -37,6 +37,7 @@ import com.ssafy.trip.accommodation.model.AccommodationRequestDto;
 import com.ssafy.trip.accommodation.model.AccommodationResponseDto;
 import com.ssafy.trip.accommodation.model.RoomRequestDto;
 import com.ssafy.trip.accommodation.model.RoomResponseDto;
+import com.ssafy.trip.accommodation.model.PageDto;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -171,6 +172,9 @@ public class AccommodationServiceImpl implements AccommodationService {
         
         Map<String, Object> params = new HashMap<>();
         params.put("accommodationId", accommodationId);
+        if (guests != null && guests > 0) {
+            params.put("guestCount", guests);
+        }
 
         LocalDate startDate = null;
         LocalDate endDate = null;
@@ -190,31 +194,35 @@ public class AccommodationServiceImpl implements AccommodationService {
         
         // RoomDao를 통해 객실 기본 정보를 가져옵니다.
         List<Room> rooms = roomDao.getRoomsByAccommodationIdAndOptionalDateRange(params); // 이 메소드가 날짜 필터링도 하는지 확인 필요
-        log.info("[AccommodationService] Got {} rooms from RoomDao for accommodationId: {}", rooms.size(), accommodationId);
+        log.info("[AccommodationService] Initial rooms from DAO for accommodationId {}: count = {}, rooms = {}", accommodationId, rooms.size(), rooms);
 
         // 날짜 정보와 인원수 정보가 유효한 경우에만 각 객실의 minAvailableCount를 계산하여 설정합니다.
         if (startDate != null && endDate != null && guests != null && guests > 0) {
-            log.info("[AccommodationService] Calculating minAvailableCount for each room with dates and guests");
+            log.info("[AccommodationService] Calculating minAvailableCount for each room with dates: {} to {}, guests: {}", startDate, endDate, guests);
+            List<Room> bookableRooms = new ArrayList<>(); // 예약 가능한 객실만 담을 리스트
             for (Room room : rooms) {
-                log.debug("[AccommodationService] Processing room ID: {}, capacity: {}", room.getRoomId(), room.getCapacity());
+                log.debug("[AccommodationService] Processing room ID: {}, Name: {}, Capacity: {}", room.getRoomId(), room.getName(), room.getCapacity());
                 // ReservationService를 사용하여 minAvailableCount 계산 (guests 파라미터 전달)
                 int minAvailableCount = reservationService.calculateMinAvailableCountForRoom(room, startDate, endDate, guests);
-                log.info("[AccommodationService] Room ID: {}, capacity: {}, calculated minAvailableCount: {}", 
-                        room.getRoomId(), room.getCapacity(), minAvailableCount);
+                log.info("[AccommodationService] Room ID: {}, Name: {}, Capacity: {}, calculated minAvailableCount: {}", 
+                        room.getRoomId(), room.getName(), room.getCapacity(), minAvailableCount);
                 room.setMinAvailableCount(minAvailableCount);
+                if (minAvailableCount > 0) {
+                    setImagesForSingleRoom(room); // 이미지 설정 추가
+                    bookableRooms.add(room);
+                }
             }
+            log.info("[AccommodationService] Filtered bookable rooms for accommodationId {}: count = {}, rooms = {}", accommodationId, bookableRooms.size(), bookableRooms);
+            return bookableRooms; // 예약 가능한 객실 목록만 반환
         } else {
-            log.info("[AccommodationService] Date or guests info insufficient, setting minAvailableCount to -1 for all rooms");
+            log.info("[AccommodationService] Date or guests info insufficient for availability check. Returning all rooms from DAO for accommodationId {}: count = {}, rooms = {}", accommodationId, rooms.size(), rooms);
+            // 날짜나 인원 정보가 충분하지 않으면, DAO에서 가져온 모든 객실에 대해 minAvailableCount를 -1로 설정하고 그대로 반환
             for (Room room : rooms) {
-                // 날짜나 인원 정보가 충분하지 않으면, 예약 가능 여부를 알 수 없으므로 minAvailableCount를 -1 (또는 다른 특정 값)로 설정
-                room.setMinAvailableCount(-1); // 프론트에서 이 값을 보고 "날짜/인원 선택 시 확인 가능" 등으로 표시 가능
+                room.setMinAvailableCount(-1); 
+                setImagesForSingleRoom(room); // 이미지 설정 추가
             }
+            return rooms;
         }
-
-        for (Room room : rooms) {
-            setImagesForSingleRoom(room);
-        }
-        return rooms;
     }
 
     /**
@@ -671,7 +679,7 @@ public class AccommodationServiceImpl implements AccommodationService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<Accommodation> getPendingReviewAccommodations(Pageable pageable) throws SQLException {
+    public PageDto<AccommodationResponseDto> getPendingReviewAccommodations(Pageable pageable) throws SQLException {
         Map<String, Object> params = new HashMap<>();
         params.put("status", Accommodation.AccommodationStatus.PENDING_REVIEW.name());
         params.put("offset", pageable.getOffset());
@@ -690,12 +698,28 @@ public class AccommodationServiceImpl implements AccommodationService {
         List<Accommodation> content = accommodationDao.getFilteredAccommodations(params);
         setMainImageUrlForAccommodations(content);
 
+        // Accommodation 리스트를 AccommodationResponseDto 리스트로 변환
+        List<AccommodationResponseDto> dtoList = new ArrayList<>();
+        for (Accommodation acc : content) {
+            try {
+                // 각 숙소의 이미지를 가져옵니다.
+                List<Image> images = imageDao.getImagesByReference(acc.getAccommodationId(), "ACCOMMODATION");
+                dtoList.add(AccommodationResponseDto.fromEntity(acc, images, objectMapper));
+            } catch (Exception e) {
+                log.error("AccommodationResponseDto 변환 중 오류 발생 (숙소 ID: {}): {}", acc.getAccommodationId(), e.getMessage());
+                // 오류 발생 시 해당 숙소는 DTO 리스트에 포함하지 않거나, 기본 DTO를 추가할 수 있습니다.
+                // 여기서는 포함하지 않는 것으로 처리합니다.
+            }
+        }
+
         Map<String, Object> countParams = new HashMap<>(params);
         countParams.remove("offset");
         countParams.remove("limit");
         long total = accommodationDao.countFilteredAccommodations(countParams);
 
-        return new PageImpl<>(content, pageable, total);
+        // PageImpl 대신 PageDto 사용
+        Page<AccommodationResponseDto> page = new PageImpl<>(dtoList, pageable, total);
+        return new PageDto<>(page);
     }
 
     @Override
@@ -998,8 +1022,7 @@ public class AccommodationServiceImpl implements AccommodationService {
             for (MultipartFile file : imageFiles) {
                 if (file != null && !file.isEmpty()) {
                     String imageUrl = uploadImageToS3(file);
-                    Image additionalImage = Image.builder()
-                            .referenceId(roomId)
+                    Image additionalImage = Image.builder().referenceId(roomId)
                             .referenceType("ROOM")
                             .accommodationId(accommodationId)
                             .roomId(roomId)

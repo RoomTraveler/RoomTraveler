@@ -27,7 +27,7 @@
         <id property="reviewImageId" column="review_image_id" />
         <result property="reviewId" column="review_id" />
         <result property="imageUrl" column="image_url" />
-        <result property="uploadOrder" column="upload_order" />
+        <result property="uploadOrder" column="img_upload_order" />
         <result property="createdAt" column="ri_created_at" />
         <result property="updatedAt" column="ri_updated_at" />
     </resultMap>
@@ -59,9 +59,9 @@
             r.review_id, r.accommodation_id, r.user_id, r.reservation_id,
             r.rating, r.title, r.content, r.stay_date, r.is_verified, r.status,
             r.created_at as r_created_at, r.updated_at as r_updated_at,
-            u.username, u.profile_image_url as user_profile_image_url,
+            u.username, u.profile_image as user_profile_image_url,
             a.title as accommodation_title,
-            ri.review_image_id as img_review_image_id,
+            ri.review_image_id as img_image_id,
             ri.image_url as img_image_url,
             ri.upload_order as img_upload_order,
             ri.created_at as img_ri_created_at,
@@ -161,6 +161,15 @@
     <!-- 기존 쿼리들 (필요시 수정 또는 유지) -->
     <!-- 숙소 ID로 리뷰 통계(평균 별점, 리뷰 수) 조회 -->
     <select id="selectReviewStatsByAccommodationId" resultType="java.util.Map">
+        SELECT
+            COALESCE(AVG(rating), 0.0) as avg_rating,
+            COUNT(review_id) as review_count
+        FROM reviews
+        WHERE accommodation_id = #{accommodationId} AND status = 'ACTIVE'
+    </select>
+
+    <!-- 리뷰 요약 정보 조회 (selectReviewStatsByAccommodationId와 동일한 기능, ID만 다름) -->
+    <select id="selectReviewSummaryByAccommodationId" resultType="java.util.Map">
         SELECT
             COALESCE(AVG(rating), 0.0) as avg_rating,
             COUNT(review_id) as review_count

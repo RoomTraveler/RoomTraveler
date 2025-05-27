@@ -280,24 +280,41 @@ async function loadRoomDetail() {
     if (roomData) {
       // RoomResponseDto.images (List<ImageResponseDto>)를 room.value.images에 할당
       // ImageResponseDto는 imageUrl, isMain을 가짐
-      const roomImagesFromApi = (roomData.images || [])
-        .filter((img) => img && img.imageUrl) // null이나 undefined 이미지, imageUrl 없는 이미지 필터링
-        .sort((a, b) => {
-          // isMain: true 인 것을 앞으로
-          if (a.isMain && !b.isMain) return -1;
-          if (!a.isMain && b.isMain) return 1;
-          return 0;
+      // const roomImagesFromApi = (roomData.images || [])
+      //   .filter((img) => img && img.imageUrl) // null이나 undefined 이미지, imageUrl 없는 이미지 필터링
+      //   .sort((a, b) => {
+      //     // isMain: true 인 것을 앞으로
+      //     if (a.isMain && !b.isMain) return -1;
+      //     if (!a.isMain && b.isMain) return 1;
+      //     return 0;
+      //   });
+      // room.value = { ...roomData, images: roomImagesFromApi };
+
+      // 백엔드 응답에 맞게 수정
+      const carouselImages = [];
+      if (roomData.mainImageUrl) {
+        carouselImages.push({ imageUrl: roomData.mainImageUrl, isMain: true });
+      }
+      if (roomData.imageUrls && Array.isArray(roomData.imageUrls)) {
+        roomData.imageUrls.forEach((url) => {
+          // 메인 이미지와 중복되지 않도록 추가
+          if (url !== roomData.mainImageUrl) {
+            carouselImages.push({ imageUrl: url, isMain: false });
+          }
         });
-      room.value = { ...roomData, images: roomImagesFromApi };
+      }
+      // images 속성 대신 imageUrls, mainImageUrl 직접 사용하므로 room.value.images 설정은 제거하거나,
+      // 필요하다면 carouselImages로 설정합니다.
+      room.value = { ...roomData, processedImages: carouselImages }; // 기존 images 대신 processedImages 사용 또는 images에 할당
     } else {
-      room.value = { images: [] }; // roomData가 없는 경우 기본값
+      room.value = { images: [], processedImages: [] }; // roomData가 없는 경우 기본값
     }
 
     reservation.totalPrice = roomData?.price || 0;
   } catch (err) {
     console.error("Error loading room details:", err);
     message.value = "객실 정보를 불러오는 데 실패했습니다.";
-    room.value = { ...room.value, images: [] }; // 에러 시 images를 빈 배열로 설정
+    room.value = { ...room.value, images: [], processedImages: [] }; // 에러 시 images를 빈 배열로 설정
   } finally {
     loading.value = false;
   }
@@ -313,8 +330,8 @@ const userId = computed(() => userStore.user?.id);
 
 const imagesForCarousel = computed(() => {
   // room.value.images가 ImageResponseDto[] 형태라고 가정
-  if (room.value && room.value.images && room.value.images.length > 0) {
-    return room.value.images;
+  if (room.value && room.value.processedImages && room.value.processedImages.length > 0) {
+    return room.value.processedImages;
   }
   return loading.value ? [] : [{ imageUrl: noImagePlaceholder, isMain: true }];
 });
@@ -372,19 +389,31 @@ async function submitReservation() {
     message.value = "체크인, 체크아웃 날짜 및 인원을 모두 선택해주세요.";
     return;
   }
-  const dto = {
-    ...reservation,
+
+  // 먼저 장바구니에 아이템 추가 시도
+  const item = {
+    roomId: Number(props.roomId),
     checkInDate: selectedCheckInDateQuery.value,
     checkOutDate: selectedCheckOutDateQuery.value,
     guestCount: selectedGuestsQuery.value,
-    totalPrice: room.value.price * displayNights.value,
-    userId: userStore.user?.id,
+    price: room.value.price,
   };
+
   try {
-    const res = await axios.post("/api/reservations", dto);
-    message.value = res.data.message || "예약이 완료되었습니다.";
+    // addToCart 함수는 내부적으로 cartStore.addToCart를 호출하고 message.value를 설정함
+    // addToCart 함수가 Promise를 반환하도록 하거나, 여기서 직접 cartStore.addToCart 결과를 확인해야 함.
+    // 우선 addToCart 내부에서 오류 발생 시 throw 하도록 되어 있다고 가정하고 진행합니다.
+    await addToCart(); // addToCart가 성공적으로 완료되면 (오류 없이)
+
+    // 장바구니 추가 성공 메시지가 message.value에 설정되었을 것이므로, 잠시 후 장바구니로 이동
+    // 또는 addToCart에서 반환하는 값으로 성공 여부 판단
+    // 현재 addToCart는 성공 시 message.value를 설정하고, 실패 시 에러를 throw 또는 message.value를 에러 메시지로 설정.
+    // addToCart가 에러를 throw하지 않으면 성공으로 간주.
+    router.push({ name: "AccommodationCartCheckout" }); // 수정된 라우트 이름
   } catch (err) {
-    message.value = err.response?.data?.message || "예약 처리 중 오류가 발생했습니다.";
+    // addToCart에서 오류 발생 시 message.value는 이미 addToCart 내부에서 설정되었을 것임
+    console.error("바로 예약 처리 중 addToCart 실패:", err);
+    // 추가적인 오류 처리가 필요하다면 여기에 작성
   }
 }
 
@@ -408,7 +437,8 @@ async function addToCart() {
     const response = await cartStore.addToCart(item);
     message.value = response.message || "객실이 장바구니에 추가되었습니다.";
   } catch (err) {
-    message.value = typeof err === 'string' ? err : (err.response?.data?.message || "장바구니 추가 중 오류가 발생했습니다.");
+    message.value =
+      typeof err === "string" ? err : err.response?.data?.message || "장바구니 추가 중 오류가 발생했습니다.";
   }
 }
 

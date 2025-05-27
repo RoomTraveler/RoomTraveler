@@ -35,19 +35,19 @@
           <div v-for="favorite in favorites" :key="favorite.favoriteId" class="col-md-4 mb-4">
             <div class="card favorite-card h-100">
               <img
-                  :src="favorite.mainImageUrl || 'https://via.placeholder.com/300x200?text=No+Image'"
-                  class="card-img-top"
-                  :alt="favorite.accommodationTitle || 'No Image'"
+                :src="favorite.accommodation.mainImageUrl || 'https://via.placeholder.com/300x200?text=No+Image'"
+                class="card-img-top"
+                :alt="favorite.accommodation.title || 'No Image'"
               />
               <div class="card-body d-flex flex-column">
-                <h5 class="card-title">{{ favorite.accommodationTitle }}</h5>
-                <p class="card-text">{{ favorite.accommodationAddress }}</p>
+                <h5 class="card-title">{{ favorite.accommodation.title }}</h5>
+                <p class="card-text">{{ favorite.accommodation.address }}</p>
                 <p class="card-text text-muted">
                   <small>찜한 날짜: {{ formatDate(favorite.createdAt) }}</small>
                 </p>
                 <div class="favorite-actions mt-auto">
-                  <router-link :to="`/accommodation/detail/${favorite.accommodationId}`" class="btn btn-primary"
-                  >상세 보기</router-link
+                  <router-link :to="`/accommodation/${favorite.accommodation.accommodationId}`" class="btn btn-primary"
+                    >상세 보기</router-link
                   >
                   <button class="btn btn-outline-danger" @click="removeFavorite(favorite.favoriteId)">삭제</button>
                 </div>
@@ -65,7 +65,7 @@
 
 <script setup>
 import { ref, onMounted } from "vue";
-import axios from "axios";
+import apiUtils from "@/api";
 import dayjs from "dayjs";
 import HeaderComponent from "@/components/accommodation/AccommodationHeader.vue";
 import FooterComponent from "@/components/layout/Footer.vue";
@@ -74,37 +74,44 @@ const favorites = ref([]);
 const message = ref("");
 const error = ref("");
 
-function formatDate(date) {
-  return date ? dayjs(date).format("YYYY-MM-DD") : "";
+function formatDate(dateArray) {
+  if (!dateArray || !Array.isArray(dateArray) || dateArray.length < 3) {
+    return "날짜 정보 없음";
+  }
+  const date = new Date(
+    dateArray[0],
+    dateArray[1] - 1,
+    dateArray[2],
+    dateArray[3] || 0,
+    dateArray[4] || 0,
+    dateArray[5] || 0
+  );
+  if (isNaN(date.getTime())) {
+    return "유효하지 않은 날짜";
+  }
+  return dayjs(date).format("YYYY-MM-DD");
 }
 
 async function fetchFavorites() {
   try {
-    const { data } = await axios.get("/api/favorites", {
+    const { data } = await apiUtils.api.get("/api/favorites", {
       withCredentials: true,
     });
-    if (data && data.success) {
-      favorites.value = data.favorites || [];
-    } else {
-      error.value = data.message || "찜 목록을 불러올 수 없습니다.";
-    }
+    favorites.value = data;
   } catch (e) {
-    error.value = e.response?.data?.message || "찜 목록을 불러올 수 없습니다.";
+    error.value = e.response?.data?.message || e.message || "찜 목록을 불러올 수 없습니다.";
+    favorites.value = [];
   }
 }
 
 async function removeFavorite(favoriteId) {
   if (!window.confirm("정말로 찜 목록에서 삭제하시겠습니까?")) return;
   try {
-    const res = await axios.delete(`/api/favorites/${favoriteId}`);
-    if (res.data && res.data.success) {
-      message.value = res.data.message || "삭제되었습니다.";
-      favorites.value = favorites.value.filter((f) => f.favoriteId !== favoriteId);
-    } else {
-      error.value = res.data.message || "삭제에 실패했습니다.";
-    }
+    const res = await apiUtils.api.delete(`/api/favorites/${favoriteId}`);
+    message.value = res.data.message || "삭제되었습니다.";
+    favorites.value = favorites.value.filter((f) => f.favoriteId !== favoriteId);
   } catch (e) {
-    error.value = e.response?.data?.message || "삭제 중 오류가 발생했습니다.";
+    error.value = e.response?.data?.message || e.message || "삭제 중 오류가 발생했습니다.";
   }
 }
 
