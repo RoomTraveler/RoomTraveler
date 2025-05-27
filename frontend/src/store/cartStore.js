@@ -35,21 +35,43 @@ export const useCartStore = defineStore("cart", {
       try {
         const response = await api.api.get("/api/cart");
         const cartData = response.data;
-        this.cart = {
-          items: cartData.items || [],
-          totalPrice: cartData.totalPrice || 0,
-          totalItems: (cartData.items || []).length, // 백엔드가 totalItems를 직접 주면 그것을 사용
-          cartId: cartData.cartId,
-          userId: cartData.userId,
-          userName: cartData.userName,
-          createdAt: cartData.createdAt,
-          updatedAt: cartData.updatedAt,
+
+        const formatDateFromArray = (dateArray) => {
+          if (!dateArray || !Array.isArray(dateArray) || dateArray.length < 3) return null;
+          const date = new Date(dateArray[0], dateArray[1] - 1, dateArray[2]);
+          if (isNaN(date.getTime())) return null;
+          return date.toISOString().split('T')[0]; // YYYY-MM-DD
         };
+
+        const processedItems = (cartData.items || []).map(item => ({
+          ...item,
+          checkInDate: formatDateFromArray(item.checkInDate),
+          checkOutDate: formatDateFromArray(item.checkOutDate),
+          roomName: typeof item.roomName === 'string' ? item.roomName.trim() : item.roomName,
+        }));
+        
+        // cart 객체의 속성을 직접 수정하여 반응성 유지
+        this.cart.items = processedItems;
+        this.cart.totalPrice = cartData.totalPrice || 0;
+        this.cart.totalItems = processedItems.length;
+        this.cart.cartId = cartData.cartId;
+        this.cart.userId = cartData.userId;
+        this.cart.userName = cartData.userName;
+        this.cart.createdAt = cartData.createdAt; // 원본 유지 또는 필요시 변환
+        this.cart.updatedAt = cartData.updatedAt; // 원본 유지 또는 필요시 변환
+
       } catch (error) {
         console.error("Error fetching cart:", error);
         this.error = error.response?.data?.error || error.response?.data?.message || "장바구니 정보를 불러올 수 없습니다.";
-        // 에러 발생 시에도 cart 구조는 유지하되, 비워줌
-        this.cart = { items: [], totalItems: 0, totalPrice: 0, cartId: null, userId: null, userName: null, createdAt: null, updatedAt: null };
+        // 에러 발생 시 cart 상태 초기화 (기존 로직 유지)
+        this.cart.items = [];
+        this.cart.totalItems = 0;
+        this.cart.totalPrice = 0;
+        this.cart.cartId = null;
+        this.cart.userId = null;
+        this.cart.userName = null;
+        this.cart.createdAt = null;
+        this.cart.updatedAt = null;
       } finally {
         this.loading = false;
       }
@@ -58,12 +80,19 @@ export const useCartStore = defineStore("cart", {
     async addToCart(itemDetails) {
       this.loading = true;
       this.error = null;
+      console.log("[CartStore] addToCart called with itemDetails:", JSON.parse(JSON.stringify(itemDetails)));
       try {
         const response = await api.api.post("/api/cart/add", itemDetails);
+        console.log("[CartStore] addToCart API response:", response);
         await this.fetchCart(); // 장바구니 상태를 최신으로 동기화
         return response.data; // 성공 메시지 또는 업데이트된 장바구니 정보 반환 가능
       } catch (error) {
-        console.error("Error adding item to cart:", error);
+        console.error("[CartStore] Error adding item to cart - API Error Object:", error);
+        if (error.response) {
+          console.error("[CartStore] API Error Response Data:", error.response.data);
+          console.error("[CartStore] API Error Response Status:", error.response.status);
+          console.error("[CartStore] API Error Response Headers:", error.response.headers);
+        }
         this.error =
             error.response?.data?.error ||
             error.response?.data?.message ||
@@ -105,61 +134,12 @@ export const useCartStore = defineStore("cart", {
       }
     },
 
-    // 기존 checkoutCart 액션은 새로운 결제 플로우로 대체되므로 주석 처리 또는 삭제
-    /*
-    async checkoutCart(payload = {}) {
-      this.loading = true;
-      this.error = null;
-      try {
-        const response = await api.api.post("/api/reservation/create-from-cart", payload);
-        await this.fetchCart();
-        return response.data;
-      } catch (error) {
-        console.error("Error during cart checkout:", error);
-        this.error =
-            error.response?.data?.error || "장바구니 예약 처리에 실패했습니다.";
-        throw error;
-      } finally {
-        this.loading = false;
-      }
-    },
-    */
+    // 기존 결제 관련 액션들은 paymentStore로 이전되었으므로 여기서는 제거하거나 주석 처리합니다.
+    // async preparePaymentForCheckout(prepareRequest) { ... }
+    // async completePaymentAfterIamport(completeRequest) { ... }
 
-    // 1. 결제 준비 액션
-    async preparePaymentForCheckout(prepareRequest) {
-      // prepareRequest는 { reservationsToCreate: [ReservationCreationDto], specialRequests: "..." } 형태여야 함
-      this.loading = true;
+    clearError() {
       this.error = null;
-      try {
-        const response = await api.api.post("/api/v1/payments/prepare", prepareRequest);
-        // this.currentPaymentInfo = response.data; // 필요시 state에 임시 저장
-        return response.data; // { merchantUid, amount, paymentName }
-      } catch (error) {
-        console.error("Error preparing payment:", error);
-        this.error = error.response?.data?.error || error.response?.data?.message || "결제 준비 중 오류가 발생했습니다.";
-        throw new Error(this.error);
-      } finally {
-        this.loading = false;
-      }
-    },
-
-    // 2. 결제 완료 및 검증 액션
-    async completePaymentAfterIamport(completeRequest) {
-      // completeRequest는 { impUid: "...", merchantUid: "..." } 형태여야 함
-      this.loading = true;
-      this.error = null;
-      try {
-        const response = await api.api.post("/api/v1/payments/complete", completeRequest);
-        await this.fetchCart(); // 결제 완료 후 장바구니 비우기 (백엔드에서 처리 안 할 경우)
-        return response.data; // { message, paymentId, reservationIds }
-      } catch (error) {
-        console.error("Error completing payment:", error);
-        this.error = error.response?.data?.error || error.response?.data?.message || "결제 처리 중 오류가 발생했습니다.";
-        // this.currentPaymentInfo = null; // 임시 정보 정리
-        throw new Error(this.error);
-      } finally {
-        this.loading = false;
-      }
     }
   },
 });

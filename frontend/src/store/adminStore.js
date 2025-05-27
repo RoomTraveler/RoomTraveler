@@ -101,7 +101,8 @@ export const useAdminStore = defineStore('admin', {
             this._setLoading(true);
             this._clearMessages();
             try {
-                const response = await api.api.post(`/api/admin/hosts/${hostUserId}/approve`);
+                // ⬇️ POST → PUT 으로 변경!
+                const response = await api.api.put(`/api/admin/approve/${hostUserId}`);
                 this._setMessage(response.data.message || '호스트 신청 승인 완료');
                 await this.fetchPendingHosts();
             } catch (err) {
@@ -115,7 +116,7 @@ export const useAdminStore = defineStore('admin', {
             this._setLoading(true);
             this._clearMessages();
             try {
-                const response = await api.api.post(`/api/admin/hosts/${hostUserId}/reject`, { reason });
+                const response = await api.api.put(`/api/admin/reject/${hostUserId}`, { reason });
                 this._setMessage(response.data.message || '호스트 신청 거절 완료');
                 await this.fetchPendingHosts();
             } catch (err) {

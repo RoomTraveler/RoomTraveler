@@ -123,6 +123,7 @@ public class PaymentServiceImpl implements PaymentService {
         // paymentDao.insert(payment) 또는 insertPaymentWithMerchantUid(payment) 사용
         // insertPaymentWithMerchantUid는 merchant_uid를 포함하여 저장하는 새 DAO 메소드 가정
         int insertedCount = paymentDao.insertPaymentWithMerchantUid(payment);
+        log.info("[PaymentService] After insertPaymentWithMerchantUid, paymentId from payment object: {}", payment.getPaymentId());
         if (insertedCount == 0 || payment.getPaymentId() == null) { // useGeneratedKeys 등으로 ID가 설정되어야 함
              log.error("결제 정보 저장 실패. merchant_uid: {}", merchantUid);
              throw new SQLException("결제 정보를 DB에 저장하는데 실패했습니다.");
@@ -141,7 +142,9 @@ public class PaymentServiceImpl implements PaymentService {
         }
         
         log.info("결제 성공 및 처리 완료: merchantUid={}, impUid={}, amount={}", merchantUid, impUid, payment.getAmount());
-        return paymentDao.selectById(payment.getPaymentId()); // 저장 후 ID가 채워진 Payment 객체 반환
+        Payment finalPayment = paymentDao.selectById(payment.getPaymentId()); // 저장 후 ID가 채워진 Payment 객체 반환
+        log.info("[PaymentService] Payment object to be returned by validateAndFinalizePayment: {}", finalPayment); // 반환될 객체 로깅
+        return finalPayment;
     }
 
     @Override

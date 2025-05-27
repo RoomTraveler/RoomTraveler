@@ -390,31 +390,26 @@ async function submitReservation() {
     return;
   }
 
-  // 먼저 장바구니에 아이템 추가 시도
-  const item = {
-    roomId: Number(props.roomId),
+  // ReservationForm으로 전달할 데이터 준비
+  const reservationDetails = {
+    roomId: props.roomId,
     checkInDate: selectedCheckInDateQuery.value,
     checkOutDate: selectedCheckOutDateQuery.value,
     guestCount: selectedGuestsQuery.value,
-    price: room.value.price,
+    price: room.value.price, // 객실 기본 가격
+    accommodationId: accommodation.value.accommodationId, // 숙소 ID 추가
+    roomName: room.value.name, // 객실 이름 추가
+    accommodationTitle: accommodation.value.title, // 숙소 이름 추가
+    roomMainImageUrl: room.value.mainImageUrl || room.value.processedImages?.[0]?.imageUrl || noImagePlaceholder, // 객실 대표 이미지
+    accommodationCheckInTime: accommodation.value.checkInTime,
+    accommodationCheckOutTime: accommodation.value.checkOutTime,
   };
 
-  try {
-    // addToCart 함수는 내부적으로 cartStore.addToCart를 호출하고 message.value를 설정함
-    // addToCart 함수가 Promise를 반환하도록 하거나, 여기서 직접 cartStore.addToCart 결과를 확인해야 함.
-    // 우선 addToCart 내부에서 오류 발생 시 throw 하도록 되어 있다고 가정하고 진행합니다.
-    await addToCart(); // addToCart가 성공적으로 완료되면 (오류 없이)
-
-    // 장바구니 추가 성공 메시지가 message.value에 설정되었을 것이므로, 잠시 후 장바구니로 이동
-    // 또는 addToCart에서 반환하는 값으로 성공 여부 판단
-    // 현재 addToCart는 성공 시 message.value를 설정하고, 실패 시 에러를 throw 또는 message.value를 에러 메시지로 설정.
-    // addToCart가 에러를 throw하지 않으면 성공으로 간주.
-    router.push({ name: "AccommodationCartCheckout" }); // 수정된 라우트 이름
-  } catch (err) {
-    // addToCart에서 오류 발생 시 message.value는 이미 addToCart 내부에서 설정되었을 것임
-    console.error("바로 예약 처리 중 addToCart 실패:", err);
-    // 추가적인 오류 처리가 필요하다면 여기에 작성
-  }
+  // ReservationForm 라우트로 이동하면서 쿼리 파라미터로 데이터 전달
+  router.push({
+    name: "ReservationForm", // ReservationForm 라우트 이름으로 변경해야 합니다.
+    query: reservationDetails,
+  });
 }
 
 async function addToCart() {

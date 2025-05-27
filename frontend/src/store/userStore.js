@@ -41,6 +41,10 @@ export const useUserStore = defineStore(
       }
     }
 
+    function clearError() {
+      error.value = null;
+    }
+
     async function fetchCurrentUser() {
       const accessToken = _tokens.value?.access_token;
       if (!accessToken) {
@@ -265,6 +269,7 @@ export const useUserStore = defineStore(
       updateProfileImage,
       changePassword,
       refresh,
+      clearError,
     };
   },
   {

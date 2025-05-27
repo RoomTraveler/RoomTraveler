@@ -38,15 +38,6 @@
         </button>
       </form>
 
-      <!-- 소셜 로그인 보여줌 -->
-      <div class="social-login">
-        <p>또는 소셜 계정으로 로그인</p>
-        <div class="social-buttons">
-          <button class="social-button google">Google로 로그인</button>
-          <button class="social-button kakao">카카오로 로그인</button>
-          <button class="social-button naver">네이버로 로그인</button>
-        </div>
-      </div>
 
       <!-- 회원가입 링크 -->
       <div class="register-link">
@@ -269,40 +260,7 @@ input[type="password"]:focus {
   text-align: center;
 }
 
-.social-buttons {
-  display: flex;
-  flex-direction: column;
-  gap: 0.8rem;
-}
 
-.social-button {
-  padding: 10px;
-  border: none;
-  border-radius: 4px;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: opacity 0.3s;
-}
-
-.social-button:hover {
-  opacity: 0.9;
-}
-
-.google {
-  background-color: #fff;
-  color: #444;
-  border: 1px solid #ddd;
-}
-
-.kakao {
-  background-color: #fee500;
-  color: #000;
-}
-
-.naver {
-  background-color: #03c75a;
-  color: white;
-}
 
 /* .mode-toggle 관련된 스타일은 제거하거나 주석 처리 */
 /*

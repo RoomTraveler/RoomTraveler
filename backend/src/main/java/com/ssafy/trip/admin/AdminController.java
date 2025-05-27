@@ -252,9 +252,17 @@ public class AdminController {
     @PostMapping("/accommodations/{accommodationId}/status")
     public ResponseEntity<Map<String, Object>> updateAccommodationStatus(
             @PathVariable Long accommodationId,
-            @RequestParam String status) {
+            @RequestBody Map<String, String> payload) {
+        String status = payload.get("status");
+        if (status == null || status.trim().isEmpty()) {
+            logger.warn("숙소 상태 변경 요청 실패: accommodationId {}, status 값이 비어있음", accommodationId);
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("message", "상태(status) 값이 필요합니다.");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+        }
+
         try {
-            // String으로 받은 status를 AccommodationStatus Enum으로 변환
             Accommodation.AccommodationStatus accommodationStatusEnum;
             try {
                 accommodationStatusEnum = Accommodation.AccommodationStatus.valueOf(status.toUpperCase());
@@ -266,7 +274,7 @@ public class AdminController {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
             }
 
-            int result = accommodationService.updateAccommodationStatus(accommodationId, accommodationStatusEnum); // Enum으로 전달
+            int result = accommodationService.updateAccommodationStatus(accommodationId, accommodationStatusEnum);
             Map<String, Object> response = new HashMap<>();
             if (result > 0) {
                 response.put("success", true);

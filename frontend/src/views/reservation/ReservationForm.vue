@@ -1,246 +1,187 @@
 <template>
-  <div class="container mt-5 mb-5">
-    <h2 class="mb-4">예약하기</h2>
+  <div class="container my-5">
+    <h2 class="mb-4">예약 결제</h2>
 
-    <!-- 예약 정보 요약 -->
-    <div class="row mb-4">
-      <div class="col-md-8">
-        <div class="card">
+    <!-- 로딩 스피너 -->
+    <div v-if="isLoading || isProcessingPayment" class="text-center py-5">
+      <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">로딩 중...</span>
+      </div>
+      <p class="mt-2">{{ isProcessingPayment ? '결제를 진행 중입니다...' : '예약 정보를 준비 중입니다...' }}</p>
+    </div>
+
+    <!-- 페이지 에러 메시지 -->
+    <div 
+      v-if="pageErrorDisplay && !isLoading && !isProcessingPayment"
+      class="alert alert-danger alert-dismissible fade show"
+      role="alert"
+    >
+      {{ pageErrorDisplay }}
+      <button type="button" class="btn-close" @click="clearPageError" aria-label="Close"></button>
+    </div>
+
+    <div v-if="!isLoading && !pageErrorDisplay && reservationDetails" class="row">
+      <!-- 예약 정보 및 폼 영역 -->
+      <div class="col-lg-8">
+        <!-- 예약 정보 카드 -->
+        <div class="card mb-4">
+          <div class="card-header">
+            <h4 class="mb-0">예약 정보</h4>
+          </div>
           <div class="card-body">
-            <h4 class="card-title">예약 정보</h4>
             <div class="row">
               <div class="col-md-4">
                 <img
-                    :src="room.value.mainImageUrl || noImage"
-                    class="img-fluid rounded"
-                    :alt="room.value.name"
-                >
+                  :src="reservationDetails.roomMainImageUrl || noImage"
+                  :alt="reservationDetails.roomName"
+                  class="img-fluid rounded w-100"
+                  style="height: 150px; object-fit: cover"
+                />
               </div>
               <div class="col-md-8">
-                <h5>{{ room.value.name }}</h5>
-                <p class="text-muted">{{ accommodation.value.title }}</p>
-                <p><i class="bi bi-geo-alt"></i> {{ accommodation.value.address }}</p>
-                <p><i class="bi bi-calendar-check"></i> 체크인: <strong>{{ checkInDate.value }}</strong> ({{ accommodation.value.checkInTime }})</p>
-                <p><i class="bi bi-calendar-x"></i> 체크아웃: <strong>{{ checkOutDate.value }}</strong> ({{ accommodation.value.checkOutTime }})</p>
-                <p><i class="bi bi-people"></i> 인원: <strong>{{ guestCount.value }}명</strong> (최대 {{ room.value.capacity }}명)</p>
+                <h5 class="fw-bold mb-1">{{ reservationDetails.accommodationTitle }}</h5>
+                <h6 class="mb-2 text-muted">{{ reservationDetails.roomName }}</h6>
+                <ul class="list-unstyled mb-0 small">
+                  <li><strong>체크인:</strong> {{ reservationDetails.checkInDate }} ({{ reservationDetails.accommodationCheckInTime || '정보 없음' }})</li>
+                  <li><strong>체크아웃:</strong> {{ reservationDetails.checkOutDate }} ({{ reservationDetails.accommodationCheckOutTime || '정보 없음' }})</li>
+                  <li><strong>숙박일수:</strong> {{ nights }}박</li>
+                  <li><strong>인원:</strong> {{ reservationDetails.guestCount }}명</li>
+                  <li><strong>총 가격:</strong> {{ formatCurrency(totalPrice) }}</li>
+                </ul>
               </div>
             </div>
           </div>
         </div>
-      </div>
-      <div class="col-md-4">
-        <div class="card">
+
+        <!-- 예약자 정보 -->
+        <div class="card mb-4">
+          <div class="card-header"><h4 class="mb-0">예약자 정보</h4></div>
           <div class="card-body">
-            <h4 class="card-title">가격 정보</h4>
-            <p><i class="bi bi-currency-dollar"></i> 1박 요금: {{ formatCurrency(room.value.price) }}</p>
-            <p><i class="bi bi-calendar-week"></i> 숙박 일수: {{ nights.value }}박</p>
-            <div class="price-detail">
-              <p>객실 요금: {{ formatCurrency(room.value.price * nights.value) }}</p>
-              <p>세금 및 수수료: {{ formatCurrency(room.value.price * nights.value * 0.1) }}</p>
-              <p class="total-price">총 요금: {{ formatCurrency(totalPrice.value) }}</p>
+            <div v-if="currentUser">
+              <p><strong>이름:</strong> {{ currentUser.username || currentUser.name || '정보 없음' }}</p>
+              <p><strong>이메일:</strong> {{ currentUser.email || '정보 없음' }}</p>
+              <p><strong>연락처:</strong> {{ currentUser.phone || "정보 없음" }}</p>
             </div>
+            <div v-else-if="!userStore.loading && !isAuthenticated">
+                <p class="text-danger">예약자 정보를 불러올 수 없습니다. 로그인이 필요할 수 있습니다.</p>
+            </div>
+            <div v-else>
+              <p class="text-muted">예약자 정보를 불러오는 중입니다...</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 특별 요청 사항 입력 -->
+        <form @submit.prevent="processSinglePayment">
+          <div class="card mb-4">
+            <div class="card-header">
+              <h4 class="mb-0">특별 요청 사항</h4>
+            </div>
+            <div class="card-body">
+              <textarea
+                v-model="specialRequests"
+                class="form-control"
+                rows="4"
+                placeholder="호스트에게 전달할 특별 요청 사항이 있으면 입력해주세요. (선택사항)"
+                maxlength="500"
+              ></textarea>
+              <small class="form-text text-muted">{{ specialRequests.length }}/500</small>
+            </div>
+          </div>
+
+          <!-- 이용 약관 동의 -->
+          <div class="card mb-4">
+            <div class="card-header">
+              <h4 class="mb-0">이용 약관</h4>
+            </div>
+            <div class="card-body">
+              <div class="form-check">
+                <input
+                  class="form-check-input"
+                  type="checkbox"
+                  id="termsCheckReservation"
+                  v-model="termsAgreed"
+                  required
+                />
+                <label class="form-check-label" for="termsCheckReservation">
+                  만 14세 이상이며 <a href="#" @click.prevent="showTermsModal = true">이용약관</a>에 동의합니다.
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- 버튼 영역 -->
+          <div class="d-flex justify-content-end gap-2">
+            <button
+              type="button"
+              class="btn btn-outline-secondary"
+              @click="router.go(-1)"
+              :disabled="isProcessingPayment || isLoading"
+            >
+              이전으로
+            </button>
+            <button
+              type="submit"
+              class="btn btn-primary"
+              :disabled="!termsAgreed || isProcessingPayment || isLoading || !reservationDetails || !currentUser"
+            >
+              <span
+                v-if="isProcessingPayment"
+                class="spinner-border spinner-border-sm me-1"
+                role="status"
+                aria-hidden="true"
+              ></span>
+              {{ formatCurrency(totalPrice) }} 결제하기
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- 결제 요약 영역 -->
+      <div class="col-lg-4">
+        <div class="card p-4 position-sticky" style="top: 80px">
+          <h4 class="mb-3">결제 요약</h4>
+          <div v-if="reservationDetails">
+            <p><strong>숙소:</strong> {{ reservationDetails.accommodationTitle }}</p>
+            <p><strong>객실:</strong> {{ reservationDetails.roomName }}</p>
+            <p><strong>체크인:</strong> {{ reservationDetails.checkInDate }}</p>
+            <p><strong>체크아웃:</strong> {{ reservationDetails.checkOutDate }}</p>
+            <p><strong>숙박일수:</strong> {{ nights }}박</p>
+            <p><strong>인원:</strong> {{ reservationDetails.guestCount }}명</p>
+            <hr />
+            <h5 class="fw-bold">총 결제 금액: {{ formatCurrency(totalPrice) }}</h5>
+          </div>
+          <div v-else>
+            <p class="text-muted">예약 정보가 없습니다.</p>
           </div>
         </div>
       </div>
     </div>
-
-    <!-- 예약자 정보 및 결제 정보 -->
-    <form @submit.prevent="createReservation">
-      <input type="hidden" v-model="roomId.value" />
-      <input type="hidden" v-model="checkInDate.value" />
-      <input type="hidden" v-model="checkOutDate.value" />
-      <input type="hidden" v-model="guestCount.value" />
-      <input type="hidden" v-model="totalPrice.value" />
-
-      <div class="row">
-        <div class="col-md-8">
-          <!-- 예약자 정보 -->
-          <div class="card mb-4">
-            <div class="card-body">
-              <h4 class="card-title">예약자 정보</h4>
-              <div class="mb-3">
-                <label for="guestName" class="form-label">이름</label>
-                <input type="text" class="form-control" id="guestName" v-model="guestName.value" required>
-              </div>
-              <div class="mb-3">
-                <label for="guestEmail" class="form-label">이메일</label>
-                <input type="email" class="form-control" id="guestEmail" v-model="guestEmail.value" required>
-              </div>
-              <div class="mb-3">
-                <label for="guestPhone" class="form-label">전화번호</label>
-                <input type="tel" class="form-control" id="guestPhone" v-model="guestPhone.value" placeholder="010-0000-0000" required>
-              </div>
-            </div>
-          </div>
-
-          <!-- 결제 방법 -->
-          <div class="card mb-4">
-            <div class="card-body">
-              <h4 class="card-title">결제 방법</h4>
-              <div class="row">
-                <div class="col-md-4 mb-3" v-for="(item, idx) in paymentTypes" :key="idx">
-                  <div
-                      class="card payment-method-card"
-                      :class="{ selected: paymentMethod.value === item.value }"
-                      @click="selectPaymentMethod(item.value)"
-                      style="cursor:pointer;"
-                  >
-                    <div class="card-body text-center">
-                      <i :class="item.icon + ' fs-1'"></i>
-                      <h5 class="mt-2">{{ item.label }}</h5>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <!-- 결제 방법별 추가 입력 -->
-              <div v-if="paymentMethod.value" class="mt-3">
-                <!-- 신용카드 -->
-                <div v-if="paymentMethod.value === 'CARD'">
-                  <div class="row">
-                    <div class="col-md-6 mb-3">
-                      <label for="cardNumber" class="form-label">카드 번호</label>
-                      <input type="text" class="form-control" id="cardNumber" v-model="cardInfo.cardNumber" placeholder="0000-0000-0000-0000" required>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                      <label for="cardName" class="form-label">카드 소유자 이름</label>
-                      <input type="text" class="form-control" id="cardName" v-model="cardInfo.cardName" required>
-                    </div>
-                  </div>
-                  <div class="row">
-                    <div class="col-md-6 mb-3">
-                      <label for="expiryDate" class="form-label">유효기간</label>
-                      <input type="text" class="form-control" id="expiryDate" v-model="cardInfo.expiryDate" placeholder="MM/YY" required>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                      <label for="cvv" class="form-label">CVV</label>
-                      <input type="text" class="form-control" id="cvv" v-model="cardInfo.cvv" placeholder="123" required>
-                    </div>
-                  </div>
-                </div>
-                <!-- 계좌이체 -->
-                <div v-if="paymentMethod.value === 'BANK_TRANSFER'">
-                  <div class="mb-3">
-                    <label for="bankName" class="form-label">은행명</label>
-                    <select class="form-select" id="bankName" v-model="bankInfo.bankName" required>
-                      <option value="">은행을 선택하세요</option>
-                      <option value="KB">KB국민은행</option>
-                      <option value="Shinhan">신한은행</option>
-                      <option value="Woori">우리은행</option>
-                      <option value="Hana">하나은행</option>
-                      <option value="IBK">기업은행</option>
-                    </select>
-                  </div>
-                  <div class="mb-3">
-                    <label for="accountNumber" class="form-label">계좌번호</label>
-                    <input type="text" class="form-control" id="accountNumber" v-model="bankInfo.accountNumber" required>
-                  </div>
-                  <div class="mb-3">
-                    <label for="accountHolder" class="form-label">예금주</label>
-                    <input type="text" class="form-control" id="accountHolder" v-model="bankInfo.accountHolder" required>
-                  </div>
-                </div>
-                <!-- 휴대폰 결제 -->
-                <div v-if="paymentMethod.value === 'PHONE'">
-                  <div class="mb-3">
-                    <label for="phoneNumber" class="form-label">휴대폰 번호</label>
-                    <input type="tel" class="form-control" id="phoneNumber" v-model="phonePayInfo.phoneNumber" placeholder="010-0000-0000" required>
-                  </div>
-                  <div class="mb-3">
-                    <label for="carrier" class="form-label">통신사</label>
-                    <select class="form-select" id="carrier" v-model="phonePayInfo.carrier" required>
-                      <option value="">통신사를 선택하세요</option>
-                      <option value="SKT">SKT</option>
-                      <option value="KT">KT</option>
-                      <option value="LGU+">LGU+</option>
-                      <option value="알뜰폰">알뜰폰</option>
-                    </select>
-                  </div>
-                  <div class="mb-3">
-                    <label for="birthDate" class="form-label">생년월일</label>
-                    <input type="text" class="form-control" id="birthDate" v-model="phonePayInfo.birthDate" placeholder="YYMMDD" required>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- 요청 사항 -->
-          <div class="card mb-4">
-            <div class="card-body">
-              <h4 class="card-title">요청 사항</h4>
-              <div class="mb-3">
-                <label for="specialRequests" class="form-label">호스트에게 전달할 메시지</label>
-                <textarea
-                    class="form-control"
-                    id="specialRequests"
-                    v-model="specialRequests.value"
-                    rows="3"
-                    placeholder="특별한 요청 사항이 있으면 입력해주세요."
-                ></textarea>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="col-md-4">
-          <!-- 예약 요약 및 결제 버튼 -->
-          <div class="card sticky-top" style="top: 20px;">
-            <div class="card-body">
-              <h4 class="card-title">예약 요약</h4>
-              <p><i class="bi bi-building"></i> {{ accommodation.value.title }}</p>
-              <p><i class="bi bi-door-closed"></i> {{ room.value.name }}</p>
-              <p><i class="bi bi-calendar-check"></i> 체크인: {{ checkInDate.value }}</p>
-              <p><i class="bi bi-calendar-x"></i> 체크아웃: {{ checkOutDate.value }}</p>
-              <p><i class="bi bi-people"></i> 인원: {{ guestCount.value }}명</p>
-              <div class="price-detail">
-                <p class="total-price">총 요금: {{ formatCurrency(totalPrice.value) }}</p>
-              </div>
-              <div class="form-check mb-3">
-                <input class="form-check-input" type="checkbox" id="agreeTerms" v-model="termsAgreed.value" required>
-                <label class="form-check-label" for="agreeTerms">
-                  <a href="#" data-bs-toggle="modal" data-bs-target="#termsModal">이용약관</a>에 동의합니다.
-                </label>
-              </div>
-              <div class="d-grid">
-                <button
-                    type="submit"
-                    class="btn btn-primary btn-lg"
-                    :disabled="!paymentMethod.value || !termsAgreed.value"
-                >결제하기</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </form>
+     <div v-if="!isLoading && !pageErrorDisplay && !reservationDetails" class="text-center py-5">
+        <p class="text-muted fs-5">잘못된 접근이거나 예약 정보가 없습니다.</p>
+        <p>이전 페이지로 돌아가 다시 시도해주세요.</p>
+        <button type="button" class="btn btn-primary mt-2" @click="router.go(-1)">이전 페이지로</button>
+    </div>
 
     <!-- 이용약관 모달 -->
-    <div class="modal fade" id="termsModal" tabindex="-1" aria-labelledby="termsModalLabel" aria-hidden="true">
-      <div class="modal-dialog modal-lg">
+    <div v-if="showTermsModal" class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+      <div class="modal-dialog modal-dialog-scrollable modal-lg">
         <div class="modal-content">
           <div class="modal-header">
-            <h5 class="modal-title" id="termsModalLabel">이용약관</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <h5 class="modal-title">이용약관</h5>
+            <button type="button" class="btn-close" @click="showTermsModal = false"></button>
           </div>
           <div class="modal-body">
-            <h5>예약 및 결제 약관</h5>
             <p>1. 예약 확정 후 취소 시 환불 규정에 따라 수수료가 부과될 수 있습니다.</p>
-            <p>2. 체크인 시간은 {{ accommodation.value.checkInTime }}, 체크아웃 시간은 {{ accommodation.value.checkOutTime }}입니다.</p>
-            <p>3. 최대 인원을 초과하는 경우 추가 요금이 발생하거나 입실이 거부될 수 있습니다.</p>
-            <p>4. 객실 내 흡연은 금지되어 있으며, 위반 시 추가 청소비가 청구될 수 있습니다.</p>
-            <p>5. 예약자와 실제 투숙객의 정보가 일치해야 합니다.</p>
-            <h5 class="mt-4">환불 정책</h5>
-            <p>- 체크인 7일 전 취소: 100% 환불</p>
-            <p>- 체크인 5일 전 취소: 70% 환불</p>
-            <p>- 체크인 3일 전 취소: 50% 환불</p>
-            <p>- 체크인 1일 전 취소: 환불 불가</p>
-            <p>- 노쇼(No-show): 환불 불가</p>
-            <h5 class="mt-4">개인정보 수집 및 이용</h5>
-            <p>1. 수집항목: 이름, 이메일, 전화번호</p>
-            <p>2. 수집목적: 예약 확인 및 서비스 제공</p>
-            <p>3. 보유기간: 예약 완료 후 3년</p>
+            <p>2. 체크인 시간은 {{ reservationDetails?.accommodationCheckInTime || '숙소 정보 확인' }}, 체크아웃 시간은 {{ reservationDetails?.accommodationCheckOutTime || '숙소 정보 확인' }}입니다.</p>
+            <p><strong>개인정보 수집 및 이용 동의</strong></p>
+            <p>회사는 다음과 같은 목적으로 개인정보를 수집 및 이용합니다.</p>
+            <p>- 수집 항목: 이름, 연락처, 이메일 주소</p>
+            <p>- 이용 목적: 예약 확인 및 안내, 서비스 제공, 고객 상담</p>
+            <p>- 보유 및 이용 기간: 법령에 따른 보존 기간 또는 동의 철회 시까지</p>
           </div>
           <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
+            <button type="button" class="btn btn-primary" @click="showTermsModal = false">확인</button>
           </div>
         </div>
       </div>
@@ -249,202 +190,244 @@
 </template>
 
 <script setup>
-// 한국어 주석
-import { ref, reactive, onMounted } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { ref, onMounted, computed, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
+import { useUserStore } from "@/store/userStore";
+import { usePaymentStore } from "@/store/paymentStore";
+import { storeToRefs } from "pinia";
+import noImage from "@/assets/no-image.jpg";
 
-// 이미지 없을 때 대체 이미지
-const noImage = require('@/assets/no-image.jpg');
-
-// 라우터/라우트 객체
 const route = useRoute();
 const router = useRouter();
+const userStore = useUserStore();
+const paymentStore = usePaymentStore();
 
-// 예약 관련 변수들 (ref/반응형)
-const roomId = ref('');
-const checkInDate = ref('');
-const checkOutDate = ref('');
-const guestCount = ref(1);
-const nights = ref(0);
-const totalPrice = ref(0);
+const { user: currentUser, isAuthenticated, loading: userLoading } = storeToRefs(userStore);
+const { isLoading: isProcessingPayment, error: paymentApiError } = storeToRefs(paymentStore);
 
-// 숙소 정보
-const accommodation = ref({
-  title: '',
-  address: '',
-  checkInTime: '',
-  checkOutTime: ''
-});
-
-// 객실 정보
-const room = ref({
-  name: '',
-  price: 0,
-  capacity: 0,
-  mainImageUrl: ''
-});
-
-// 예약자 정보
-const guestName = ref('');
-const guestEmail = ref('');
-const guestPhone = ref('');
-
-// 결제 방법
-const paymentMethod = ref('');
-
-// 결제별 입력 정보
-const cardInfo = reactive({ cardNumber: '', cardName: '', expiryDate: '', cvv: '' });
-const bankInfo = reactive({ bankName: '', accountNumber: '', accountHolder: '' });
-const phonePayInfo = reactive({ phoneNumber: '', carrier: '', birthDate: '' });
-
-// 요청 사항
-const specialRequests = ref('');
-
-// 약관 동의
+const isLoading = ref(true); // 페이지 초기 데이터 로딩 상태
+const componentError = ref(null); // 컴포넌트 자체 유효성 검사 오류 등
+const reservationDetails = ref(null);
+const specialRequests = ref("");
 const termsAgreed = ref(false);
+const showTermsModal = ref(false);
 
-// 결제 방법 목록
-const paymentTypes = [
-  { value: 'CARD', icon: 'bi bi-credit-card', label: '신용카드' },
-  { value: 'BANK_TRANSFER', icon: 'bi bi-bank', label: '계좌이체' },
-  { value: 'PHONE', icon: 'bi bi-phone', label: '휴대폰 결제' }
-];
+const VITE_PORTONE_IMP_CODE = import.meta.env.VITE_PORTONE_IMP_CODE;
 
-// 페이지 첫 진입 시 데이터 세팅
-onMounted(() => {
-  // 쿼리로 받은 값
-  roomId.value = route.query.roomId || '';
-  checkInDate.value = route.query.checkInDate || '';
-  checkOutDate.value = route.query.checkOutDate || '';
-  guestCount.value = parseInt(route.query.guestCount || '1');
+// 에러 메시지 통합 표시 로직
+const pageErrorDisplay = computed(() => componentError.value || paymentApiError.value );
 
-  // 사용자 정보, 객실/숙소 정보 로드
-  loadUserInfo();
-  loadRoomInfo();
+function clearPageError() {
+  componentError.value = null;
+  paymentStore.clearError();
+}
+
+watch(paymentApiError, (newError) => {
+  if (newError && !componentError.value) {
+    // paymentStore에서 발생한 에러를 pageErrorDisplay를 통해 보여줌
+  }
 });
 
-// 사용자 정보 로드
-async function loadUserInfo() {
-  try {
-    const response = await fetch('/api/users/me');
-    if (!response.ok) throw new Error('사용자 정보를 불러오는데 실패했습니다.');
-    const user = await response.json();
-    guestName.value = user.name;
-    guestEmail.value = user.email;
-    guestPhone.value = user.phone || '';
-  } catch (e) {
-    console.error('사용자 정보 로드 오류:', e);
+const nights = computed(() => {
+  if (reservationDetails.value?.checkInDate && reservationDetails.value?.checkOutDate) {
+    try {
+      const checkIn = new Date(reservationDetails.value.checkInDate);
+      const checkOut = new Date(reservationDetails.value.checkOutDate);
+      if (isNaN(checkIn.getTime()) || isNaN(checkOut.getTime())) return 0;
+      const diffTime = checkOut.getTime() - checkIn.getTime();
+      return Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+    } catch (e) {
+      console.error("Error calculating nights:", e);
+      return 0;
+    }
   }
-}
+  return 0;
+});
 
-// 객실 및 숙소 정보 로드
-async function loadRoomInfo() {
-  try {
-    if (!roomId.value) throw new Error('객실 ID가 없습니다.');
-    const response = await fetch(`/api/rooms/${roomId.value}`);
-    if (!response.ok) throw new Error('객실 정보를 불러오는데 실패했습니다.');
-    const data = await response.json();
-    room.value = data.room;
-    accommodation.value = data.accommodation;
-    calculateNights();
-    calculateTotalPrice();
-  } catch (e) {
-    console.error('객실 정보 로드 오류:', e);
+const totalPrice = computed(() => {
+  if (reservationDetails.value?.price && nights.value > 0) {
+    const pricePerNight = parseFloat(reservationDetails.value.price);
+    if (isNaN(pricePerNight)) return 0;
+    return pricePerNight * nights.value;
   }
-}
+  return 0;
+});
 
-// 숙박 일수 계산
-function calculateNights() {
-  if (checkInDate.value && checkOutDate.value) {
-    const checkIn = new Date(checkInDate.value);
-    const checkOut = new Date(checkOutDate.value);
-    const diffTime = Math.abs(checkOut - checkIn);
-    nights.value = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  }
-}
+const validateReservationDetails = (details) => {
+  if (!details) return "예약 정보를 불러올 수 없습니다.";
+  if (!details.roomId || !details.accommodationId) return "객실 또는 숙소 정보가 올바르지 않습니다.";
+  if (!details.checkInDate || !details.checkOutDate) return "체크인 또는 체크아웃 날짜가 올바르지 않습니다.";
+  if (new Date(details.checkInDate) >= new Date(details.checkOutDate)) return "체크아웃 날짜는 체크인 날짜 이후여야 합니다.";
+  if (!details.guestCount || parseInt(details.guestCount, 10) <= 0) return "인원 정보가 올바르지 않습니다.";
+  if (details.price == null || parseFloat(details.price) < 0) return "가격 정보가 올바르지 않습니다."; // 0원일 수도 있으므로 < 0 검사
+  return null;
+};
 
-// 총 가격 계산
-function calculateTotalPrice() {
-  totalPrice.value = room.value.price * nights.value * 1.1; // 세금 10%
-}
-
-// 결제 방법 선택
-function selectPaymentMethod(method) {
-  paymentMethod.value = method;
-}
-
-// 예약 생성
-async function createReservation() {
+onMounted(async () => {
+  isLoading.value = true;
+  clearPageError();
   try {
-    if (!paymentMethod.value) {
-      alert('결제 방법을 선택해주세요.');
+    if (!isAuthenticated.value) {
+      await userStore.loadUserFromStorage();
+      if (!isAuthenticated.value) {
+        router.push({ name: "Login", query: { redirect: route.fullPath } });
+        isLoading.value = false;
+        return;
+      }
+    }
+
+    const query = route.query;
+    const parsedDetails = {
+      roomId: query.roomId ? parseInt(query.roomId, 10) : null,
+      accommodationId: query.accommodationId ? parseInt(query.accommodationId, 10) : null,
+      checkInDate: query.checkInDate,
+      checkOutDate: query.checkOutDate,
+      guestCount: query.guestCount ? parseInt(query.guestCount, 10) : null,
+      price: query.price ? parseFloat(query.price) : null,
+      roomName: query.roomName || "객실 정보 없음",
+      accommodationTitle: query.accommodationTitle || "숙소 정보 없음",
+      roomMainImageUrl: query.roomMainImageUrl || noImage,
+      accommodationCheckInTime: query.accommodationCheckInTime,
+      accommodationCheckOutTime: query.accommodationCheckOutTime,
+    };
+
+    const validationError = validateReservationDetails(parsedDetails);
+    if (validationError) {
+      componentError.value = validationError;
+      reservationDetails.value = null; // 유효하지 않은 정보는 표시하지 않음
+    } else {
+      reservationDetails.value = parsedDetails;
+    }
+
+  } catch (err) {
+    console.error("Error in ReservationForm onMounted:", err);
+    componentError.value = "예약 정보를 불러오는 중 오류가 발생했습니다: " + (err.message || "알 수 없는 오류");
+  } finally {
+    isLoading.value = false;
+  }
+});
+
+const processSinglePayment = async () => {
+  clearPageError();
+
+  if (!VITE_PORTONE_IMP_CODE) {
+    componentError.value = "아임포트 가맹점 식별코드가 설정되지 않았습니다. 관리자에게 문의하세요.";
+    return;
+  }
+  if (!termsAgreed.value) {
+    componentError.value = "이용약관에 동의해주세요.";
+    return;
+  }
+  if (!reservationDetails.value || !currentUser.value) {
+    componentError.value = "결제에 필요한 예약 정보 또는 사용자 정보가 없습니다.";
+    return;
+  }
+  const validationError = validateReservationDetails(reservationDetails.value);
+  if (validationError) {
+    componentError.value = validationError;
+    return;
+  }
+  if (specialRequests.value.length > 500) {
+      componentError.value = "특별 요청 사항은 500자 이내로 작성해주세요.";
       return;
-    }
-    if (!termsAgreed.value) {
-      alert('이용약관에 동의해주세요.');
-      return;
-    }
-    // 실제 결제 정보 유효성 체크는 추가적으로 필요
-
-    const response = await fetch('/api/reservations/create', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        roomId: roomId.value,
-        checkInDate: checkInDate.value,
-        checkOutDate: checkOutDate.value,
-        guestCount: guestCount.value,
-        guestName: guestName.value,
-        guestEmail: guestEmail.value,
-        guestPhone: guestPhone.value,
-        paymentMethod: paymentMethod.value,
-        specialRequests: specialRequests.value,
-        totalPrice: totalPrice.value
-      })
-    });
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || '예약 생성에 실패했습니다.');
-    }
-    const data = await response.json();
-    // 결제 결과 페이지로 이동
-    router.push(`/payment/result/${data.paymentId}?message=예약이 완료되었습니다.`);
-  } catch (e) {
-    console.error('예약 생성 오류:', e);
-    alert(e.message || '예약 생성에 실패했습니다.');
   }
-}
 
-// 금액 포맷팅
-function formatCurrency(amount) {
-  return new Intl.NumberFormat('ko-KR', {
-    style: 'currency',
-    currency: 'KRW',
-    maximumFractionDigits: 0
-  }).format(amount);
-}
+  try {
+    const reservationToCreate = {
+      roomId: reservationDetails.value.roomId,
+      accommodationId: reservationDetails.value.accommodationId,
+      checkInDate: reservationDetails.value.checkInDate,
+      checkOutDate: reservationDetails.value.checkOutDate,
+      guestCount: reservationDetails.value.guestCount,
+      totalPrice: totalPrice.value, // nights * price 로 계산된 총액
+      // roomName, accommodationTitle 등은 서버에서 필요시 ID로 조회 가능
+    };
+
+    const prepareData = {
+      reservationsToCreate: [reservationToCreate], // API는 리스트를 받으므로 단일 아이템 리스트로 전달
+      specialRequests: specialRequests.value,
+    };
+    
+    const paymentPrepareResponse = await paymentStore.preparePayment(prepareData);
+    const { merchantUid, amount, paymentName } = paymentPrepareResponse;
+    const buyerEmail = currentUser.value?.email || "guest@example.com";
+    const buyerName = currentUser.value?.username || currentUser.value?.name || "비회원";
+    const buyerTel = currentUser.value?.phone || "010-0000-0000";
+
+    const { IMP } = window;
+    IMP.init(VITE_PORTONE_IMP_CODE);
+
+    IMP.request_pay(
+      {
+        pg: "html5_inicis.INIpayTest",
+        pay_method: "card",
+        merchant_uid: merchantUid,
+        name: paymentName,
+        amount: amount,
+        buyer_email: buyerEmail,
+        buyer_name: buyerName,
+        buyer_tel: buyerTel,
+      },
+      async (rsp) => {
+        if (rsp.success) {
+          try {
+            const completeData = {
+              impUid: rsp.imp_uid,
+              merchantUid: rsp.merchant_uid,
+            };
+            const paymentCompleteResponse = await paymentStore.completePayment(completeData);
+            
+            router.push({
+              name: "PaymentResult",
+              query: {
+                imp_uid: rsp.imp_uid,
+                merchant_uid: rsp.merchant_uid,
+                message: paymentCompleteResponse.message || "결제가 성공적으로 완료되었습니다.",
+                paymentId: paymentCompleteResponse.paymentId,
+              },
+            });
+          } catch (completeError) {
+            console.error("Payment completion error:", completeError);
+            // paymentStore.error에 이미 오류가 설정됨
+          }
+        } else {
+          console.error("Iamport payment failed:", rsp);
+          let errorMessage = `결제 실패: ${rsp.error_msg || '알 수 없는 사유로 결제가 실패했습니다.'}`;
+          if (rsp.imp_uid) errorMessage += ` (거래번호: ${rsp.imp_uid})`;
+          componentError.value = errorMessage;
+          if (merchantUid) {
+             await paymentStore.cancelPreparedReservations(merchantUid);
+          }
+        }
+      }
+    );
+  } catch (prepareError) {
+    console.error("Payment preparation error in component:", prepareError);
+    // paymentStore.error에 이미 오류가 설정됨
+  }
+};
+
+const formatCurrency = (value) => {
+  if (typeof value !== "number" || isNaN(value)) return "가격 정보 없음";
+  return new Intl.NumberFormat("ko-KR", {
+    style: "currency",
+    currency: "KRW",
+    maximumFractionDigits: 0,
+  }).format(value);
+};
 </script>
 
 <style scoped>
-.price-detail {
-  border-top: 1px solid #dee2e6;
-  padding-top: 15px;
-  margin-top: 15px;
+.card {
+  border-radius: 0.75rem;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.07);
 }
-.total-price {
-  font-size: 1.2rem;
-  font-weight: bold;
+.position-sticky {
+  top: 1rem; /* nav 높이 고려 */
+  z-index: 2;
 }
-.payment-method-card {
-  cursor: pointer;
-  transition: all 0.3s;
+.modal.fade.show {
+  display: block;
 }
-.payment-method-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-}
-.payment-method-card.selected {
-  border-color: #0d6efd;
-  background-color: #f0f7ff;
-}
+/* 추가적인 스타일링은 CartCheckout.vue 또는 전역 스타일 참조 */
 </style>

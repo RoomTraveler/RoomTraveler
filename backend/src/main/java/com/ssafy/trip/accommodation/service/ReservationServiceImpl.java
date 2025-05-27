@@ -43,6 +43,8 @@ import com.ssafy.trip.payment.dto.PaymentPrepareRequestDto; // DTO 임포트
 import com.ssafy.trip.payment.dto.ReservationCreationDto; // ReservationCreationDto 임포트 추가
 import com.ssafy.trip.cart.service.CartService; // CartService 임포트
 import java.util.UUID; // UUID 임포트
+import com.ssafy.trip.user.User; // User 클래스 임포트 추가
+import com.ssafy.trip.user.UserService; // UserService 임포트 추가
 
 /**
  * 예약 서비스 구현 클래스
@@ -59,6 +61,7 @@ public class ReservationServiceImpl implements ReservationService {
     private final RoomAvailabilityDao roomAvailabilityDao;
     private final AccommodationDao accommodationDao; // 숙소 정보 접근을 위해 추가
     private final CartService cartService; // CartService 주입
+    private final UserService userService; // UserService 필드 주입 추가
     // private final ReviewService reviewService; // ReviewService 필드 제거
 
     /**
@@ -102,6 +105,15 @@ public class ReservationServiceImpl implements ReservationService {
         return result;
     }
 
+    private String generateUniqueMerchantUid() {
+        String merchantUid;
+        do {
+            merchantUid = UUID.randomUUID().toString();
+        } while (reservationDao.existsByMerchantUid(merchantUid));
+        return merchantUid;
+    }
+
+    
     /**
      * 새 예약을 등록합니다.
      * 사용자 ID, 예약 상태(PENDING), 결제 상태(UNPAID)를 설정하여 예약을 생성합니다.
@@ -687,71 +699,104 @@ public class ReservationServiceImpl implements ReservationService {
     @Override
     @Transactional
     public Map<String, Object> prepareReservationsForPayment(PaymentPrepareRequestDto prepareRequestDto, Long userId) throws SQLException, InvalidRequestException, ResourceNotFoundException {
-        List<ReservationCreationDto> creationDtos = prepareRequestDto.getReservationsToCreate();
-        if (creationDtos == null || creationDtos.isEmpty()) {
-            throw new InvalidRequestException("결제할 예약 정보가 없습니다.");
+        User user = userService.getUserById(userId);
+        if (user == null) {
+            throw new ResourceNotFoundException("사용자 정보를 찾을 수 없습니다. ID: " + userId);
         }
 
-        String merchantUid = UUID.randomUUID().toString();
-        List<Reservation> reservations = new ArrayList<>();
+        List<Reservation> tempReservations = new ArrayList<>();
         BigDecimal totalAmount = BigDecimal.ZERO;
-        String representativeRoomName = null;
+        String merchantUid = generateUniqueMerchantUid();
+        StringBuilder paymentNameBuilder = new StringBuilder();
 
-        for (ReservationCreationDto dto : creationDtos) {
-            Room room = roomDao.getRoomById(dto.getRoomId());
+        for (ReservationCreationDto reservationDto : prepareRequestDto.getReservationsToCreate()) {
+            Room room = roomDao.getRoomById(reservationDto.getRoomId());
             if (room == null) {
-                throw new ResourceNotFoundException("요청된 객실 정보를 찾을 수 없습니다: ID " + dto.getRoomId());
+                throw new ResourceNotFoundException("객실 정보를 찾을 수 없습니다. ID: " + reservationDto.getRoomId());
             }
-            if (representativeRoomName == null) {
-                representativeRoomName = room.getName();
-            }
-
-            if (room.getRoomCount() == null || room.getRoomCount() <= 0) {
-                throw new InvalidRequestException("객실 '" + room.getName() + "'의 기본 재고 정보가 유효하지 않습니다.");
+            Accommodation accommodation = accommodationDao.getAccommodationById(room.getAccommodationId());
+            if (accommodation == null) {
+                throw new ResourceNotFoundException("숙소 정보를 찾을 수 없습니다. (객실 ID: " + room.getRoomId() + ")");
             }
 
-            Reservation reservation = Reservation.builder()
-                    .userId(userId)
-                    .roomId(dto.getRoomId())
-                    .accommodationId(dto.getAccommodationId())
-                    .merchantUid(merchantUid)
-                    .checkInDate(dto.getCheckInDate())
-                    .checkOutDate(dto.getCheckOutDate())
-                    .guestCount(dto.getGuestCount())
-                    .totalPrice(dto.getTotalPrice())
-                    .status("PENDING_PAYMENT")
-                    .paymentStatus("PENDING")
-                    .specialRequests(prepareRequestDto.getSpecialRequests())
-                    .build();
-            reservations.add(reservation);
-            totalAmount = totalAmount.add(dto.getTotalPrice());
-        }
+            // ReservationCreationDto의 날짜 필드는 이미 LocalDate 타입이므로 파싱 불필요
+            LocalDate checkInDate = reservationDto.getCheckInDate(); 
+            LocalDate checkOutDate = reservationDto.getCheckOutDate();
 
-        for (Reservation reservation : reservations) {
-            reservationDao.insertPendingReservation(reservation);
-        }
+            if (checkInDate == null || checkOutDate == null) {
+                log.error("날짜 정보 누락: 체크인 또는 체크아웃 날짜가 null입니다. DTO: {}", reservationDto);
+                throw new InvalidRequestException("체크인 또는 체크아웃 날짜 정보가 누락되었습니다.");
+            }
+            
+            long nights = ChronoUnit.DAYS.between(checkInDate, checkOutDate);
+            if (nights <= 0) {
+                throw new InvalidRequestException("체크아웃 날짜는 체크인 날짜 이후여야 합니다.");
+            }
+            BigDecimal currentReservationTotalPrice = reservationDto.getTotalPrice();
+            totalAmount = totalAmount.add(currentReservationTotalPrice);
 
-        for (Reservation reservation : reservations) {
-            List<LocalDate> dates = getDateRange(reservation.getCheckInDate(), reservation.getCheckOutDate());
-            for (LocalDate date : dates) {
-                RoomAvailability availabilityUpdate = RoomAvailability.builder()
-                                                .roomId(reservation.getRoomId())
-                                                .date(date)
-                                                .availableCount(1)
-                                                .build();
-                int updatedRows = roomAvailabilityDao.decreaseDailyAvailability(availabilityUpdate);
+            if (paymentNameBuilder.length() > 0) {
+                paymentNameBuilder.append(", ");
+            }
+            paymentNameBuilder.append(room.getName());
+
+            List<LocalDate> dateRange = getDateRange(checkInDate, checkOutDate);
+            for (LocalDate date : dateRange) {
+                RoomAvailability availabilityToDecrease = new RoomAvailability();
+                availabilityToDecrease.setRoomId(reservationDto.getRoomId());
+                availabilityToDecrease.setDate(date);
+                availabilityToDecrease.setAvailableCount(1);
+
+                int updatedRows = roomAvailabilityDao.decreaseDailyAvailability(availabilityToDecrease);
                 if (updatedRows == 0) {
-                    throw new InvalidRequestException("객실 ID " + reservation.getRoomId() + "의 " + date + " 날짜 재고를 확보할 수 없습니다. 이미 예약되었거나 재고가 부족합니다.");
+                    RoomAvailability currentDbAvailability = roomAvailabilityDao.getAvailabilityByRoomIdAndDate(reservationDto.getRoomId(), date);
+                    Integer currentStock = (currentDbAvailability != null) ? currentDbAvailability.getAvailableCount() : null;
+                    log.warn("객실 ID {}의 {} 날짜 재고 확보 실패. DB 업데이트 row: {}. 현재 DB 재고: {}",
+                            reservationDto.getRoomId(), date, updatedRows, currentStock);
+                    throw new InvalidRequestException(
+                        String.format("객실 ID %d의 %s 날짜 재고를 확보할 수 없습니다. 이미 예약되었거나 재고가 부족합니다.",
+                                      reservationDto.getRoomId(), date.toString()));
                 }
             }
+
+            Reservation tempReservation = new Reservation();
+            tempReservation.setUserId(userId);
+            tempReservation.setRoomId(reservationDto.getRoomId());
+            tempReservation.setAccommodationId(room.getAccommodationId());
+            tempReservation.setCheckInDate(checkInDate);
+            tempReservation.setCheckOutDate(checkOutDate);
+            tempReservation.setGuestCount(reservationDto.getGuestCount());
+            tempReservation.setTotalPrice(currentReservationTotalPrice);
+            tempReservation.setPaymentStatus("PENDING_PREPARATION");
+            tempReservation.setStatus("TEMP_RESERVED");
+            tempReservation.setMerchantUid(merchantUid); 
+            tempReservation.setSpecialRequests(prepareRequestDto.getSpecialRequests());
+            tempReservation.setCreatedAt(LocalDateTime.now());
+            tempReservation.setUpdatedAt(LocalDateTime.now());
+            
+            tempReservations.add(tempReservation);
         }
 
-        Map<String, Object> result = new HashMap<>();
-        result.put("merchantUid", merchantUid);
-        result.put("amount", totalAmount);
-        result.put("paymentName", representativeRoomName + (reservations.size() > 1 ? " 외 " + (reservations.size() - 1) + "건" : ""));
-        log.info("결제 준비 완료: merchantUid={}, totalAmount={}", merchantUid, totalAmount);
-        return result;
+        String finalPaymentName = paymentNameBuilder.toString();
+        if (finalPaymentName.length() > 50) { 
+            finalPaymentName = finalPaymentName.substring(0, 47) + "...";
+        }
+        if (tempReservations.size() > 1) {
+            finalPaymentName += " 외 " + (tempReservations.size() -1) + "건";
+        }
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("merchantUid", merchantUid);
+        response.put("amount", totalAmount);
+        response.put("paymentName", finalPaymentName);
+        response.put("buyerEmail", user.getEmail());
+        response.put("buyerName", user.getUsername());
+        response.put("buyerTel", user.getPhone());
+
+        log.info("결제 준비 완료: merchantUid={}, amount={}, name='{}', buyer={}, 예약 건수: {}",
+             merchantUid, totalAmount, finalPaymentName, user.getEmail(), tempReservations.size());
+
+        return response;
     }
 
     private List<LocalDate> getDateRange(LocalDate startDate, LocalDate endDate) {

@@ -41,6 +41,13 @@
         )
     </insert>
 
+<select id="existsByMerchantUid" resultType="boolean" parameterType="string">
+    SELECT EXISTS (
+        SELECT 1 FROM reservations WHERE merchant_uid = #{merchantUid}
+    )
+</select>
+
+
     <!-- 예약 ID로 예약을 조회합니다. -->
     <select id="getReservationById" resultType="com.ssafy.trip.accommodation.model.Reservation">
         SELECT * FROM reservations WHERE reservation_id = #{reservationId}
@@ -266,7 +273,7 @@
         ) VALUES (
             #{userId}, #{roomId}, #{accommodationId}, #{merchantUid},
             #{checkInDate}, #{checkOutDate}, #{guestCount}, #{totalPrice},
-            'PENDING_PAYMENT', 'PENDING', #{specialRequests}, NOW(), NOW()
+            #{status}, #{paymentStatus}, #{specialRequests}, NOW(), NOW()
         )
     </insert>
 

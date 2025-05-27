@@ -122,6 +122,7 @@ interface FilterValuesFromParent {
   dateRange: [Date, Date] | null;
   guests: number;
   accommodationType: string | null;
+  keyword?: string;
 }
 
 interface SortOption {
@@ -132,6 +133,7 @@ interface SortOption {
 const props = defineProps<{
   initialFilters?: FilterValuesFromParent;
   initialSort?: string;
+  initialKeyword?: string;
 }>();
 
 const emit = defineEmits(["update-filters"]);
@@ -145,6 +147,7 @@ const selectedGuests = ref<number>(props.initialFilters?.guests || 2);
 const selectedAccommodationType = ref<string | null>(props.initialFilters?.accommodationType || null);
 const currentSortValue = ref<string>(props.initialSort || "created_at_desc");
 const showSortModal = ref(false);
+const currentKeyword = ref<string>(props.initialKeyword || "");
 
 // 정렬 옵션 업데이트
 const sortOptions: Array<SortOption> = [
@@ -174,6 +177,14 @@ watch(
   () => props.initialSort,
   (newSort) => {
     currentSortValue.value = newSort || "created_at_desc";
+  }
+);
+watch(
+  () => props.initialKeyword,
+  (newKeyword) => {
+    if (newKeyword !== currentKeyword.value) {
+      currentKeyword.value = newKeyword || "";
+    }
   }
 );
 
@@ -242,6 +253,7 @@ function emitFilters() {
     guests: selectedGuests.value,
     accommodationType: selectedAccommodationType.value,
     sortBy: currentSortValue.value,
+    keyword: currentKeyword.value,
   });
 }
 function selectAccommodationType(typeValue: string | null) {

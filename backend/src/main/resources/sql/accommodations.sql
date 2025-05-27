@@ -117,8 +117,9 @@ CREATE TABLE reservations (
     check_out_date DATE NOT NULL,
     guest_count INT NOT NULL,
     total_price DECIMAL(10,2) NOT NULL,
-    status ENUM('PENDING', 'CONFIRMED', 'CANCELLED', 'COMPLETED', 'NO_SHOW') NOT NULL DEFAULT 'PENDING',
-    payment_status ENUM('UNPAID', 'PAID', 'REFUNDED', 'PARTIALLY_REFUNDED') NOT NULL DEFAULT 'UNPAID',
+    status ENUM('PENDING', 'CONFIRMED', 'CANCELLED', 'COMPLETED', 'NO_SHOW', 'PENDING_PAYMENT') NOT NULL DEFAULT 'PENDING',
+    payment_status ENUM('UNPAID', 'PAID', 'REFUNDED', 'PARTIALLY_REFUNDED', 'PENDING') NOT NULL DEFAULT 'UNPAID',
+    special_requests TEXT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (reservation_id),
@@ -127,7 +128,10 @@ CREATE TABLE reservations (
     INDEX (check_in_date, check_out_date)
 );
 
+
 -- 리뷰 테이블은 reviews.sql에 정의되어 있습니다
+ALTER TABLE reservations DROP INDEX merchant_uid;
+ALTER TABLE reservations ADD INDEX idx_merchant_uid (merchant_uid);
 
 -- 객실 가용성 테이블
 CREATE TABLE room_availability (

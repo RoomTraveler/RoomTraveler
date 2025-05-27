@@ -191,10 +191,11 @@
     <!-- 이 쿼리는 해당 날짜의 레코드가 이미 존재한다고 가정합니다. -->
     <!-- 만약 레코드가 없을 수 있다면, INSERT ... ON DUPLICATE KEY UPDATE 또는 별도의 INSERT 로직 필요 -->
     <update id="increaseDailyAvailability" parameterType="com.ssafy.trip.accommodation.model.RoomAvailability">
-        UPDATE room_availability
-        SET available_count = available_count + #{availableCount}
-        WHERE room_id = #{roomId}
-          AND date = #{date}
+        UPDATE room_availability ra
+        JOIN rooms r ON ra.room_id = r.room_id
+        SET ra.available_count = LEAST(ra.available_count + #{availableCount}, r.room_count)
+        WHERE ra.room_id = #{roomId}
+          AND ra.date = #{date}
     </update>
 
 </mapper>

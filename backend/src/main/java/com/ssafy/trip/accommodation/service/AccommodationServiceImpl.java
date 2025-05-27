@@ -794,9 +794,19 @@ public class AccommodationServiceImpl implements AccommodationService {
 
     @Override
     @Transactional
-    public AccommodationResponseDto createAccommodationAndImages(AccommodationRequestDto requestDto, Long hostId) throws Exception {
+    public AccommodationResponseDto createAccommodationAndImages(AccommodationRequestDto requestDto, Long userIdOfHost) throws Exception {
+        // Parameter 'hostId' is renamed to 'userIdOfHost' to clarify it's the user_id of the host from the 'users' table.
+
+        // Optional: Validate if the user with userIdOfHost actually has a HOST role or if a Host entity exists for this userId.
+        // This could be done here or in the controller.
+        // Example: 
+        // User hostUser = userDao.findById(userIdOfHost);
+        // if (hostUser == null || !Role.HOST.equals(hostUser.getRole())) {
+        //     throw new IllegalAccessException("User " + userIdOfHost + " is not a valid host.");
+        // }
+
         Accommodation accommodation = new Accommodation();
-        accommodation.setHostId(hostId);
+        accommodation.setHostId(userIdOfHost); // Use userIdOfHost for the accommodation's host_id field.
         accommodation.setTitle(requestDto.getTitle());
         accommodation.setAccommodationType(requestDto.getAccommodationType());
         accommodation.setDescription(requestDto.getDescription());

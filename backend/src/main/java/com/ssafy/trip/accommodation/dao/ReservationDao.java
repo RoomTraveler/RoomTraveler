@@ -16,6 +16,9 @@ import java.util.Map;
 @Mapper
 public interface ReservationDao {
 
+    // 이미 merchantUid가 존재하는지 확인
+    boolean existsByMerchantUid(@Param("merchantUid") String merchantUid);
+
     /**
      * 새 예약을 등록합니다.
      * @param reservation 등록할 예약 정보

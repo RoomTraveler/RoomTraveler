@@ -21,7 +21,7 @@
           <!-- 검색 영역 -->
           <div class="search-area">
             <div class="search-input-wrapper">
-              <template v-if="selected !== '숙박'">
+              <template v-if="selected === '여행'">
                 <input
                   type="text"
                   v-model="searchKeyword"
@@ -33,9 +33,15 @@
                   <i class="bi bi-search"></i>
                 </button>
               </template>
-              <template v-else>
-                <input type="text" placeholder="지역, 숙소명" class="search-input" />
-                <button class="search-button">
+              <template v-else-if="selected === '숙박'">
+                <input
+                  type="text"
+                  v-model="accommodationSearchKeyword"
+                  placeholder="지역, 숙소명"
+                  class="search-input"
+                  @keyup.enter="searchAccommodations"
+                />
+                <button class="search-button" @click="searchAccommodations">
                   <i class="bi bi-search"></i>
                 </button>
               </template>
@@ -147,6 +153,7 @@ const route = useRoute();
 const selected = ref("숙박");
 const notificationInterval = ref(null);
 const searchKeyword = ref("");
+const accommodationSearchKeyword = ref("");
 const attractions = ref([]); // 검색 결과 저장
 
 // ✅ Computed
@@ -209,7 +216,7 @@ const select = (value) => {
   }, 200);
 };
 
-// ✅ 검색 함수 (Enter 또는 버튼 클릭)
+// ✅ 관광지 검색 함수 (Enter 또는 버튼 클릭)
 const searchAttractions = () => {
   if (!searchKeyword.value.trim()) {
     alert("검색어를 입력해주세요.");
@@ -219,6 +226,25 @@ const searchAttractions = () => {
   router.push({
     path: "/attraction/search",
     query: { keyword: searchKeyword.value.trim() },
+  });
+};
+
+// ✅ 숙소 검색 함수 (Enter 또는 버튼 클릭) - 추가
+const searchAccommodations = () => {
+  const keyword = accommodationSearchKeyword.value.trim();
+  console.log("[Header.vue] searchAccommodations called. Keyword:", keyword);
+  if (!keyword) {
+    alert("검색어(지역 또는 숙소명)를 입력해주세요.");
+    return;
+  }
+
+  const targetPath = "/accommodation/list";
+  const query = { keyword };
+  console.log("[Header.vue] Navigating to:", targetPath, "with query:", query);
+
+  router.push({
+    path: targetPath,
+    query: query,
   });
 };
 

@@ -969,29 +969,34 @@ export default {
         return;
       }
 
-      const itemDetails = {
+      const reservationDetails = {
         roomId: room.roomId,
         checkInDate: this.formatDateForApi(this.selectedCheckInDate),
         checkOutDate: this.formatDateForApi(this.selectedCheckOutDate),
         guestCount: this.selectedGuests,
-        price: room.price,
+        price: room.price, // 또는 room.pricePerNight 등 실제 가격 필드
+        accommodationId: this.accommodation.accommodationId,
+        roomName: room.name,
+        accommodationTitle: this.accommodation.title,
+        roomMainImageUrl: room.mainImageUrl || room.thumbnailUrl || this.noImage, // 객실 대표 이미지
+        accommodationCheckInTime: this.accommodation.checkInTime,
+        accommodationCheckOutTime: this.accommodation.checkOutTime,
       };
 
-      try {
-        await this.cartStore.addToCart(itemDetails);
-        this.$router.push({ name: "Cart" });
-      } catch (error) {
-        console.error("AccommodationDetail - Error during booking (add to cart step):", error);
-        this.showToast(
-          error.response?.data?.message || error.message || "예약 처리 중(장바구니 추가) 오류가 발생했습니다.",
-          3000,
-          "error"
-        );
-      }
+      this.$router.push({
+        name: "ReservationForm", 
+        query: reservationDetails,
+      });
     },
     async handleAddToCart(room) {
       if (!this.isRoomBookable(room)) {
-        this.showToast("선택하신 조건으로 현재 예약이 불가능하여 장바구니에 담을 수 없습니다.", 3000);
+        this.showToast(
+          room.minAvailableCount !== undefined && room.minAvailableCount <= 0
+            ? "해당 객실은 현재 예약이 마감되었습니다. 다른 객실을 선택해주세요."
+            : "선택하신 조건으로 현재 예약이 불가능하여 장바구니에 담을 수 없습니다.",
+          3500,
+          "warning"
+        );
         return;
       }
       if (!this.isLoggedIn) {
@@ -1021,18 +1026,28 @@ export default {
         this.showToast(response.message || "객실이 장바구니에 추가되었습니다.");
       } catch (error) {
         console.error("AccommodationDetail - Error adding to cart:", error);
-        this.showToast(
-          error.response?.data?.message || error.message || "장바구니 추가 중 오류가 발생했습니다.",
-          3000,
-          "error"
-        );
+        let errorMessage = "장바구니 추가 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
+        if (error.response?.data?.message) {
+          if (error.response.data.message.includes("재고") || error.response.data.message.includes("마감")) {
+            errorMessage = "선택하신 객실은 현재 예약이 마감되었거나 재고가 부족합니다. 다른 객실을 선택해주세요.";
+          } else {
+            errorMessage = error.response.data.message;
+          }
+        } else if (error.message) {
+          if (error.message.includes("재고") || error.message.includes("마감")) {
+            errorMessage = "선택하신 객실은 현재 예약이 마감되었거나 재고가 부족합니다. 다른 객실을 선택해주세요.";
+          } else {
+            errorMessage = error.message;
+          }
+        }
+        this.showToast(errorMessage, 3500, "error");
       }
     },
     isRoomBookable(room) {
       if (!room) return false;
 
       if (!this.selectedCheckInDate || !this.selectedCheckOutDate || this.selectedGuests === 0) {
-        return true;
+        return false;
       }
 
       const totalGuests = this.selectedGuests;

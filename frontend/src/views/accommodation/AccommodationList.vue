@@ -2,7 +2,7 @@
   <div class="bg-white min-vh-100" style="font-family: &quot;Pretendard&quot;, &quot;Noto Sans KR&quot;, sans-serif">
     <div class="container" style="max-width: 768px">
       <!-- 필터 헤더 -->
-      <FilterHeader @update-filters="handleFiltersUpdate" :initialFilters="currentFilters" :initialSort="currentSort" />
+      <FilterHeader @update-filters="handleFiltersUpdate" :initialFilters="currentFilters" :initialSort="currentSort" :initialKeyword="currentFilters.keyword || ''" />
 
       <!-- 숙소 리스트 -->
       <div class="pb-5 px-2">
@@ -126,6 +126,8 @@ import AccommodationCardInfo from "../../components/accommodation/AccommodationC
 import RoundedImage from "../../components/common/RoundedImage.vue";
 import { ElMessage } from "element-plus";
 
+console.log("[AccommodationList.vue] Component setup script executing.");
+
 interface Room {
   price: number;
   capacity: number;
@@ -157,6 +159,7 @@ interface FilterValues {
   dateRange: [Date, Date] | null;
   guests: number;
   accommodationType: string | null;
+  keyword?: string;
 }
 
 interface Category {
@@ -178,6 +181,7 @@ interface UrlFilters {
   guests?: number;
   accommodationType?: string;
   sortBy?: string;
+  keyword?: string;
 }
 
 const route = useRoute();
@@ -197,6 +201,7 @@ const currentFilters = ref<FilterValues>({
   dateRange: null,
   guests: 2,
   accommodationType: null,
+  keyword: "",
 });
 const currentSort = ref<string>("recommendScoreDesc");
 
@@ -231,6 +236,7 @@ watch(
     }
     if (currentFilters.value.guests > 0) query.guests = currentFilters.value.guests;
     if (currentFilters.value.accommodationType) query.accommodationType = currentFilters.value.accommodationType;
+    if (currentFilters.value.keyword) query.keyword = currentFilters.value.keyword;
 
     if (currentSort.value && currentSort.value !== "recommendScoreDesc") {
       query.sortBy = currentSort.value;
@@ -241,12 +247,13 @@ watch(
   { deep: true }
 );
 
-function handleFiltersUpdate(filters: FilterValues & { sortBy?: string }) {
+function handleFiltersUpdate(filters: FilterValues & { sortBy?: string; keyword?: string }) {
   currentFilters.value = {
     region: filters.region,
     dateRange: filters.dateRange,
     guests: filters.guests,
     accommodationType: filters.accommodationType,
+    keyword: filters.keyword || "",
   };
   if (filters.sortBy && filters.sortBy !== currentSort.value) {
     currentSort.value = filters.sortBy;
@@ -269,6 +276,10 @@ async function fetchAccommodations(loadMore = false) {
   if (loading.value && !loadMore) return;
   if (loadingMore.value && loadMore) return;
   if (loadMore && !hasMoreData.value) return;
+
+  console.log("[AccommodationList] fetchAccommodations called. loadMore:", loadMore, "currentPage:", currentPage.value);
+  console.log("[AccommodationList] Current filters for API call:", JSON.parse(JSON.stringify(currentFilters.value)));
+  console.log("[AccommodationList] Current sort for API call:", currentSort.value);
 
   let pageToFetch: number;
   if (loadMore) {
@@ -297,6 +308,7 @@ async function fetchAccommodations(loadMore = false) {
     if (currentFilters.value.dateRange && currentFilters.value.dateRange[1]) {
       params.checkOutDate = formatDate(currentFilters.value.dateRange[1]);
     }
+    if (currentFilters.value.keyword) params.keyword = currentFilters.value.keyword;
 
     const filteredParams = Object.fromEntries(
       Object.entries(params).filter(([_, v]) => v !== undefined && v !== null && v !== "")
@@ -397,7 +409,22 @@ const formatCheckInTime = (timeArray: [number, number] | undefined | null): stri
   return `${hour}:${minute}`;
 };
 
+watch(
+  () => route.query.keyword, // URL의 keyword 쿼리 파라미터 감시
+  (newKeyword, oldKeyword) => {
+    console.log("[AccommodationList.vue] Watcher for route.query.keyword triggered.");
+    console.log("[AccommodationList] Detected keyword change in URL:", newKeyword, "(was:", oldKeyword, ")");
+    if (newKeyword !== oldKeyword) { // 실제 keyword가 변경되었을 때만
+      const keywordValue = Array.isArray(newKeyword) ? newKeyword[0] : newKeyword;
+      currentFilters.value.keyword = keywordValue || "";
+      console.log("[AccommodationList] Updated currentFilters.keyword:", currentFilters.value.keyword);
+      resetAndFetchAccommodations(); // 페이지 리셋하고 데이터 다시 불러오기
+    }
+  }
+);
+
 onMounted(() => {
+  console.log("[AccommodationList.vue] Component mounted.");
   const query = route.query as UrlFilters;
   if (query.sidoCode) currentFilters.value.region.sidoCode = Number(query.sidoCode);
   if (query.gugunCode) currentFilters.value.region.gugunCode = Number(query.gugunCode);
@@ -416,6 +443,10 @@ onMounted(() => {
   }
   if (query.guests) currentFilters.value.guests = Number(query.guests);
   if (query.accommodationType) currentFilters.value.accommodationType = query.accommodationType;
+  if (query.keyword) {
+    const keywordValue = Array.isArray(query.keyword) ? query.keyword[0] : query.keyword;
+    currentFilters.value.keyword = keywordValue;
+  }
 
   if (query.sortBy) {
     currentSort.value = query.sortBy;

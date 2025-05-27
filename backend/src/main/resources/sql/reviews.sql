@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS reviews (
     FOREIGN KEY (reservation_id) REFERENCES reservations(reservation_id) ON DELETE SET NULL
     ) COMMENT '숙소 리뷰 테이블';
 
+
 -- 리뷰 이미지 테이블
 CREATE TABLE IF NOT EXISTS review_images (
                                              review_image_id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '리뷰 이미지 고유 ID',

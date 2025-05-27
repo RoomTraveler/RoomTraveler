@@ -15,12 +15,15 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.Authentication;
 
 import java.io.IOException;
 import java.sql.SQLException;
@@ -43,10 +46,27 @@ public class PaymentController {
     @PostMapping("/prepare")
     public ResponseEntity<?> preparePayment(
             @RequestBody PaymentPrepareRequestDto prepareRequestDto,
-            @AuthenticationPrincipal User user) {
+            @AuthenticationPrincipal(expression = "user") User user,
+            HttpServletRequest request) {
+
         if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "로그인이 필요합니다."));
+            log.warn("Unauthorized attempt to prepare payment. User is null. This might indicate an issue with SecurityConfig or token validation upstream.");
+            Authentication currentAuth = SecurityContextHolder.getContext().getAuthentication();
+            log.warn("Current Authentication object in SecurityContextHolder: {}", currentAuth);
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "인증되지 않은 사용자입니다. 로그인이 필요합니다."));
         }
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        System.out.println("### Prepare Payment Endpoint Authentication (from SecurityContextHolder): " + authentication);
+        if (authentication != null) {
+            System.out.println("### Principal (from SecurityContextHolder): " + authentication.getPrincipal());
+            System.out.println("### Authorities (from SecurityContextHolder): " + authentication.getAuthorities());
+        }
+        System.out.println("### Authenticated User (from @AuthenticationPrincipal): " + user);
+        
+        String authorizationHeader = request.getHeader("Authorization");
+        System.out.println("### Authorization Header in Controller: " + authorizationHeader);
+
         try {
             Map<String, Object> preparationResult = reservationService.prepareReservationsForPayment(prepareRequestDto, user.getUserId());
             
@@ -61,7 +81,7 @@ public class PaymentController {
 
             return ResponseEntity.ok(responseDto);
         } catch (Exception e) {
-            log.error("Error during payment preparation: {}", e.getMessage(), e);
+            log.error("Error during payment preparation for user {}: {}", user.getUserId(), e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", "결제 준비 중 오류 발생: " + e.getMessage()));
         }
@@ -69,9 +89,12 @@ public class PaymentController {
 
     @Operation(summary = "아임포트 결제 검증 및 최종 처리", description = "아임포트 결제 성공 후 imp_uid와 merchant_uid로 결제내역을 검증하고, 예약 및 결제 정보를 최종 저장/업데이트합니다.")
     @PostMapping("/complete")
-    public ResponseEntity<?> completePayment(@RequestBody PaymentCompleteRequestDto completeRequestDto, @AuthenticationPrincipal User user) {
+    public ResponseEntity<?> completePayment(@RequestBody PaymentCompleteRequestDto completeRequestDto, @AuthenticationPrincipal(expression = "user") User user) {
         if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "로그인이 필요합니다."));
+            log.warn("Unauthorized attempt to complete payment. User is null. This might indicate an issue with SecurityConfig or token validation upstream.");
+            Authentication currentAuth = SecurityContextHolder.getContext().getAuthentication();
+            log.warn("Current Authentication object in SecurityContextHolder at /complete: {}", currentAuth);
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "인증되지 않은 사용자입니다. 로그인이 필요합니다."));
         }
         try {
             Payment payment = paymentService.validateAndFinalizePayment(completeRequestDto, user.getUserId());
@@ -189,7 +212,7 @@ public class PaymentController {
     }
 
     @Operation(summary = "결제 상세 정보", description = "내 결제 상세정보")
-    @GetMapping("/detail/{paymentId}")
+    @GetMapping("/{paymentId}")
     public ResponseEntity<?> paymentDetail(
             @Parameter(description = "결제 PK") @PathVariable Long paymentId,
             @AuthenticationPrincipal User user) {
